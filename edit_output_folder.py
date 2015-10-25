@@ -3,13 +3,14 @@
 
 import wx
 
-class EditOutputFolder(wx.Frame):
-    """Extending Frame"""
-    def __init__(self, parent):
-        wx.Frame.__init__(self, parent, title = "Edit Output Folder", size = (450, 350))
+class EditOutputFolder(wx.Dialog):
+#    """Extending Dialog"""
+    def __init__(self, *args, **kw):
+        super(EditOutputFolder, self).__init__(*args, **kw)
 
+        self.SetSize((450, 350))
+        self.SetTitle("Edit Output Folder")
         self.InitUI()
-        self.Show(True)
 
     def InitUI(self):
         """Initialize User Interface"""
@@ -47,6 +48,7 @@ class EditOutputFolder(wx.Frame):
 
         btn_cancel = wx.Button(panel, label="Cancel")
         sizer.Add(btn_cancel, pos=(5, 4), flag=wx.RIGHT|wx.BOTTOM, border=5)
+        btn_cancel.Bind(wx.EVT_BUTTON, self.OnClose)
 
         # Advanced options
         sbox_advanced_title = wx.StaticBox(panel, -1, "Advanced options")
@@ -66,8 +68,5 @@ class EditOutputFolder(wx.Frame):
         sizer.AddGrowableCol(1)
         panel.SetSizer(sizer)
 
-# Run the window, for testing purposes. Needs to be removed eventually.
-
-app = wx.App(False)
-frame = EditOutputFolder(None)
-app.MainLoop()
+    def OnClose(self, e):
+        self.Destroy()
