@@ -8,6 +8,7 @@ It is only needed for development and testing reasons.
 
 import wx
 import edit_output_folder
+import about
 
 class TestMainFrame(wx.Frame):
 	"""Extending Frame"""
@@ -19,7 +20,8 @@ class TestMainFrame(wx.Frame):
 		# Menu
 		dialog_menu = wx.Menu()
 
-		menu_edit_output_folder = dialog_menu.Append(wx.NewId(), "Edit Output Folder", "Dialog for editing a specific output folder.")
+		item_edit_output_folder = dialog_menu.Append(wx.NewId(), "Edit Output Folder", "Dialog for editing a specific output folder.")
+		item_about = dialog_menu.Append(wx.NewId(), "&About", "About OctoTagger")
 
 		# Create the menubar
 		menubar = wx.MenuBar()
@@ -27,7 +29,8 @@ class TestMainFrame(wx.Frame):
 		self.SetMenuBar(menubar) # menubar to frame
 
 		# Set Events
-		self.Bind(wx.EVT_MENU, self.OnEditOutputFolder, menu_edit_output_folder)
+		self.Bind(wx.EVT_MENU, self.OnEditOutputFolder, item_edit_output_folder)
+		self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
 		self.Show(True)
 
@@ -35,6 +38,9 @@ class TestMainFrame(wx.Frame):
 		dlg = edit_output_folder.EditOutputFolder(self)
 		if dlg.ShowModal() == 5101:
         		dlg.Destroy()
+
+	def OnAbout(self, e):
+		wx.AboutBox(about.getInfo())
 
 def main():
 	app = wx.App()
