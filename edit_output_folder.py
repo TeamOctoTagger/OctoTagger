@@ -63,9 +63,10 @@ class EditOutputFolder(wx.Dialog):
         rb_hardlinks = wx.RadioButton(panel, -1, "Hardlinks")
         sbox_advanced.Add(rb_hardlinks, flag=wx.LEFT|wx.BOTTOM, border=5)
 
-        sizer.Add(sbox_advanced, pos=(3,0), span=(0, 5), flag=wx.LEFT|wx.TOP|wx.RIGHT|wx.EXPAND, border=5)
+        sizer.Add(sbox_advanced, pos=(3,0), span=(0, 5), flag=wx.LEFT|wx.TOP|wx.RIGHT|wx.EXPAND, border=10)
 
         sizer.AddGrowableCol(1)
+        sizer.AddGrowableRow(4)
         panel.SetSizer(sizer)
 
     def OnClose(self, e):
