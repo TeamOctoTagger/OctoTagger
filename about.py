@@ -9,7 +9,7 @@ import wx
 
 def getInfo():
     description = "OctoTagger is a simple yet powerful software for organizing your files."
-    licence = "GPLv3"
+    licence = open("LICENSE").read()
 
     info = wx.AboutDialogInfo()
 
