@@ -1,0 +1,9 @@
+create table database(
+    pk_id integer primary key autoincrement,
+    name text,
+    location text);
+
+create table settings(
+    pk_id integer primary key autoincrement,
+    use_softlink boolean
+)
