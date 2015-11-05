@@ -7,6 +7,7 @@ It is only needed for development and testing reasons.
 '''
 
 import wx
+import import_files
 import edit_output_folder
 import bulk_create_output_folders
 import settings
@@ -19,9 +20,13 @@ class TestMainFrame(wx.Frame):
 
 		self.CreateStatusBar() # Status Bar
 
+		# Important variables
+		self.current_db = "./default"
+
 		# Menu
 		dialog_menu = wx.Menu()
 
+		item_import = dialog_menu.Append(wx.ID_ANY, "&Import files", "Import one or more files into the current database.")
 		item_edit_output_folder = dialog_menu.Append(wx.ID_ANY, "&Edit Output Folder", "Dialog for editing a specific output folder")
 		item_create_bulk_output_folders = dialog_menu.Append(wx.ID_ANY, "&Bulk create output folders", "Automatically create an output folder for each tag")
 		item_clear_data = dialog_menu.Append(wx.ID_ANY, "&Clear all data", "Removes all databases and clears all private data.")
@@ -34,6 +39,7 @@ class TestMainFrame(wx.Frame):
 		self.SetMenuBar(menubar) # menubar to frame
 
 		# Set Events
+		self.Bind(wx.EVT_MENU, self.OnImport, item_import)
 		self.Bind(wx.EVT_MENU, self.OnEditOutputFolder, item_edit_output_folder)
 		self.Bind(wx.EVT_MENU, self.OnBulkCreate, item_create_bulk_output_folders)
 		self.Bind(wx.EVT_MENU, self.OnClearData, item_clear_data)
@@ -42,6 +48,15 @@ class TestMainFrame(wx.Frame):
 
 		self.Centre()
 		self.Show(True)
+
+	def OnImport(self, e):
+		dlg_import = wx.FileDialog(self, "Import files", "", "",
+                                       "All files (*.*)|*.*", wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST)
+
+		if dlg_import.ShowModal() == wx.ID_CANCEL:
+			print "Import aborted."
+		else:
+			import_files.import_files(dlg_import.GetPaths(), self.current_db)
 
 	def OnEditOutputFolder(self, e):
 		dlg = edit_output_folder.EditOutputFolder(self)
