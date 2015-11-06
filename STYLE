@@ -1,0 +1,13 @@
+All python code needs to follow the PEP8 style guidelines.
+
+To check if your code is compliant, use the `flake8` utility, which can be
+installed via `pip`. Some editors also have this functionality built-in.
+
+In case you need to split a string accross multiple lines do it like this:
+    (
+        "This is a string "
+	"that is continued on this line"
+    )
+or like this:
+    ("This is a string "
+     "that is continued on this line")
