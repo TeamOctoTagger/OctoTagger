@@ -148,7 +148,6 @@ class MainWindow(wx.Frame):
         panel2 = itemview.ItemView(self)
         panel3 = wx.Panel(self, style=wx.SUNKEN_BORDER)
         panel1.SetBackgroundColour("#3498db")
-        panel2.SetBackgroundColour("#e74c3c")
         panel3.SetBackgroundColour("#2ecc71")
         box = wx.BoxSizer(wx.HORIZONTAL)
         box2 = wx.BoxSizer(wx.VERTICAL)
@@ -159,10 +158,11 @@ class MainWindow(wx.Frame):
         box.Add(box2, 1, wx.EXPAND)
         box.Add(panel2, 3, wx.EXPAND)
 
-        content = wx.StaticText(
-            panel2, -1, "Hello Test", style=wx.ALIGN_CENTRE)
-        font = wx.Font(32, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        content.SetFont(font)
+        panel2.SetItems([
+            {"name": "hello.jpg"},
+            {"name": "todo.txt"},
+            {"name": "bye.png"}
+        ])
 
         self.SetSizer(box)
         self.Layout()
