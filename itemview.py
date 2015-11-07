@@ -37,10 +37,13 @@ class Item(wx.Panel):
         size = image.GetSize()
         if size.GetWidth() > size.GetHeight():
             factor = THUMBNAIL_MAX_SIZE / size.GetWidth()
+            pos = (0, (THUMBNAIL_MAX_SIZE - image.GetHeight()*factor)/2)
         else:
             factor = THUMBNAIL_MAX_SIZE / size.GetHeight()
+            pos = ((THUMBNAIL_MAX_SIZE - image.GetWidth()*factor)/2, 0)
         size.Scale(factor, factor)
         image.Rescale(size.GetWidth(), size.GetHeight())
+        image.Resize((THUMBNAIL_MAX_SIZE, THUMBNAIL_MAX_SIZE), pos)
         self.bitmap = wx.StaticBitmap(
             self,
             bitmap=image.ConvertToBitmap()
