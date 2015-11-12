@@ -159,7 +159,16 @@ class MainWindow(wx.Frame):
         box.Add(panel2, 3, wx.EXPAND)
 
         panel2.SetItems([
-            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"}
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
         ])
 
         self.SetSizer(box)
