@@ -143,28 +143,44 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
-        panel1 = wx.Panel(self, style=wx.SUNKEN_BORDER)
-        usertext = wx.TextCtrl(panel1, -1, "", size=(200, -1))
-        panel2 = itemview.ItemView(self)
-        panel3 = wx.Panel(self, style=wx.SUNKEN_BORDER)
-        panel1.SetBackgroundColour("#3498db")
-        panel3.SetBackgroundColour("#2ecc71")
-        box = wx.BoxSizer(wx.HORIZONTAL)
-        box2 = wx.BoxSizer(wx.VERTICAL)
+        leftUpperPan = wx.Panel(self)
+        leftUpperPan1 = wx.Panel(self)
+        leftUpperPan2 = wx.Panel(self)
+        leftUpperPan3 = wx.Panel(self)
+        usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
+        mainPan = itemview.ItemView(self)
+        leftLowerPan = wx.Panel(self)
+        leftUpperPan.SetBackgroundColour("#3498db")
+        leftUpperPan1.SetBackgroundColour("#3498db")
+        leftUpperPan2.SetBackgroundColour("#3498db")
+        leftUpperPan3.SetBackgroundColour("#3498db")
+        leftLowerPan.SetBackgroundColour("#2ecc71")
+        mainBox = wx.BoxSizer(wx.HORIZONTAL)
+        leftBox = wx.BoxSizer(wx.VERTICAL)
+        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
+        leftInnerBox2 = wx.BoxSizer(wx.VERTICAL)
 
-        box2.Add(panel1, 7, wx.EXPAND)
-        box2.Add(panel3, 10, wx.EXPAND)
+        leftInnerBox2.Add(leftUpperPan3, 1, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox2.Add(leftUpperPan, 8, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
-        box.Add(box2, 1, wx.EXPAND)
-        box.Add(panel2, 3, wx.EXPAND)
+        leftInnerBox.Add(leftUpperPan1, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
-        panel2.SetItems([
+
+        leftBox.Add(leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftBox.Add(leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
+
+        mainBox.Add(leftBox, 1, wx.EXPAND)
+        mainBox.Add(mainPan, 3, wx.EXPAND)
+
+        mainPan.SetItems([
             {"name": "hello.jpg"},
             {"name": "todo.txt"},
             {"name": "bye.png"}
         ])
 
-        self.SetSizer(box)
+        self.SetSizer(mainBox)
         self.Layout()
         self.Show(True)
 

@@ -4,7 +4,7 @@ import wx
 class ItemView(wx.Panel):
     def __init__(self, parent):
         super(ItemView, self).__init__(parent)
-        self.SetBackgroundColour(wx.LIGHT_GREY)
+        self.SetBackgroundColour("#e74c3c")
 
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.SetSizer(self.sizer)
