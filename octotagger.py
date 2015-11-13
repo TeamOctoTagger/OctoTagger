@@ -175,9 +175,16 @@ class MainWindow(wx.Frame):
         mainBox.Add(mainPan, 3, wx.EXPAND)
 
         mainPan.SetItems([
-            {"name": "hello.jpg"},
-            {"name": "todo.txt"},
-            {"name": "bye.png"}
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
+            {"name": "92996172-60c0-47e1-b447-d0bbeb9eab97"},
         ])
 
         self.SetSizer(mainBox)
