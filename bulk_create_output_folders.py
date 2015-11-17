@@ -2,7 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import wx
+import tagging
+import os
+from os.path import expanduser
+import sqlite3
 
+db = "./default/"
+db_file = os.path.normpath(os.path.join(db, "default.db"))
+conn = sqlite3.connect(db_file)
+cursor = conn.cursor()
 
 class BulkCreateOutputFolders(wx.Dialog):
     """Extending Dialog"""
@@ -19,11 +27,7 @@ class BulkCreateOutputFolders(wx.Dialog):
         panel = wx.Panel(self)
         sizer = wx.GridBagSizer(5, 5)
         sz_sel_btn = wx.BoxSizer(wx.VERTICAL)
-        self.tags = [
-            "gif", "iceland 2012", "meme", "human", "iceland 2012",
-            "meme", "human", "iceland 2012", "meme", "human", "iceland 2012",
-            "meme", "human", "iceland 2012", "meme", "human"
-        ]
+        self.tags = tagging.get_all_tags()
 
         # Define elements and add them to sizer
         # Labels
@@ -46,9 +50,9 @@ class BulkCreateOutputFolders(wx.Dialog):
 
         # Text controls
 
-        tc_directory = wx.TextCtrl(panel)
+        self.tc_directory = wx.TextCtrl(panel)
         sizer.Add(
-            tc_directory,
+            self.tc_directory,
             pos=(0, 1),
             span=(1, 2),
             flag=wx.RIGHT | wx.TOP | wx.EXPAND,
@@ -58,6 +62,7 @@ class BulkCreateOutputFolders(wx.Dialog):
         # Buttons
 
         btn_browse = wx.Button(panel, label="Browse...")
+        btn_browse.Bind(wx.EVT_BUTTON, self.OnBrowse)
         sizer.Add(
             btn_browse,
             pos=(0, 3),
@@ -91,6 +96,7 @@ class BulkCreateOutputFolders(wx.Dialog):
         )
 
         btn_ok = wx.Button(panel, label="Ok")
+        btn_ok.Bind(wx.EVT_BUTTON, self.OnOk)
         sizer.Add(
             btn_ok,
             pos=(4, 2),
@@ -109,16 +115,15 @@ class BulkCreateOutputFolders(wx.Dialog):
 
         # Tags
         # Check list box
-        lb = wx.CheckListBox(
+        self.lb = wx.CheckListBox(
             panel,
             wx.ID_ANY,
             (0, 0),
             wx.DefaultSize,
             self.tags
         )
-        self.lb = lb
         sizer.Add(
-            lb,
+            self.lb,
             pos=(2, 0),
             span=(1, 2),
             flag=wx.GROW | wx.ALL,
@@ -138,5 +143,26 @@ class BulkCreateOutputFolders(wx.Dialog):
         for cb in self.lb.GetChecked():
             self.lb.Check(cb, False)
 
+    def OnBrowse(self, e):
+        print "Nein"
+    	dlg_select_dir = wx.DirDialog(self, "Choose a location in which the output folders will be generated", expanduser("~"))
+
+    	if dlg_select_dir.ShowModal() == wx.ID_CANCEL:
+    		print "Selection aborted."
+    	else:
+            self.tc_directory.SetValue(dlg_select_dir.GetPath())
+
+    def OnOk(self, e):
+        register_folders(self.tc_directory.GetValue(), self.lb.GetCheckedStrings())
+
     def OnClose(self, e):
         self.Destroy()
+
+# Inserts the folders into the database
+def register_folders(location, tags):
+    location = os.path.normpath(location)
+    for tag in tags:
+        query_insert_folder = "INSERT INTO folder(name, location, expression) VALUES (\'%s\', \'%s\', \'%s\')"%(tag, location, tag)
+        cursor.execute(query_insert_folder)
+
+    conn.commit()

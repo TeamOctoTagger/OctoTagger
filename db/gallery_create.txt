@@ -11,14 +11,8 @@ create table folder(
 
 create table file(
     pk_id integer primary key autoincrement,
-    hash text,
-    file_name text,
-    fk_thumbnail_id integer references thumbnail(pk_id));
-
-create table thumbnail(
-    pk_id integer primary key autoincrement,
-    name text,
-    location text);
+    uuid text,
+    file_name text);
 
 create table file_has_tag(
     pk_fk_file_id integer references file(pk_id),

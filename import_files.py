@@ -10,10 +10,15 @@ import os
 import shutil
 import uuid
 import wx
-
+import sqlite3
+import database
 
 def import_files(files, db):
-    dest_dir = os.path.normpath(db + "/files")
+    # Get gallery connection
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+    dest_dir = os.path.join(database.get_current_gallery("directory"), "files")
+
     for file in files:
         file = os.path.normpath(file)
         # Defensive programming
@@ -27,9 +32,15 @@ def import_files(files, db):
 
             dest = os.path.join(dest_dir, new_name)
             shutil.copy(file, dest)
+
+            query_insert_file = "INSERT INTO file (file_name, uuid) VALUES (\'%s\', \'%s\')"%(original_name, new_name)
+            cursor.execute(query_insert_file)
+
         else:
             dlg_error = wx.MessageBox(
                 'An error has occured while importing.',
                 'Error',
                 wx.OK | wx.ICON_EXCLAMATION
-            )
+            ).ShowModal()
+
+    gallery.commit()

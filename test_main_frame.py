@@ -46,7 +46,7 @@ class TestMainFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
 		self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
-		self.Centre()
+		#self.Centre()
 		self.Show(True)
 
 	def OnImport(self, e):
