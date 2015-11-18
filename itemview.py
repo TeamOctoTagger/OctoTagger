@@ -13,28 +13,76 @@ class ItemView(wx.Panel):
         self.SetSizer(self.sizer)
         self.SetAutoLayout(True)
 
+        # selections
+
+        self.selection = []
+        self.breadcrumbs = []
+        self.lastClicked = None
+        # TODO tree structure of selections
+
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
 
     def OnMouseUp(self, event):
         target = event.GetEventObject()
         if target is self:
             # clicked outside of any item
-            print(self.GetSelectedItems())
             return
-        elif not isinstance(target, wx.Panel):
+
+        if not target.GetClientRect().Contains(event.GetPosition()):
+            # click dragged outside of target
+            # cancel click
+            return
+
+        while not isinstance(target, wx.Panel):
             # clicked on a child of the item
             target = target.GetParent()
-        target.ToggleSelected()
+
+        if event.ControlDown() and event.ShiftDown():
+            # add new range selection
+            pass
+        elif event.ControlDown():
+            # add new single selection
+            pass
+        elif event.ShiftDown():
+            # set new range selection
+            pass
+        else:
+            # set new single selection
+            # TODO cache children, also for folder structure
+            # self.lastClicked = self.sizer.GetChildren().index(target)
+            target.ToggleSelected()
+
+    def OnMouseDouble(self, event):
+        # TODO open folder or open tagging view
+        pass
 
     def SetItems(self, items):
-        self.sizer.Clear()
+        # TODO support db items AND fs items
         for item in items:
-            itemCtrl = Item(self, item['name'])
+            if type(item) is str:  # item is db uuid
+                pass
+            elif type(item) is dict:  # item is fs reference
+                # item['name'] == filename
+                # item['path'] == location in fs
+                if type(item['path']) is list:  # this is a folder
+                    pass
+                elif type(item['path']) is str:  # this is a file
+                    pass
+                else:
+                    raise TypeError(
+                        'Encountered unsupported path',
+                        item['path']
+                    )
+            else:
+                raise TypeError('Encountered unsupported item', item)
+
+            # TODO remove old code
+            itemCtrl = Item(self, item)
             self.sizer.Add(
                 itemCtrl,
                 flag=wx.ALL,
                 border=5,
-                userData=item['name']  # FIXME use ID
             )
 
     def GetSelectedItems(self):
@@ -45,6 +93,9 @@ class ItemView(wx.Panel):
             if window.IsSelected():
                 selected_items.append(item.GetUserData())
         return selected_items
+
+    def UpdateSelection(self):
+        self.sizer.Clear()
 
 
 class Item(wx.Panel):
@@ -106,7 +157,7 @@ class Item(wx.Panel):
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
 
     def PropagateEvent(self, event):
-        event.ResumePropagation(3)
+        event.ResumePropagation(1)
         event.Skip()
 
     def UpdateBackground(self):
