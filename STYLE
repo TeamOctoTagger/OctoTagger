@@ -1,13 +1,48 @@
+# Style
+
 All python code needs to follow the PEP8 style guidelines.
+https://www.python.org/dev/peps/pep-0008/
 
 To check if your code is compliant, use the `flake8` utility, which can be
-installed via `pip`. Some editors also have this functionality built-in.
+installed via `pip`. Some editors also have this functionality built-in. It is
+important to note that `flake8` is usually stricter than editors.
 
-In case you need to split a string accross multiple lines do it like this:
+Function arguments should either be written on one line,
+    do_stuff(1, 2, 3)
+or each on a separate line
+    do_stuff(
+        1,
+        2,
+        3,
+    )
+but NOT mixed!
+    do_stuff(1, 2
+             3)
+Also remember the final comma after the last element.
+
+In case you need to split a string across multiple lines enclose it in
+parentheses (remember the spaces):
     (
         "This is a string "
-	"that is continued on this line"
+        "that is continued on this line"
     )
-or like this:
-    ("This is a string "
-     "that is continued on this line")
+
+# Structure
+
+Bigger classes (e.g. ItemView) should reside in their files with the same name
+(e.g. itemview.py). If there are multiple smaller classes with similar
+functionality, they should be put in the same file (e.g. dialogs).
+
+# Naming
+
+When subclassing a wx class, all functions should follow their naming style of
+capitalized word (i.e. DoStuff).
+
+Variables and non-wx functions should be lowercase with underscore (i.e.
+do_stuff).
+
+# Logic
+
+Prefer raising an exception instead of silently failing.
+See https://docs.python.org/2/library/exceptions.html for a list of built-in
+exceptions.
