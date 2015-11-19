@@ -15,17 +15,27 @@ class TaggingView(wx.Frame):
         # self.control = wx.TextCtrl(self, style=wx.TE_MULTILINE)
         self.CreateStatusBar()  # A StatusBar in the bottom of the window
 
-        leftPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
-        leftUpPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
-        leftBotPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
+        leftPan = wx.Panel(self)
+        leftUpPan = wx.Panel(self)
+        leftBotPan = wx.Panel(self)
+
+        leftMidLeftPan = wx.Panel(self)
+        leftMidMidPan = wx.Panel(self)
+        leftMidRightPan = wx.Panel(self)
 
         midLeftPan = wx.Panel(self)
+        midTopPan = wx.Panel(self)
         midPan = wx.Panel(self)
+        midBotPan = wx.Panel(self)
         midRightPan = wx.Panel(self)
 
-        rightPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
-        rightUpPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
-        rightBotPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
+        rightPan = wx.Panel(self)
+        rightUpPan = wx.Panel(self)
+        rightBotPan = wx.Panel(self)
+
+        rightMidLeftPan = wx.Panel(self)
+        rightMidMidPan = wx.Panel(self)
+        rightMidRightPan = wx.Panel(self)
 
         topPan = wx.Panel(self)
         topPanLeft = wx.Panel(self)
@@ -44,14 +54,23 @@ class TaggingView(wx.Frame):
         leftUpPan.SetBackgroundColour("#3498db")
         leftBotPan.SetBackgroundColour("#3498db")
 
+        leftMidLeftPan.SetBackgroundColour("#3498db")
+        leftMidMidPan.SetBackgroundColour("#3498db")
+        leftMidRightPan.SetBackgroundColour("#3498db")
+
         midPan.SetBackgroundColour("#3498db")
         midLeftPan.SetBackgroundColour("#3498db")
         midRightPan.SetBackgroundColour("#3498db")
-
+        midTopPan.SetBackgroundColour("#3498db")
+        midBotPan.SetBackgroundColour("#3498db")
 
         rightPan.SetBackgroundColour("#3498db")
         rightUpPan.SetBackgroundColour("#3498db")
         rightBotPan.SetBackgroundColour("#3498db")
+
+        rightMidLeftPan.SetBackgroundColour("#3498db")
+        rightMidMidPan.SetBackgroundColour("#3498db")
+        rightMidRightPan.SetBackgroundColour("#3498db")
 
         topPan.SetBackgroundColour("#2ecc71")
         topPanLeft.SetBackgroundColour("#2ecc71")
@@ -65,7 +84,7 @@ class TaggingView(wx.Frame):
         botPan4.SetBackgroundColour("#e74c3c")
         botPan5.SetBackgroundColour("#e74c3c")
 
-        PhotoMaxSize = 900
+        PhotoMaxSize = 600
 
         url = "landschaft.png"
         img = wx.Image(url, wx.BITMAP_TYPE_ANY)
@@ -85,21 +104,36 @@ class TaggingView(wx.Frame):
         imageCtrl.SetBitmap(wx.BitmapFromImage(img))
         midPan.Refresh()
 
-        img = wx.Image("arrow_left", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(200,150)
+        img = wx.Image("arrow_left.png", wx.BITMAP_TYPE_ANY)
+        img = img.Scale(120,120)
+        imageCtrl2 = wx.StaticBitmap(leftMidMidPan, wx.ID_ANY,
+                                         wx.BitmapFromImage(img))
+
+        imageCtrl2.SetBitmap(wx.BitmapFromImage(img))
+        leftMidMidPan.Refresh()
+
+        img = wx.Image("arrow_right.png", wx.BITMAP_TYPE_ANY)
+        img = img.Scale(120,120)
+        imageCtrl3 = wx.StaticBitmap(rightMidMidPan, wx.ID_ANY,
+                                         wx.BitmapFromImage(img))
+
+        imageCtrl3.SetBitmap(wx.BitmapFromImage(img))
+        rightPan.Refresh()
 
         topBox = wx.BoxSizer(wx.HORIZONTAL)
         topUnderBox = wx.BoxSizer(wx.VERTICAL)
 
         midBox = wx.BoxSizer(wx.HORIZONTAL)
-        midInnerBox = wx.BoxSizer(wx.HORIZONTAL)
+        midInnerBox = wx.BoxSizer(wx.VERTICAL)
 
         botBox = wx.BoxSizer(wx.HORIZONTAL)
         botUnderBox = wx.BoxSizer(wx.HORIZONTAL)
 
         leftBox = wx.BoxSizer(wx.VERTICAL)
+        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
 
         rightBox = wx.BoxSizer(wx.VERTICAL)
+        rightInnerBox = wx.BoxSizer(wx.HORIZONTAL)
 
         mainBox = wx.BoxSizer(wx.VERTICAL)
 
@@ -117,17 +151,29 @@ class TaggingView(wx.Frame):
         topBox.Add(topUnderBox, 2, wx.EXPAND)
         topBox.Add(topPanRight, 10, wx.EXPAND)
 
+        leftInnerBox.Add(leftMidLeftPan, 100, wx.EXPAND)
+        leftInnerBox.Add(leftMidMidPan, 100, wx.EXPAND)
+        leftInnerBox.Add(leftMidRightPan, 1, wx.EXPAND)
+
+        rightInnerBox.Add(rightMidLeftPan, 30, wx.EXPAND)
+        rightInnerBox.Add(rightMidMidPan,100, wx.EXPAND)
+        rightInnerBox.Add(rightMidRightPan, 100, wx.EXPAND)
+
         leftBox.Add(leftUpPan, 4, wx.EXPAND)
-        leftBox.Add(leftPan, 4, wx.EXPAND)
+        leftBox.Add(leftInnerBox, 4, wx.EXPAND)
         leftBox.Add(leftBotPan, 4, wx.EXPAND)
 
         rightBox.Add(rightUpPan, 4, wx.EXPAND)
-        rightBox.Add(rightPan, 4, wx.EXPAND)
+        rightBox.Add(rightInnerBox, 4, wx.EXPAND)
         rightBox.Add(rightBotPan, 4, wx.EXPAND)
+
+        midInnerBox.Add(midTopPan, 15, wx.EXPAND)
+        midInnerBox.Add(midPan, 100, wx.EXPAND)
+        midInnerBox.Add(midBotPan, 15, wx.EXPAND)
 
         midBox.Add(leftBox, 50, wx.EXPAND)
         midBox.Add(midLeftPan, 10, wx.EXPAND)
-        midBox.Add(midPan, 1, wx.EXPAND)
+        midBox.Add(midInnerBox, 1, wx.EXPAND)
         midBox.Add(midRightPan, 10, wx.EXPAND)
         midBox.Add(rightBox, 50, wx.EXPAND)
 
