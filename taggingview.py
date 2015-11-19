@@ -11,7 +11,7 @@ import itemview
 class TaggingView(wx.Frame):
 
     def __init__(self, parent, title):
-        wx.Frame.__init__(self, parent, title=title, size=(800, 600))
+        wx.Frame.__init__(self, parent, title=title, size=(1280, 900))
         # self.control = wx.TextCtrl(self, style=wx.TE_MULTILINE)
         self.CreateStatusBar()  # A StatusBar in the bottom of the window
 
@@ -19,7 +19,9 @@ class TaggingView(wx.Frame):
         leftUpPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
         leftBotPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
 
-        midPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
+        midLeftPan = wx.Panel(self)
+        midPan = wx.Panel(self)
+        midRightPan = wx.Panel(self)
 
         rightPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
         rightUpPan = wx.Panel(self, style=wx.SUNKEN_BORDER)
@@ -43,6 +45,9 @@ class TaggingView(wx.Frame):
         leftBotPan.SetBackgroundColour("#3498db")
 
         midPan.SetBackgroundColour("#3498db")
+        midLeftPan.SetBackgroundColour("#3498db")
+        midRightPan.SetBackgroundColour("#3498db")
+
 
         rightPan.SetBackgroundColour("#3498db")
         rightUpPan.SetBackgroundColour("#3498db")
@@ -60,7 +65,7 @@ class TaggingView(wx.Frame):
         botPan4.SetBackgroundColour("#e74c3c")
         botPan5.SetBackgroundColour("#e74c3c")
 
-        PhotoMaxSize = 600
+        PhotoMaxSize = 900
 
         url = "landschaft.png"
         img = wx.Image(url, wx.BITMAP_TYPE_ANY)
@@ -80,10 +85,14 @@ class TaggingView(wx.Frame):
         imageCtrl.SetBitmap(wx.BitmapFromImage(img))
         midPan.Refresh()
 
+        img = wx.Image("arrow_left", wx.BITMAP_TYPE_ANY)
+        img = img.Scale(200,150)
+
         topBox = wx.BoxSizer(wx.HORIZONTAL)
         topUnderBox = wx.BoxSizer(wx.VERTICAL)
 
         midBox = wx.BoxSizer(wx.HORIZONTAL)
+        midInnerBox = wx.BoxSizer(wx.HORIZONTAL)
 
         botBox = wx.BoxSizer(wx.HORIZONTAL)
         botUnderBox = wx.BoxSizer(wx.HORIZONTAL)
@@ -116,9 +125,11 @@ class TaggingView(wx.Frame):
         rightBox.Add(rightPan, 4, wx.EXPAND)
         rightBox.Add(rightBotPan, 4, wx.EXPAND)
 
-        midBox.Add(leftBox, 1, wx.EXPAND)
-        midBox.Add(midPan, 5, wx.EXPAND)
-        midBox.Add(rightBox, 1, wx.EXPAND)
+        midBox.Add(leftBox, 50, wx.EXPAND)
+        midBox.Add(midLeftPan, 10, wx.EXPAND)
+        midBox.Add(midPan, 1, wx.EXPAND)
+        midBox.Add(midRightPan, 10, wx.EXPAND)
+        midBox.Add(rightBox, 50, wx.EXPAND)
 
         botUnderBox.Add(botPan1, 1, wx.EXPAND)
         botUnderBox.Add(botPan2, 1, wx.EXPAND)
