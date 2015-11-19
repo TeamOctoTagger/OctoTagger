@@ -37,6 +37,7 @@ class TaggingView(wx.Frame):
         botPan4 = wx.Panel(self, style=wx.SUNKEN_BORDER)
         botPan5 = wx.Panel(self, style=wx.SUNKEN_BORDER)
 
+
         leftPan.SetBackgroundColour("#3498db")
         leftUpPan.SetBackgroundColour("#3498db")
         leftBotPan.SetBackgroundColour("#3498db")
@@ -59,6 +60,26 @@ class TaggingView(wx.Frame):
         botPan4.SetBackgroundColour("#e74c3c")
         botPan5.SetBackgroundColour("#e74c3c")
 
+        PhotoMaxSize = 600
+
+        url = "landschaft.png"
+        img = wx.Image(url, wx.BITMAP_TYPE_ANY)
+        # scale the image, preserving the aspect ratio
+        W = img.GetWidth()
+        H = img.GetHeight()
+        if W > H:
+            NewW = PhotoMaxSize
+            NewH = PhotoMaxSize * H / W
+        else:
+            NewH = PhotoMaxSize
+            NewW = PhotoMaxSize * W / H
+        img = img.Scale(NewW,NewH)
+        imageCtrl = wx.StaticBitmap(midPan, wx.ID_ANY,
+                                         wx.BitmapFromImage(img))
+
+        imageCtrl.SetBitmap(wx.BitmapFromImage(img))
+        midPan.Refresh()
+
         topBox = wx.BoxSizer(wx.HORIZONTAL)
         topUnderBox = wx.BoxSizer(wx.VERTICAL)
 
@@ -73,7 +94,9 @@ class TaggingView(wx.Frame):
 
         mainBox = wx.BoxSizer(wx.VERTICAL)
 
-        text = wx.StaticText(topPan, id=wx.ID_ANY, label="Folder 1 > Folder 2")
+
+
+        text = wx.StaticText(topPan, id=wx.ID_ANY, label="Dateiname")
         font = wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL)
         text.SetFont(font)
 
@@ -81,9 +104,9 @@ class TaggingView(wx.Frame):
         topUnderBox.Add(topPan, 1, wx.EXPAND)
         topUnderBox.Add(topPanBot, 1, wx.EXPAND)
 
-        topBox.Add(topPanLeft, 1, wx.EXPAND)
-        topBox.Add(topUnderBox, 15, wx.EXPAND)
-        topBox.Add(topPanRight, 1, wx.EXPAND)
+        topBox.Add(topPanLeft, 10, wx.EXPAND)
+        topBox.Add(topUnderBox, 2, wx.EXPAND)
+        topBox.Add(topPanRight, 10, wx.EXPAND)
 
         leftBox.Add(leftUpPan, 4, wx.EXPAND)
         leftBox.Add(leftPan, 4, wx.EXPAND)
@@ -108,6 +131,8 @@ class TaggingView(wx.Frame):
         mainBox.Add(topBox, 2, wx.EXPAND)
         mainBox.Add(midBox, 12, wx.EXPAND)
         mainBox.Add(botBox, 4, wx.EXPAND)
+
+
 
         self.SetSizer(mainBox)
         self.Layout()
