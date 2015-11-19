@@ -1,5 +1,7 @@
 from __future__ import division
+import os
 import wx
+import database
 
 THUMBNAIL_MAX_SIZE = 128
 
@@ -15,13 +17,30 @@ class ItemView(wx.Panel):
 
         # selections
 
-        self.selection = []
+        self.items = []
         self.breadcrumbs = []
-        self.lastClicked = None
-        # TODO tree structure of selections
+        self.last_clicked = None
 
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
+
+    def get_current_root(self):
+        root = self.items
+        for breadcrumb in self.breadcrumbs:
+            root = root[breadcrumb]
+        return root
+
+    def update_items(self):
+        self.sizer.Clear()
+        root = self.get_current_root()
+        for item in root:
+            index = len(self.sizer.GetChildren())
+            self.sizer.Add(
+                Item(self, item['name'], item['path']),
+                flag=wx.ALL,
+                border=5,
+                userData=index,
+            )
 
     def OnMouseUp(self, event):
         target = event.GetEventObject()
@@ -31,80 +50,100 @@ class ItemView(wx.Panel):
 
         if not target.GetClientRect().Contains(event.GetPosition()):
             # click dragged outside of target
-            # cancel click
             return
 
-        while not isinstance(target, wx.Panel):
+        while not isinstance(target, Item):
             # clicked on a child of the item
             target = target.GetParent()
 
-        if event.ControlDown() and event.ShiftDown():
-            # add new range selection
-            pass
-        elif event.ControlDown():
-            # add new single selection
-            pass
-        elif event.ShiftDown():
-            # set new range selection
-            pass
+        index = self.sizer.GetItem(target).GetUserData()
+
+        if not (event.ControlDown() or event.ShiftDown()):
+            # clear selection
+            items = self.sizer.GetChildren()
+            for item in items:
+                item.GetWindow().SetSelected(False)
+
+        if event.ShiftDown() and self.last_clicked is not None:
+            items = self.sizer.GetChildren()
+            direction = 1 if self.last_clicked < index else -1
+
+            for i in range(self.last_clicked, index+direction, direction):
+                items[i].GetWindow().SetSelected(
+                    items[self.last_clicked].GetWindow().IsSelected()
+                )
         else:
-            # set new single selection
-            # TODO cache children, also for folder structure
-            # self.lastClicked = self.sizer.GetChildren().index(target)
             target.ToggleSelected()
+
+        self.last_clicked = index
 
     def OnMouseDouble(self, event):
         # TODO open folder or open tagging view
+        self.last_clicked = None
+        self.update_items()
         pass
 
     def SetItems(self, items):
-        # TODO support db items AND fs items
-        for item in items:
-            if type(item) is str:  # item is db uuid
-                pass
-            elif type(item) is dict:  # item is fs reference
-                # item['name'] == filename
-                # item['path'] == location in fs
-                if type(item['path']) is list:  # this is a folder
-                    pass
-                elif type(item['path']) is str:  # this is a file
-                    pass
-                else:
-                    raise TypeError(
-                        'Encountered unsupported path',
-                        item['path']
-                    )
-            else:
-                raise TypeError('Encountered unsupported item', item)
+        files_dir = os.path.join(
+            database.get_current_gallery("directory"),
+            "files"
+        )
 
-            # TODO remove old code
-            itemCtrl = Item(self, item)
-            self.sizer.Add(
-                itemCtrl,
-                flag=wx.ALL,
-                border=5,
-            )
+        def parse_items(items):
+            result = []
+            for item in items:
+                if type(item) is str:  # item is db uuid
+                    result.append({
+                        'name': item,  # TODO get name from db
+                        'path': os.path.join(files_dir, item),
+                    })
+                elif type(item) is dict:  # item is fs reference
+                    # item['name'] == filename
+                    # item['path'] == location in fs or list of items in folder
+                    if type(item['path']) is list:  # folder
+                        result.append({
+                            'name': item['name'],
+                            'path': parse_items(item['path']),
+                        })
+                    elif type(item['path']) is dict:  # file
+                        result.append({
+                            'name': item['name'],
+                            'path': item['path'],
+                        })
+                    else:
+                        raise TypeError('Encountered unsupported path', item)
+                else:
+                    raise TypeError('Encountered unsupported item', item)
+            return result
+
+        self.items = parse_items(items)
+        self.update_items()
 
     def GetSelectedItems(self):
-        selected_items = []
-        for i in range(self.sizer.GetItemCount()):
-            item = self.sizer.GetItem(i)
-            window = item.GetWindow()
-            if window.IsSelected():
-                selected_items.append(item.GetUserData())
-        return selected_items
+        result = []
+        items = self.sizer.GetChildren()
 
-    def UpdateSelection(self):
-        self.sizer.Clear()
+        for item in items:
+            if item.GetWindow().IsSelected():
+                result.append(item.GetWindow().GetPath())
+
+        return result
+
+    def SetSelectedAll(self, selected=True):
+        items = self.sizer.GetChildren()
+        for item in items:
+            item.GetWindow().SetSelected(selected)
 
 
 class Item(wx.Panel):
-    def __init__(self, parent, name):
+    def __init__(self, parent, name, path):
         super(Item, self).__init__(parent)
 
+        self.path = path
         self.selected = False
+        self.is_folder = type(path) is list
 
-        self.SetBackgroundColour(parent.GetBackgroundColour())
+        self.UpdateBackground()
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
@@ -112,8 +151,13 @@ class Item(wx.Panel):
 
         # controls
 
-        image = wx.Image('default/files/' + name)
+        if self.is_folder:
+            image = wx.Image(path)  # FIXME path to image of folder
+        else:
+            image = wx.Image(path)
 
+        # center image
+        # FIXME center image on Windows
         size = image.GetSize()
         if size.GetWidth() > size.GetHeight():
             factor = THUMBNAIL_MAX_SIZE / size.GetWidth()
@@ -155,6 +199,9 @@ class Item(wx.Panel):
         self.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
         self.bitmap.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+
+    def GetPath(self):
+        return self.path
 
     def PropagateEvent(self, event):
         event.ResumePropagation(1)
