@@ -7,7 +7,7 @@ THUMBNAIL_MAX_SIZE = 128
 class ItemView(wx.Panel):
     def __init__(self, parent):
         super(ItemView, self).__init__(parent)
-        self.SetBackgroundColour("#e74c3c")
+        self.SetBackgroundColour("#c1c8c5")
 
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.SetSizer(self.sizer)
@@ -162,7 +162,7 @@ class Item(wx.Panel):
 
     def UpdateBackground(self):
         if self.selected:
-            color = wx.BLUE
+            color = "#3bb1d8"
         else:
             color = self.GetParent().GetBackgroundColour()
         self.SetBackgroundColour(color)
