@@ -6,6 +6,7 @@ import bulk_create_output_folders
 import settings
 import about
 import itemview
+import database
 
 
 class MainWindow(wx.Frame):
@@ -139,6 +140,8 @@ class MainWindow(wx.Frame):
                   item_edit_output_folder)
         self.Bind(wx.EVT_MENU, self.OnBulkCreate,
                   item_create_bulk_output_folders)
+        self.Bind(wx.EVT_MENU, self.OnClearCurrentDatabase,
+                  toolResetCurrentDatabase)
         self.Bind(wx.EVT_MENU, self.OnClearData, item_clear_data)
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
@@ -215,6 +218,23 @@ class MainWindow(wx.Frame):
         dlg = bulk_create_output_folders.BulkCreateOutputFolders(self)
         dlg.ShowModal()
         dlg.Destroy()
+
+    def OnClearCurrentDatabase(self, e):
+
+            dlg_export = wx.MessageBox(
+                (
+                    'This will remove all tags from the current database.'
+                    'Do you want to continue?'
+                ),
+                'Export saved files?',
+                 wx.CANCEL | wx.OK | wx.OK_DEFAULT | wx.ICON_QUESTION
+            )
+            print dlg_export
+            if dlg_export == 4:
+                print "Export files now"
+                
+            elif dlg_export == 16:
+                print "Canceled."
 
     def OnClearData(self, e):
         dlg_clear = wx.MessageBox(
