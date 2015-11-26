@@ -105,7 +105,7 @@ class TaggingView(wx.Frame):
         midPan.Refresh()
 
         img = wx.Image("arrow_left.png", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(120,120)
+        img = img.Scale(80,80)
         imageCtrl2 = wx.StaticBitmap(leftMidMidPan, wx.ID_ANY,
                                          wx.BitmapFromImage(img))
 
@@ -113,7 +113,7 @@ class TaggingView(wx.Frame):
         leftMidMidPan.Refresh()
 
         img = wx.Image("arrow_right.png", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(120,120)
+        img = img.Scale(80,80)
         imageCtrl3 = wx.StaticBitmap(rightMidMidPan, wx.ID_ANY,
                                          wx.BitmapFromImage(img))
 
