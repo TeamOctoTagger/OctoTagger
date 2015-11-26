@@ -7,18 +7,15 @@ import os
 from os.path import expanduser
 
 
-class EditOutputFolder(wx.Dialog):
+class CreateOutputFolder(wx.Dialog):
 
     """Extending Dialog"""
 
     def __init__(self, *args, **kw):
-        super(EditOutputFolder, self).__init__(*args, **kw)
-
-        for arg in args:
-            self.folder_id = arg
+        super(CreateOutputFolder, self).__init__(*args, **kw)
 
         self.SetSize((450, 350))
-        self.SetTitle("Edit Output Folder")
+        self.SetTitle("Create Output Folder")
         self.init_ui()
 
     def init_ui(self):
@@ -128,9 +125,9 @@ class EditOutputFolder(wx.Dialog):
             border=5
         )
 
-        self.rb_hardlinks = wx.RadioButton(panel, -1, "Hardlinks")
+        rb_hardlinks = wx.RadioButton(panel, -1, "Hardlinks")
         sbox_advanced.Add(
-            self.rb_hardlinks,
+            rb_hardlinks,
             flag=wx.LEFT | wx.BOTTOM,
             border=5
         )
@@ -146,43 +143,6 @@ class EditOutputFolder(wx.Dialog):
         sizer.AddGrowableCol(1)
         sizer.AddGrowableRow(4)
         panel.SetSizer(sizer)
-
-        self.init_data()
-
-    def init_data(self):
-
-        # Define variables
-        name = expression = location = ""
-        softlink = True
-
-        # Get connection
-        gallery_conn = database.get_current_gallery("connection")
-        cursor = gallery_conn.cursor()
-
-        # Get data
-        query_folder = "SELECT name, expression, location, use_softlink FROM folder WHERE pk_id = %d" % (self.folder_id)
-        cursor.execute(query_folder)
-        result = cursor.fetchall()
-        for properties in result:
-            name = properties[0]
-            expression = properties[1]
-            location = os.path.normpath(properties[2])
-            if properties[3] == 1:
-                softlink = True
-            else:
-                softlink = False
-
-        # Set data in UI
-        self.tc_name.SetValue(name)
-        self.tc_expression.SetValue(expression)
-        self.tc_directory.SetValue(location)
-
-        if softlink:
-            self.rb_softlinks.SetValue(True)
-            self.rb_hardlinks.SetValue(False)
-        else:
-            self.rb_softlinks.SetValue(False)
-            self.rb_hardlinks.SetValue(True)
 
     def on_browse(self, e):
         dlg_browse = wx.DirDialog(self,
@@ -233,6 +193,8 @@ class EditOutputFolder(wx.Dialog):
 
             return
 
+        self.Destroy()
+
         if(not os.path.exists(dir) or not os.path.isdir(dir)):
             wx.MessageBox(
                 'Invalid location!',
@@ -241,18 +203,15 @@ class EditOutputFolder(wx.Dialog):
 
             return
 
-        # Get connection
+        # Create database entry
 
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 
-        # Update database entry
+        query_insert_folder = "INSERT INTO folder(name, location, expression, use_softlink) VALUES (\'%s\', \'%s\', \'%s\', %d)" % (name, dir, expression, softlink)
 
-        query_insert_folder = "UPDATE folder SET name = \'%s\', location = \'%s\', expression = \'%s\', use_softlink = %d WHERE pk_id = %d" % (name, dir, expression, softlink, self.folder_id)
         cursor.execute(query_insert_folder)
         gallery_conn.commit()
-
-        self.Destroy()
 
     def on_close(self, e):
         self.Destroy()
