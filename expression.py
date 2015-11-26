@@ -161,6 +161,3 @@ def parse(string):
     query = parse_or(tokens)
 
     return query
-
-if __name__ == '__main__':
-    print(parse("alpha bear / -sun (cloud=2 / -cloud=1..3)"))
