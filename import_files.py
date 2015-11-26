@@ -10,13 +10,12 @@ import os
 import shutil
 import uuid
 import wx
-import sqlite3
 import database
 
-def import_files(files, db):
+def import_files(files):
     # Get gallery connection
-    gallery = database.get_current_gallery("connection")
-    cursor = gallery.cursor()
+    gallery_conn = database.get_current_gallery("connection")
+    cursor = gallery_conn.cursor()
     dest_dir = os.path.join(database.get_current_gallery("directory"), "files")
 
     for file in files:
@@ -43,4 +42,4 @@ def import_files(files, db):
                 wx.OK | wx.ICON_EXCLAMATION
             ).ShowModal()
 
-    gallery.commit()
+    gallery_conn.commit()

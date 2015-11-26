@@ -1,12 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import wx
 import edit_output_folder
+import create_output_folder
 import bulk_create_output_folders
 import settings
 import about
 import itemview
 import database
+import new_database
+import import_files
 
 
 class MainWindow(wx.Frame):
@@ -21,18 +25,45 @@ class MainWindow(wx.Frame):
         toolmenu = wx.Menu()
         viewmenu = wx.Menu()
         helpmenu = wx.Menu()
+        menu_open_database = wx.Menu()
+
+        # Create list of galleries
+        gallery_list = []
+
+        # Get system connection
+
+        sys_conn = database.get_sys_db()
+        cursor = sys_conn.cursor()
+
+        # Select galleries
+        query_galleries = "SELECT pk_id, name FROM gallery"
+        cursor.execute(query_galleries)
+        galleries = cursor.fetchall()
+        for gallery in galleries:
+            gallery_list.append(gallery)
+
+        print gallery_list
+
+        # Open Database menu
+        for gallery in gallery_list:
+            menu_open_database.Append(
+                100 + gallery[0],
+                gallery[1],
+                "Switch to database: " + gallery[1]
+            )
+
+        # TODO
+        # Make switching functional
+        # Make list updateable
 
         # FILEMENU
         fileNewDatabase = filemenu.Append(
             1,
-            "&New Database",
+            "&New database",
             " Create a new database"
         )
-        fileOpenDatabase = filemenu.Append(
-            2,
-            "&Open Database",
-            " Open an existing database"
-        )
+        filemenu.AppendMenu(wx.ID_ANY, "&Open database", menu_open_database)
+
         filemenu.AppendSeparator()
         fileImportFiles = filemenu.Append(
             3,
@@ -44,7 +75,7 @@ class MainWindow(wx.Frame):
             "&Create output folders",
             "Automatically create an output folder for each tag"
         )
-        item_edit_output_folder = filemenu.Append(
+        item_create_output_folder = filemenu.Append(
             wx.ID_ANY,
             "&Create advanced output folder",
             "Dialog for editing a specific output folder"
@@ -76,10 +107,10 @@ class MainWindow(wx.Frame):
             "&Reset current database",
             "Reset the current database"
         )
-        item_clear_data = toolmenu.Append(
+        tool_delete_database = toolmenu.Append(
             wx.ID_ANY,
-            "&Clear all data",
-            "Removes all databases and clears all private data."
+            "&Delete current database",
+            "Completely removes the current database."
         )
         toolExportDatabase = toolmenu.Append(
             10,
@@ -134,15 +165,16 @@ class MainWindow(wx.Frame):
         self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
 
         # Set events
+        self.Bind(wx.EVT_MENU, self.on_new_database, fileNewDatabase)
+        self.Bind(wx.EVT_MENU, self.on_reset, toolResetCurrentDatabase)
+        self.Bind(wx.EVT_MENU, self.on_delete, tool_delete_database)
+        self.Bind(wx.EVT_MENU, self.on_import, fileImportFiles)
         self.Bind(wx.EVT_MENU, self.OnManual, helpManual)
         self.Bind(wx.EVT_MENU, self.OnExit, fileExit)
-        self.Bind(wx.EVT_MENU, self.OnEditOutputFolder,
-                  item_edit_output_folder)
+        self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder,
+                  item_create_output_folder)
         self.Bind(wx.EVT_MENU, self.OnBulkCreate,
                   item_create_bulk_output_folders)
-        self.Bind(wx.EVT_MENU, self.OnClearCurrentDatabase,
-                  toolResetCurrentDatabase)
-        self.Bind(wx.EVT_MENU, self.OnClearData, item_clear_data)
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
@@ -170,31 +202,84 @@ class MainWindow(wx.Frame):
         leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
         leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
-
-        leftBox.Add(leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftBox.Add(leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftBox.Add(
+            leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftBox.Add(
+            leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
         mainBox.Add(leftBox, 1, wx.EXPAND)
         mainBox.Add(mainPan, 3, wx.EXPAND)
-
-        mainPan.SetItems([
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-        ])
 
         self.SetSizer(mainBox)
         self.Layout()
         self.Show(True)
 
     # define events
+
+    def on_new_database(self, e):
+        dlg = new_database.NewDatabase(self)
+        dlg.ShowModal()
+
+    def on_reset(self, e):
+        dlg_export = wx.MessageBox(
+            (
+                'This will remove all tags and output folders '
+                'from the database \"%s\". Your files will remain. '
+                'Do you want to continue?'
+                % (database.get_current_gallery("name"))
+            ),
+            'Warning',
+            wx.CANCEL | wx.OK | wx.CANCEL_DEFAULT | wx.ICON_WARNING
+        )
+        print dlg_export
+        if dlg_export == 4:
+            database.reset_gallery(database.get_current_gallery("id"))
+
+        elif dlg_export == 16:
+            print "Canceled."
+
+    def on_delete(self, e):
+        dlg_clear = wx.MessageBox(
+            (
+                'Are you sure you want to remove the database \"%s\"? '
+                'This will remove all data associated with the database.'
+                % (database.get_current_gallery("name"))
+            ),
+            'Information',
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION
+        )
+        # If the user continues, ask if he wants to export his files.
+        if dlg_clear == 2:
+            dlg_export = wx.MessageBox(
+                (
+                    'Do you want to export your saved files? '
+                    'Click "Yes" if you want to keep your files, '
+                    'and "No" if you want to delete them. '
+                    '\n\nWARNING: You will not be able to retrieve '
+                    'your files again if you select "No"!'
+                ),
+                'Export saved files?',
+                wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
+            )
+            if dlg_export == 2:
+                print "Export files now"
+                # TODO: Export files!
+
+            # Delete everything now!
+            database.delete_gallery(database.get_current_gallery("id"))
+
+        else:
+            print "Aborted clearing of files"
+
+    def on_import(self, e):
+        dlg_import = wx.FileDialog(self, "Import files", "", "",
+                                   "All files (*.*)|*.*",
+                                   wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST)
+
+        if dlg_import.ShowModal() == wx.ID_CANCEL:
+            print "Import aborted."
+        else:
+            import_files.import_files(dlg_import.GetPaths())
 
     def OnManual(self, e):
         dlg = wx.MessageDialog(
@@ -209,8 +294,8 @@ class MainWindow(wx.Frame):
     def OnExit(self, e):
         self.Close(True)
 
-    def OnEditOutputFolder(self, e):
-        dlg = edit_output_folder.EditOutputFolder(self)
+    def OnCreateOutputFolder(self, e):
+        dlg = create_output_folder.CreateOutputFolder(self)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -219,53 +304,6 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
-    def OnClearCurrentDatabase(self, e):
-
-            dlg_export = wx.MessageBox(
-                (
-                    'This will remove all tags from the current database.'
-                    'Do you want to continue?'
-                ),
-                'Export saved files?',
-                 wx.CANCEL | wx.OK | wx.OK_DEFAULT | wx.ICON_QUESTION
-            )
-            print dlg_export
-            if dlg_export == 4:
-                print "Export files now"
-                
-            elif dlg_export == 16:
-                print "Canceled."
-
-    def OnClearData(self, e):
-        dlg_clear = wx.MessageBox(
-            (
-                'Are you sure you want to clear all data? '
-                'This will remove all your databases.'
-            ),
-            'Information',
-            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION
-        )
-        # If the user continues, ask if he wants to export his files.
-        if dlg_clear == 2:
-            dlg_export = wx.MessageBox(
-                (
-                    'Do you want to export your saved files? '
-                    'Click "Yes" if you want to keep your files, '
-                    'and "No" if you want to delete them. '
-                    '\n\nWARNING: You will not be able to retrieve '
-                    'your files again if you click "No"!'
-                ),
-                'Export saved files?',
-                wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
-            )
-            if dlg_export == 2:
-                print "Export files now"
-            else:
-                print "Delete files now"
-
-        else:
-            print "Aborted clearing of files"
-
     def OnSettings(self, e):
         dlg = settings.Settings(self)
         dlg.ShowModal()
@@ -273,6 +311,7 @@ class MainWindow(wx.Frame):
 
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
+
 
 app = wx.App(False)
 frame = MainWindow(None, "Octotagger")
@@ -305,4 +344,23 @@ app = wx.PySimpleApp()
 frame = MyFrame(None, -1, "Sizer Test")
 frame.Show()
 app.MainLoop()
+
+
+
+        mainPan.SetItems([
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+            "92996172-60c0-47e1-b447-d0bbeb9eab97",
+        ])
+
+
 '''
+
+# TODO: Solve issue with displayed items (see above)

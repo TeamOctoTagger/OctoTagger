@@ -130,10 +130,32 @@ def switch_gallery(id):
 
 def reset_gallery(id):
     gallery_conn = get_gallery(id, "connection")
-    cursor = gallery_conn.cursor
+    cursor = gallery_conn.cursor()
 
     query_file_has_tag = "DELETE FROM file_has_tag"
     query_tag = "DELETE FROM tag"
-    query_folder = "DELETE FROM tag"
-    # TODO
-    # FIX ME
+    query_folder = "DELETE FROM folder"
+
+    cursor.execute(query_file_has_tag)
+    cursor.execute(query_tag)
+    cursor.execute(query_folder)
+
+    gallery_conn.commit()
+
+
+def delete_gallery(id):
+
+    # Get gallery location
+    directory = get_gallery(id, "directory")
+
+    # Delete directory
+    shutil.rmtree(directory)
+
+    # Get sys connection
+    sys_conn = get_sys_db()
+    cursor = sys_conn.cursor()
+
+    # Remove gallery from system db
+    query_remove_gallery = "DELETE FROM gallery WHERE pk_id = %d" % id
+    cursor.execute(query_remove_gallery)
+    sys_conn.commit()
