@@ -7,7 +7,8 @@ create table folder(
     pk_id integer primary key autoincrement,
     name text,
     location text,
-    expression text);
+    expression text,
+    use_softlink boolean);
 
 create table file(
     pk_id integer primary key autoincrement,

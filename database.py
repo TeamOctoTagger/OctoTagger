@@ -11,27 +11,21 @@ import shutil
 
 sys_db_file = './system.db'
 
+
 def get_sys_db():
     return sqlite3.connect(sys_db_file)
 
-def get_current_gallery(property):
 
+def get_gallery(gallery_id, property):
     # Variable for storing the current gallery's properties.
-    gallery_id = 1;
     gallery_location = ''
     gallery_name = ''
 
-    # Select the current gallery from the system database.
+    # Get gallery's data.
     sys_db = get_sys_db()
     cursor = sys_db.cursor()
-    query_current_gallery = "SELECT current_db FROM settings"
-    cursor.execute(query_current_gallery)
-    result = cursor.fetchall()
-    for setting in result:
-        gallery_id = setting[0]
-
-    # Get gallery's data.
     query_gallery_location = "SELECT location, name FROM gallery WHERE pk_id = %d" % (gallery_id)
+
     cursor.execute(query_gallery_location)
     result = cursor.fetchall()
     for gallery in result:
@@ -56,6 +50,25 @@ def get_current_gallery(property):
         return sqlite3.connect(os.path.normpath(os.path.join(gallery_location, gallery_name, (gallery_name + '.db'))))
     else:
         return False
+
+
+def get_current_gallery(property):
+
+    gallery_id = -1
+
+    # Select the current gallery from the system database.
+    sys_db = get_sys_db()
+    cursor = sys_db.cursor()
+    query_current_gallery = "SELECT current_db FROM settings"
+    cursor.execute(query_current_gallery)
+    result = cursor.fetchall()
+    for setting in result:
+        gallery_id = setting[0]
+
+    # Close connection
+    sys_db.commit()
+
+    return get_gallery(gallery_id, property)
 
 
 def create_gallery(name, location):
@@ -84,16 +97,19 @@ def create_gallery(name, location):
         return -1
 
     # Insert new gallery into sys connection
-    query_insert_gallery = "INSERT INTO gallery(name, location) VALUES (\'%s\', \'%s\')" % (name, location)
+    query_insert_gallery = "INSERT INTO gallery(name, location) VALUES (\'%s\', \'%s\')" % (
+        name, location)
     cursor.execute(query_insert_gallery)
     sys_db.commit()
 
     # Return new gallery's ID
-    query_id = "SELECT pk_id FROM gallery WHERE name = \'%s\' AND location=\'%s\'" % (name, location)
+    query_id = "SELECT pk_id FROM gallery WHERE name = \'%s\' AND location=\'%s\'" % (
+        name, location)
     cursor.execute(query_id)
     result = cursor.fetchall()
     for gallery in result:
         return gallery[0]
+
 
 def switch_gallery(id):
     # Get sys connection
@@ -110,3 +126,36 @@ def switch_gallery(id):
         return True
     else:
         return False
+
+
+def reset_gallery(id):
+    gallery_conn = get_gallery(id, "connection")
+    cursor = gallery_conn.cursor()
+
+    query_file_has_tag = "DELETE FROM file_has_tag"
+    query_tag = "DELETE FROM tag"
+    query_folder = "DELETE FROM folder"
+
+    cursor.execute(query_file_has_tag)
+    cursor.execute(query_tag)
+    cursor.execute(query_folder)
+
+    gallery_conn.commit()
+
+
+def delete_gallery(id):
+
+    # Get gallery location
+    directory = get_gallery(id, "directory")
+
+    # Delete directory
+    shutil.rmtree(directory)
+
+    # Get sys connection
+    sys_conn = get_sys_db()
+    cursor = sys_conn.cursor()
+
+    # Remove gallery from system db
+    query_remove_gallery = "DELETE FROM gallery WHERE pk_id = %d" % id
+    cursor.execute(query_remove_gallery)
+    sys_conn.commit()

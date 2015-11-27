@@ -12,8 +12,11 @@ db_file = os.path.normpath(os.path.join(db, "default.db"))
 conn = sqlite3.connect(db_file)
 cursor = conn.cursor()
 
+
 class BulkCreateOutputFolders(wx.Dialog):
+
     """Extending Dialog"""
+
     def __init__(self, *args, **kw):
         super(BulkCreateOutputFolders, self).__init__(*args, **kw)
 
@@ -144,25 +147,30 @@ class BulkCreateOutputFolders(wx.Dialog):
             self.lb.Check(cb, False)
 
     def OnBrowse(self, e):
-        print "Nein"
-    	dlg_select_dir = wx.DirDialog(self, "Choose a location in which the output folders will be generated", expanduser("~"))
+        dlg_select_dir = wx.DirDialog(
+            self, "Choose a location in which the output folders will be generated", expanduser("~"))
 
-    	if dlg_select_dir.ShowModal() == wx.ID_CANCEL:
-    		print "Selection aborted."
-    	else:
+        if dlg_select_dir.ShowModal() == wx.ID_CANCEL:
+            print "Selection aborted."
+        else:
             self.tc_directory.SetValue(dlg_select_dir.GetPath())
 
     def OnOk(self, e):
-        register_folders(self.tc_directory.GetValue(), self.lb.GetCheckedStrings())
+        register_folders(
+            self.tc_directory.GetValue(), self.lb.GetCheckedStrings())
 
     def OnClose(self, e):
         self.Destroy()
 
 # Inserts the folders into the database
+
+
 def register_folders(location, tags):
     location = os.path.normpath(location)
     for tag in tags:
-        query_insert_folder = "INSERT INTO folder(name, location, expression) VALUES (\'%s\', \'%s\', \'%s\')"%(tag, location, tag)
+        query_insert_folder = "INSERT INTO folder(name, location, expression) VALUES (\'%s\', \'%s\', \'%s\')" % (
+            tag, location, tag)
         cursor.execute(query_insert_folder)
 
     conn.commit()
+    # TODO: Symlink type!
