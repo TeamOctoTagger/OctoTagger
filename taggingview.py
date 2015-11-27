@@ -11,7 +11,7 @@ import itemview
 class TaggingView(wx.Frame):
 
     def __init__(self, parent, title):
-        wx.Frame.__init__(self, parent, title=title, size=(1280, 900))
+        wx.Frame.__init__(self, parent, title=title, size=(900, 550))
         # self.control = wx.TextCtrl(self, style=wx.TE_MULTILINE)
         self.CreateStatusBar()  # A StatusBar in the bottom of the window
 
@@ -42,13 +42,13 @@ class TaggingView(wx.Frame):
         topPanTop = wx.Panel(self)
         topPanBot = wx.Panel(self)
         topPanRight = wx.Panel(self)
-
+        '''
         botPan1 = wx.Panel(self, style=wx.SUNKEN_BORDER)
         botPan2 = wx.Panel(self, style=wx.SUNKEN_BORDER)
         botPan3 = wx.Panel(self, style=wx.SUNKEN_BORDER)
         botPan4 = wx.Panel(self, style=wx.SUNKEN_BORDER)
         botPan5 = wx.Panel(self, style=wx.SUNKEN_BORDER)
-
+        '''
 
         leftPan.SetBackgroundColour("#3498db")
         leftUpPan.SetBackgroundColour("#3498db")
@@ -77,14 +77,15 @@ class TaggingView(wx.Frame):
         topPanTop.SetBackgroundColour("#2ecc71")
         topPanBot.SetBackgroundColour("#2ecc71")
         topPanRight.SetBackgroundColour("#2ecc71")
-
+        '''
         botPan1.SetBackgroundColour("#e74c3c")
         botPan2.SetBackgroundColour("#e74c3c")
         botPan3.SetBackgroundColour("#e74c3c")
         botPan4.SetBackgroundColour("#e74c3c")
         botPan5.SetBackgroundColour("#e74c3c")
+        '''
 
-        PhotoMaxSize = 600
+        PhotoMaxSize = 900
 
         url = "landschaft.png"
         img = wx.Image(url, wx.BITMAP_TYPE_ANY)
@@ -105,20 +106,20 @@ class TaggingView(wx.Frame):
         midPan.Refresh()
 
         img = wx.Image("arrow_left.png", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(80,80)
-        imageCtrl2 = wx.StaticBitmap(leftMidMidPan, wx.ID_ANY,
+        img = img.Scale(40,40)
+        imageCtrl2 = wx.StaticBitmap(topPanLeft, wx.ID_ANY,
                                          wx.BitmapFromImage(img))
 
         imageCtrl2.SetBitmap(wx.BitmapFromImage(img))
-        leftMidMidPan.Refresh()
+        topPanLeft.Refresh()
 
         img = wx.Image("arrow_right.png", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(80,80)
-        imageCtrl3 = wx.StaticBitmap(rightMidMidPan, wx.ID_ANY,
+        img = img.Scale(40,40)
+        imageCtrl3 = wx.StaticBitmap(topPanRight, wx.ID_ANY,
                                          wx.BitmapFromImage(img))
 
         imageCtrl3.SetBitmap(wx.BitmapFromImage(img))
-        rightPan.Refresh()
+        topPanRight.Refresh()
 
         topBox = wx.BoxSizer(wx.HORIZONTAL)
         topUnderBox = wx.BoxSizer(wx.VERTICAL)
@@ -126,8 +127,8 @@ class TaggingView(wx.Frame):
         midBox = wx.BoxSizer(wx.HORIZONTAL)
         midInnerBox = wx.BoxSizer(wx.VERTICAL)
 
-        botBox = wx.BoxSizer(wx.HORIZONTAL)
-        botUnderBox = wx.BoxSizer(wx.HORIZONTAL)
+        #botBox = wx.BoxSizer(wx.HORIZONTAL)
+        #botUnderBox = wx.BoxSizer(wx.HORIZONTAL)
 
         leftBox = wx.BoxSizer(wx.VERTICAL)
         leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
@@ -137,26 +138,24 @@ class TaggingView(wx.Frame):
 
         mainBox = wx.BoxSizer(wx.VERTICAL)
 
-
-
         text = wx.StaticText(topPan, id=wx.ID_ANY, label="Dateiname")
         font = wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL)
         text.SetFont(font)
 
-        topUnderBox.Add(topPanTop, 1, wx.EXPAND)
+        #topUnderBox.Add(topPanTop, 0.5, wx.EXPAND)
         topUnderBox.Add(topPan, 1, wx.EXPAND)
-        topUnderBox.Add(topPanBot, 1, wx.EXPAND)
+        #topUnderBox.Add(topPanBot, 1, wx.EXPAND)
 
         topBox.Add(topPanLeft, 10, wx.EXPAND)
-        topBox.Add(topUnderBox, 2, wx.EXPAND)
+        topBox.Add(topUnderBox, 2000, wx.EXPAND|wx.ALIGN_CENTER)
         topBox.Add(topPanRight, 10, wx.EXPAND)
 
         leftInnerBox.Add(leftMidLeftPan, 100, wx.EXPAND)
-        leftInnerBox.Add(leftMidMidPan, 100, wx.EXPAND)
+        leftInnerBox.Add(leftMidMidPan, 100, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL)
         leftInnerBox.Add(leftMidRightPan, 1, wx.EXPAND)
 
         rightInnerBox.Add(rightMidLeftPan, 30, wx.EXPAND)
-        rightInnerBox.Add(rightMidMidPan,100, wx.EXPAND)
+        rightInnerBox.Add(rightMidMidPan,100, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL)
         rightInnerBox.Add(rightMidRightPan, 100, wx.EXPAND)
 
         leftBox.Add(leftUpPan, 4, wx.EXPAND)
@@ -167,16 +166,17 @@ class TaggingView(wx.Frame):
         rightBox.Add(rightInnerBox, 4, wx.EXPAND)
         rightBox.Add(rightBotPan, 4, wx.EXPAND)
 
-        midInnerBox.Add(midTopPan, 15, wx.EXPAND)
-        midInnerBox.Add(midPan, 100, wx.EXPAND)
-        midInnerBox.Add(midBotPan, 15, wx.EXPAND)
+        midInnerBox.Add(midTopPan, 5, wx.EXPAND)
+        midInnerBox.Add(midPan, 100, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL)
+        midInnerBox.Add(midBotPan, 5, wx.EXPAND)
 
-        midBox.Add(leftBox, 50, wx.EXPAND)
+        #midBox.Add(leftBox, 50, wx.EXPAND)
         midBox.Add(midLeftPan, 10, wx.EXPAND)
-        midBox.Add(midInnerBox, 1, wx.EXPAND)
+        midBox.Add(midInnerBox, 10, wx.EXPAND)
         midBox.Add(midRightPan, 10, wx.EXPAND)
-        midBox.Add(rightBox, 50, wx.EXPAND)
+        #midBox.Add(rightBox, 50, wx.EXPAND)
 
+        '''
         botUnderBox.Add(botPan1, 1, wx.EXPAND)
         botUnderBox.Add(botPan2, 1, wx.EXPAND)
         botUnderBox.Add(botPan3, 1, wx.EXPAND)
@@ -184,10 +184,10 @@ class TaggingView(wx.Frame):
         botUnderBox.Add(botPan5, 1, wx.EXPAND)
 
         botBox.Add(botUnderBox, 10, wx.EXPAND)
-
+        '''
         mainBox.Add(topBox, 2, wx.EXPAND)
         mainBox.Add(midBox, 12, wx.EXPAND)
-        mainBox.Add(botBox, 4, wx.EXPAND)
+        #mainBox.Add(botBox, 4, wx.EXPAND)
 
 
 
