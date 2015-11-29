@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import wx
-import edit_output_folder
+#import edit_output_folder
 import create_output_folder
 import bulk_create_output_folders
 import settings
@@ -17,76 +17,49 @@ class MainWindow(wx.Frame):
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title, size=(1280, 720))
-        # self.control = wx.TextCtrl(self, style=wx.TE_MULTILINE)
-        self.CreateStatusBar()  # A StatusBar in the bottom of the window
+
+        # A StatusBar in the bottom of the window
+        self.CreateStatusBar()
 
         # Setting up the menus.
-        filemenu = wx.Menu()
+        self.filemenu = wx.Menu()
         toolmenu = wx.Menu()
         viewmenu = wx.Menu()
         helpmenu = wx.Menu()
-        menu_open_database = wx.Menu()
-
-        # Create list of galleries
-        gallery_list = []
-
-        # Get system connection
-
-        sys_conn = database.get_sys_db()
-        cursor = sys_conn.cursor()
-
-        # Select galleries
-        query_galleries = "SELECT pk_id, name FROM gallery"
-        cursor.execute(query_galleries)
-        galleries = cursor.fetchall()
-        for gallery in galleries:
-            gallery_list.append(gallery)
-
-        print gallery_list
-
-        # Open Database menu
-        for gallery in gallery_list:
-            menu_open_database.Append(
-                100 + gallery[0],
-                gallery[1],
-                "Switch to database: " + gallery[1]
-            )
-
-        # TODO
-        # Make switching functional
-        # Make list updateable
+        menu_open_database = self.get_gallery_menu()
 
         # FILEMENU
-        fileNewDatabase = filemenu.Append(
+        fileNewDatabase = self.filemenu.Append(
             1,
             "&New database",
             " Create a new database"
         )
-        filemenu.AppendMenu(wx.ID_ANY, "&Open database", menu_open_database)
+        self.filemenu.AppendMenu(wx.ID_ANY,
+                                 "&Open gallery", menu_open_database)
 
-        filemenu.AppendSeparator()
-        fileImportFiles = filemenu.Append(
+        self.filemenu.AppendSeparator()
+        fileImportFiles = self.filemenu.Append(
             3,
             "&Import Files",
             "Import files and folders into the program"
         )
-        item_create_bulk_output_folders = filemenu.Append(
+        item_create_bulk_output_folders = self.filemenu.Append(
             wx.ID_ANY,
             "&Create output folders",
             "Automatically create an output folder for each tag"
         )
-        item_create_output_folder = filemenu.Append(
+        item_create_output_folder = self.filemenu.Append(
             wx.ID_ANY,
             "&Create advanced output folder",
             "Dialog for editing a specific output folder"
         )
-        filemenu.AppendSeparator()
-        item_settings = filemenu.Append(
+        self.filemenu.AppendSeparator()
+        item_settings = self.filemenu.Append(
             wx.ID_ANY,
             "&Settings",
             "OctoTagger settings."
         )
-        fileExit = filemenu.Append(
+        fileExit = self.filemenu.Append(
             wx.ID_EXIT, "&Exit", " Terminate the program")
 
         # TOOLMENU
@@ -155,7 +128,7 @@ class MainWindow(wx.Frame):
         # Creating the menubar
         menuBar = wx.MenuBar()
         # Adding the "filemenu" to the MenuBar
-        menuBar.Append(filemenu, "&File")
+        menuBar.Append(self.filemenu, "&File")
         # Adding the "toolmenu" to the MenuBar
         menuBar.Append(toolmenu, "&Tools")
         # Adding the "viewmenu" to the MenuBar
@@ -177,6 +150,9 @@ class MainWindow(wx.Frame):
                   item_create_bulk_output_folders)
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
+
+        for gallery in menu_open_database.GetMenuItems():
+            self.Bind(wx.EVT_MENU, self.on_switch_gallery, gallery)
 
         leftUpperPan = wx.Panel(self)
         leftUpperPan1 = wx.Panel(self)
@@ -210,15 +186,63 @@ class MainWindow(wx.Frame):
         mainBox.Add(leftBox, 1, wx.EXPAND)
         mainBox.Add(mainPan, 3, wx.EXPAND)
 
+        # Check current gallery
+
+        current_gallery = database.get_current_gallery("id")
+        for gallery in menu_open_database.GetMenuItems():
+            if gallery.GetId() - 100 == current_gallery:
+                gallery.Check()
+
         self.SetSizer(mainBox)
         self.Layout()
         self.Show(True)
 
     # define events
 
+    def get_gallery_menu(self):
+        menu = wx.Menu()
+
+        # Create list of galleries
+        gallery_list = []
+
+        # Get system connection
+
+        sys_conn = database.get_sys_db()
+        cursor = sys_conn.cursor()
+
+        # Select galleries
+        query_galleries = "SELECT pk_id, name FROM gallery"
+        cursor.execute(query_galleries)
+        result = cursor.fetchall()
+        for gallery in result:
+            gallery_list.append(gallery)
+
+        # Open Database menu
+        for gallery in gallery_list:
+            item = wx.MenuItem(
+                id=100 + gallery[0],
+                text=gallery[1],
+                help="Switch to database: " + gallery[1],
+                kind=wx.ITEM_RADIO
+            )
+            menu.AppendItem(item)
+
+        return menu
+
+    def update_gallery_menu(self):
+        self.filemenu.DeleteItem(
+            self.filemenu.FindItemByPosition(1))
+        self.filemenu.InsertMenu(1, wx.ID_ANY, "Open gallery",
+                                 self.get_gallery_menu(), "")
+
+    def on_switch_gallery(self, e):
+        gallery_id = e.GetId() - 100
+        database.switch_gallery(gallery_id)
+
     def on_new_database(self, e):
         dlg = new_database.NewDatabase(self)
         dlg.ShowModal()
+        self.update_gallery_menu()
 
     def on_reset(self, e):
         dlg_export = wx.MessageBox(
@@ -270,6 +294,8 @@ class MainWindow(wx.Frame):
 
         else:
             print "Aborted clearing of files"
+
+        self.update_gallery_menu()
 
     def on_import(self, e):
         dlg_import = wx.FileDialog(self, "Import files", "", "",

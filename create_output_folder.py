@@ -5,6 +5,7 @@ import wx
 import database
 import os
 from os.path import expanduser
+import create_folders
 
 
 class CreateOutputFolder(wx.Dialog):
@@ -125,9 +126,9 @@ class CreateOutputFolder(wx.Dialog):
             border=5
         )
 
-        rb_hardlinks = wx.RadioButton(panel, -1, "Hardlinks")
+        self.rb_hardlinks = wx.RadioButton(panel, -1, "Hardlinks")
         sbox_advanced.Add(
-            rb_hardlinks,
+            self.rb_hardlinks,
             flag=wx.LEFT | wx.BOTTOM,
             border=5
         )
@@ -143,6 +144,32 @@ class CreateOutputFolder(wx.Dialog):
         sizer.AddGrowableCol(1)
         sizer.AddGrowableRow(4)
         panel.SetSizer(sizer)
+
+        self.init_symlink()
+
+    def init_symlink(self):
+        # Init variable
+        use_softlink = True
+
+        # Get connection
+        sys_conn = database.get_sys_db()
+        cursor = sys_conn.cursor()
+
+        # Get setting
+        query_symlink = "SELECT use_softlink FROM settings"
+        cursor.execute(query_symlink)
+        result = cursor.fetchall()
+        for setting in result:
+            if result[0] == 1:
+                use_softlink = True
+            else:
+                use_softlink = False
+
+        print use_softlink
+
+        # Apply setting to UI
+        self.rb_softlinks.SetValue(use_softlink)
+        self.rb_hardlinks.SetValue(not use_softlink)
 
     def on_browse(self, e):
         dlg_browse = wx.DirDialog(self,
@@ -208,10 +235,16 @@ class CreateOutputFolder(wx.Dialog):
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 
-        query_insert_folder = "INSERT INTO folder(name, location, expression, use_softlink) VALUES (\'%s\', \'%s\', \'%s\', %d)" % (name, dir, expression, softlink)
+        query_insert_folder = ("INSERT INTO folder"
+                               "(name, location, expression, use_softlink) "
+                               "VALUES (\'%s\', \'%s\', \'%s\', %d)" %
+                               (name, dir, expression, softlink))
 
         cursor.execute(query_insert_folder)
         gallery_conn.commit()
+
+        # Create folders
+        create_folders.create_folders()
 
     def on_close(self, e):
         self.Destroy()
