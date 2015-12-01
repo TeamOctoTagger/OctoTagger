@@ -84,31 +84,49 @@ class ItemView(wx.Panel):
         pass
 
     def SetItems(self, items):
-        files_dir = os.path.join(
-            database.get_current_gallery("directory"),
-            "files"
-        )
+        '''
+        Sets which items are to be displayed. Pass ids from database as int or
+        paths from filesystem as str.
+        '''
+
+        connection = database.get_current_gallery('connection').cursor()
 
         def parse_items(items):
             result = []
             for item in items:
-                if type(item) is str:  # item is db uuid
+                if type(item) is int:  # item is db id
+                    connection.execute(
+                        (
+                            'SELECT file_name, location '
+                            'FROM file '
+                            'LEFT JOIN thumbnail '
+                            'ON fk_thumbnail_id=thumbnail.pk_id '
+                            'WHERE file.pk_id=:id '
+                        ),
+                        {
+                            'id': item,
+                        }
+                    )
+                    row = connection.fetchone()
+                    if row is None:
+                        raise ValueError('Item not found in database', item)
+                    print(row)
                     result.append({
-                        'name': item,  # TODO get name from db
-                        'path': os.path.join(files_dir, item),
+                        'name': row[0],
+                        'path': row[1],  # TODO absolute thumbnail location
                     })
-                elif type(item) is dict:  # item is fs reference
-                    # item['name'] == filename
-                    # item['path'] == location in fs or list of items in folder
-                    if type(item['path']) is list:  # folder
+                elif type(item) is str:  # item is fs path
+                    # TODO check if file or folder
+                    name = os.path.basename(item)
+                    if os.path.isdir(item):
                         result.append({
-                            'name': item['name'],
-                            'path': parse_items(item['path']),
+                            'name': name,
+                            'path': parse_items(item),
                         })
-                    elif type(item['path']) is dict:  # file
+                    elif os.path.isfile(item):
                         result.append({
-                            'name': item['name'],
-                            'path': item['path'],
+                            'name': name,
+                            'path': item,
                         })
                     else:
                         raise TypeError('Encountered unsupported path', item)
