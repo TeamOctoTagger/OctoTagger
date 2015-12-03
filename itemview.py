@@ -6,14 +6,24 @@ import database
 THUMBNAIL_SIZE = (128, 128)
 
 
-class ItemView(wx.Panel):
+class ItemView(wx.ScrolledWindow):
 
     def __init__(self, parent):
-        super(ItemView, self).__init__(parent)
+        super(ItemView, self).__init__(
+            parent,
+            style=wx.VSCROLL,
+        )
         self.SetBackgroundColour("#c1c8c5")
 
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.SetSizer(self.sizer)
+
+        # scrollbars
+
+        # TODO include text and border
+        self.SetScrollRate(THUMBNAIL_SIZE[0], THUMBNAIL_SIZE[1])
+
+        self.Bind(wx.EVT_SIZE, self.OnSize)
 
         # selections
 
@@ -52,6 +62,15 @@ class ItemView(wx.Panel):
                 userData=index,
             )
         self.Layout()
+        self.AdjustScrollbars()
+
+    def OnSize(self, event):
+        # prevent horizontal overflow
+        size = self.GetSize()
+        vsize = self.GetVirtualSize()
+        self.SetVirtualSize((size[0], vsize[1]))
+
+        event.Skip()
 
     def OnMouseUp(self, event):
         target = event.GetEventObject()
