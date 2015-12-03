@@ -14,7 +14,6 @@ class ItemView(wx.Panel):
 
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.SetSizer(self.sizer)
-        self.SetAutoLayout(True)
 
         # selections
 
@@ -33,7 +32,17 @@ class ItemView(wx.Panel):
 
     def update_items(self):
         self.sizer.Clear(True)
+
         root = self.get_current_root()
+        if len(self.breadcrumbs) > 0:
+            self.sizer.Add(
+                Item(self, '..', root['path']),
+                flag=wx.ALL,
+                border=5,
+                userData=-1,
+            )
+        if type(root) is dict:
+            root = root['path']
         for item in root:
             index = len(self.sizer.GetChildren())
             self.sizer.Add(
@@ -80,10 +89,28 @@ class ItemView(wx.Panel):
         self.last_clicked = index
 
     def OnMouseDouble(self, event):
-        # TODO open folder or open tagging view
+        target = event.GetEventObject()
+
+        if target is self:
+            # clicked outside of any item
+            return
+
+        if not target.GetClientRect().Contains(event.GetPosition()):
+            # click dragged outside of target
+            return
+
+        while not isinstance(target, Item):
+            # clicked on a child of the item
+            target = target.GetParent()
+
+        index = self.sizer.GetItem(target).GetUserData()
+        if index == -1:
+            self.breadcrumbs.pop()
+        else:
+            self.breadcrumbs.append(index)
+
         self.last_clicked = None
         self.update_items()
-        pass
 
     def SetItems(self, items):
         '''
@@ -92,7 +119,6 @@ class ItemView(wx.Panel):
         '''
 
         connection = database.get_current_gallery('connection').cursor()
-        self.items = []
 
         def parse_items(items):
             result = []
@@ -120,7 +146,6 @@ class ItemView(wx.Panel):
                         'path': file_path,  # TODO absolute thumbnail location
                     })
                 elif type(item) is str:  # item is fs path
-                    # TODO check if file or folder
                     name = os.path.basename(item)
                     if os.path.isdir(item):
                         result.append({
