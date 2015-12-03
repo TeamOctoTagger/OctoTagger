@@ -3,7 +3,7 @@ import os
 import wx
 import database
 
-THUMBNAIL_MAX_SIZE = 128
+THUMBNAIL_SIZE = (128, 128)
 
 
 class ItemView(wx.Panel):
@@ -137,13 +137,29 @@ class ItemView(wx.Panel):
                     row = connection.fetchone()
                     if row is None:
                         raise ValueError('Item not found in database', item)
-                    print(row)
-                    file_path = os.path.join(
+
+                    thumbnail_path = os.path.join(
                         database.get_current_gallery("directory"),
-                        "files", row[1])
+                        "thumbnails",
+                        row[1],
+                    )
+                    if not os.path.isfile(thumbnail_path):
+                        # no thumbnail available
+                        file_path = os.path.join(
+                            database.get_current_gallery("directory"),
+                            "files",
+                            row[1],
+                        )
+
+                        from PIL import Image
+                        image = Image.open(file_path).convert()
+                        image.thumbnail(THUMBNAIL_SIZE)
+                        image.save(thumbnail_path, "JPEG")
+
                     result.append({
                         'name': row[0],
-                        'path': file_path,  # TODO absolute thumbnail location
+                        'path': item,
+                        'image': thumbnail_path,
                     })
                 elif type(item) is str:  # item is fs path
                     name = os.path.basename(item)
@@ -189,34 +205,19 @@ class Item(wx.Panel):
 
         self.path = path
         self.selected = False
-        self.is_folder = type(path) is list
 
         self.UpdateBackground()
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
-        self.SetAutoLayout(True)
 
         # controls
 
-        if self.is_folder:
-            image = wx.Image(path)  # FIXME path to image of folder
-        else:
-            image = wx.Image(path)
-
-        # center image
-        # FIXME center image on Windows
-        size = image.GetSize()
-        if size.GetWidth() > size.GetHeight():
-            factor = THUMBNAIL_MAX_SIZE / size.GetWidth()
-            pos = (0, (THUMBNAIL_MAX_SIZE - image.GetHeight() * factor) / 2)
-        else:
-            factor = THUMBNAIL_MAX_SIZE / size.GetHeight()
-            pos = ((THUMBNAIL_MAX_SIZE - image.GetWidth() * factor) / 2, 0)
-        size.Scale(factor, factor)
-        image.Rescale(size.GetWidth(), size.GetHeight())
-        image.Resize((THUMBNAIL_MAX_SIZE, THUMBNAIL_MAX_SIZE), pos)
-
+        image = wx.Image(image)
+        image.Resize(THUMBNAIL_SIZE, (
+            (THUMBNAIL_SIZE[0] - image.GetWidth()) / 2,
+            (THUMBNAIL_SIZE[1] - image.GetHeight()) / 2,
+        ))
         self.bitmap = wx.StaticBitmap(
             self,
             bitmap=image.ConvertToBitmap()
@@ -241,6 +242,8 @@ class Item(wx.Panel):
             flag=wx.ALL | wx.EXPAND | wx.ALIGN_CENTER,
             border=5
         )
+
+        self.Layout()
 
         # events
 
