@@ -9,6 +9,7 @@ import settings
 import about
 import itemview
 import database
+import tagging
 import new_database
 import import_files
 
@@ -151,40 +152,60 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
+        # TODO: Replace this with custom event!
+        self.Bind(wx.EVT_MENU, self.select_tags, toolIntegrityCheck)
+
         for gallery in menu_open_database.GetMenuItems():
             self.Bind(wx.EVT_MENU, self.on_switch_gallery, gallery)
 
-        leftUpperPan = wx.Panel(self)
-        leftUpperPan1 = wx.Panel(self)
-        leftUpperPan2 = wx.Panel(self)
-        leftUpperPan3 = wx.Panel(self)
-        usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
+        # Tag and Context Pane
+
         self.mainPan = itemview.ItemView(self)
-        leftLowerPan = wx.Panel(self)
-        leftUpperPan.SetBackgroundColour("#3498db")
-        leftUpperPan1.SetBackgroundColour("#3498db")
-        leftUpperPan2.SetBackgroundColour("#3498db")
-        leftUpperPan3.SetBackgroundColour("#3498db")
-        leftLowerPan.SetBackgroundColour("#2ecc71")
-        mainBox = wx.BoxSizer(wx.HORIZONTAL)
-        leftBox = wx.BoxSizer(wx.VERTICAL)
-        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
-        leftInnerBox2 = wx.BoxSizer(wx.VERTICAL)
 
-        leftInnerBox2.Add(leftUpperPan3, 1, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox2.Add(leftUpperPan, 8, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        main_box = wx.BoxSizer(wx.HORIZONTAL)
+        left_panel = wx.Panel(self, style=wx.SIMPLE_BORDER, size=(300, -1))
+        left_panel_sz = wx.BoxSizer(wx.VERTICAL)
+        left_panel.SetSizer(left_panel_sz)
 
-        leftInnerBox.Add(leftUpperPan1, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        tag_panel = wx.Panel(self)
+        tag_panel_sz = wx.BoxSizer(wx.VERTICAL)
+        tag_panel.SetSizer(tag_panel_sz)
 
-        leftBox.Add(
-            leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftBox.Add(
-            leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        query_field_panel = wx.Panel(self, size=(-1, 50))
+        query_field_panel_sz = wx.BoxSizer(wx.HORIZONTAL)
+        query_field_panel.SetSizer(query_field_panel_sz)
 
-        mainBox.Add(leftBox, 1, wx.EXPAND)
-        mainBox.Add(self.mainPan, 3, wx.EXPAND)
+        tag_list_panel = wx.Panel(self)
+        tag_list_panel_sz = wx.BoxSizer(wx.VERTICAL)
+        tag_list_panel.SetSizer(tag_list_panel_sz)
+
+        tag_panel_sz.Add(query_field_panel, 0, wx.EXPAND | wx.ALIGN_CENTER)
+        tag_panel_sz.Add(tag_list_panel, 1, wx.EXPAND)
+
+        self.query_field = wx.TextCtrl(
+            query_field_panel,
+            -1,
+            "")
+
+        query_field_panel_sz.Add(
+            self.query_field,
+            1,
+            wx.LEFT | wx.RIGHT | wx.UP,
+            20)
+
+        context_panel = wx.Panel(self, size=(-1, 150))
+
+        left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
+        left_panel_sz.Add(context_panel, 0, wx.EXPAND)
+
+        main_box.Add(left_panel, 0, wx.EXPAND)
+        main_box.Add(self.mainPan, 1, wx.EXPAND)
+
+        # Tag Pane
+
+        self.lb_pan = tag_list_panel
+        self.lb_sz = tag_list_panel_sz
+        self.update_tag_list()
 
         # Check current gallery
 
@@ -193,13 +214,13 @@ class MainWindow(wx.Frame):
             if gallery.GetId() - 100 == current_gallery:
                 gallery.Check()
 
-        self.SetSizer(mainBox)
+        self.SetSizer(main_box)
         self.Layout()
         self.Show(True)
 
         self.start_overview()
 
-    # define events
+    # Define events
 
     def start_overview(self):
         # Set items to all current database items
@@ -220,6 +241,62 @@ class MainWindow(wx.Frame):
         # Set items
         self.mainPan.SetItems(items)
         self.Refresh()
+        self.Layout()
+
+    def select_tags(self, e):
+        items = self.mainPan.GetSelectedItems()
+        for checkbox in self.lb.GetChecked():
+            self.lb.Check(checkbox, False)
+
+        selected_tags = []
+
+        checkboxes = self.lb.GetStrings()
+        print checkboxes
+        for item in items:
+
+            tags = []
+            for tag in tagging.get_tags(item):
+                tags.append(tagging.tag_id_to_name(tag))
+
+            for tag in tags:
+                print tag
+                if tag in checkboxes:
+                    selected_tags.append(tag)
+
+        self.lb.SetCheckedStrings(selected_tags)
+
+    def tag_selected(self, e):
+        items = self.mainPan.GetSelectedItems()
+        tags = self.lb.GetCheckedStrings()
+
+        for item in items:
+            for tag in tags:
+                tagging.tag_file(item, tag)
+
+        # TODO: Untag files
+
+    def update_tag_list(self):
+
+        # Remove previous list
+        self.lb_pan.DestroyChildren()
+
+        tags = tagging.get_all_tags()
+
+        self.lb = wx.CheckListBox(
+            self.lb_pan,
+            wx.ID_ANY,
+            (0, 0),
+            (-1, -1),
+            tags
+        )
+
+        self.lb_sz.Add(
+            self.lb,
+            1,
+            wx.EXPAND | wx.ALL,
+            20)
+
+        self.Bind(wx.EVT_CHECKLISTBOX, self.tag_selected, self.lb)
         self.Layout()
 
     def get_gallery_menu(self):
@@ -262,11 +339,13 @@ class MainWindow(wx.Frame):
         gallery_id = e.GetId() - 100
         database.switch_gallery(gallery_id)
         self.start_overview()
+        self.update_tag_list()
 
     def on_new_database(self, e):
         dlg = new_database.NewDatabase(self)
         dlg.ShowModal()
         self.update_gallery_menu()
+        self.update_tag_list()
 
     def on_reset(self, e):
         dlg_export = wx.MessageBox(
@@ -366,3 +445,40 @@ class MainWindow(wx.Frame):
 app = wx.App(False)
 frame = MainWindow(None, "OctoTagger")
 app.MainLoop()
+
+'''
+
+
+        leftUpperPan = wx.Panel(self)
+        leftUpperPan1 = wx.Panel(self)
+        leftUpperPan2 = wx.Panel(self)
+        leftUpperPan3 = wx.Panel(self)
+        usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
+        self.mainPan = itemview.ItemView(self)
+        leftLowerPan = wx.Panel(self)
+        leftUpperPan.SetBackgroundColour("#3498db")
+        leftUpperPan1.SetBackgroundColour("#3498db")
+        leftUpperPan2.SetBackgroundColour("#3498db")
+        leftUpperPan3.SetBackgroundColour("#3498db")
+        leftLowerPan.SetBackgroundColour("#2ecc71")
+        mainBox = wx.BoxSizer(wx.HORIZONTAL)
+        leftBox = wx.BoxSizer(wx.VERTICAL)
+        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
+        leftInnerBox2 = wx.BoxSizer(wx.VERTICAL)
+
+        leftInnerBox2.Add(leftUpperPan3, 1, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox2.Add(leftUpperPan, 8, flag=wx.EXPAND | wx.ALIGN_CENTER)
+
+        leftInnerBox.Add(leftUpperPan1, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+
+        leftBox.Add(
+            leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftBox.Add(
+            leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
+
+        mainBox.Add(leftBox, 1, wx.EXPAND)
+        mainBox.Add(self.mainPan, 3, wx.EXPAND)
+
+'''
