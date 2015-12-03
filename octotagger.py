@@ -159,7 +159,7 @@ class MainWindow(wx.Frame):
         leftUpperPan2 = wx.Panel(self)
         leftUpperPan3 = wx.Panel(self)
         usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
-        mainPan = itemview.ItemView(self)
+        self.mainPan = itemview.ItemView(self)
         leftLowerPan = wx.Panel(self)
         leftUpperPan.SetBackgroundColour("#3498db")
         leftUpperPan1.SetBackgroundColour("#3498db")
@@ -184,7 +184,7 @@ class MainWindow(wx.Frame):
             leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
         mainBox.Add(leftBox, 1, wx.EXPAND)
-        mainBox.Add(mainPan, 3, wx.EXPAND)
+        mainBox.Add(self.mainPan, 3, wx.EXPAND)
 
         # Check current gallery
 
@@ -197,7 +197,30 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.Show(True)
 
+        self.start_overview()
+
     # define events
+
+    def start_overview(self):
+        # Set items to all current database items
+        # Get gallery connection
+
+        gallery_conn = database.get_current_gallery("connection")
+        cursor = gallery_conn.cursor()
+
+        query_items = "SELECT pk_id FROM file"
+        cursor.execute(query_items)
+        result = cursor.fetchall()
+
+        items = []
+
+        for item in result:
+            items.append(item[0])
+
+        # Set items
+        self.mainPan.SetItems(items)
+        self.Refresh()
+        self.Layout()
 
     def get_gallery_menu(self):
         menu = wx.Menu()
@@ -238,6 +261,7 @@ class MainWindow(wx.Frame):
     def on_switch_gallery(self, e):
         gallery_id = e.GetId() - 100
         database.switch_gallery(gallery_id)
+        self.start_overview()
 
     def on_new_database(self, e):
         dlg = new_database.NewDatabase(self)
@@ -340,53 +364,5 @@ class MainWindow(wx.Frame):
 
 
 app = wx.App(False)
-frame = MainWindow(None, "Octotagger")
+frame = MainWindow(None, "OctoTagger")
 app.MainLoop()
-
-'''
-
-import wx
-
-class MyFrame(wx.Frame):
-   def __init__(self, parent, ID, title):
-       wx.Frame.__init__(self, parent, ID, title, size=(300, 250))
-
-       panel1 = wx.Panel(self,-1, style=wx.SUNKEN_BORDER)
-       panel2 = wx.Panel(self,-1, style=wx.SUNKEN_BORDER)
-
-       panel1.SetBackgroundColour("BLUE")
-       panel2.SetBackgroundColour("RED")
-
-       box = wx.BoxSizer(wx.HORIZONTAL)
-       box.Add(panel1, 2, wx.EXPAND)
-       box.Add(panel2, 1, wx.EXPAND)
-
-       self.SetAutoLayout(True)
-       self.SetSizer(box)
-       self.Layout()
-
-
-app = wx.PySimpleApp()
-frame = MyFrame(None, -1, "Sizer Test")
-frame.Show()
-app.MainLoop()
-
-
-
-        mainPan.SetItems([
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-        ])
-
-
-'''
-
-# TODO: Solve issue with displayed items (see above)

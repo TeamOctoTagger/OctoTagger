@@ -5,6 +5,7 @@ import wx
 import database
 import os
 from os.path import expanduser
+import create_folders
 
 
 class EditOutputFolder(wx.Dialog):
@@ -252,6 +253,10 @@ class EditOutputFolder(wx.Dialog):
         cursor.execute(query_insert_folder)
         gallery_conn.commit()
 
+        # Create folders
+        create_folders.create_folders()
+
+        # Exit
         self.Destroy()
 
     def on_close(self, e):

@@ -7,6 +7,7 @@ THUMBNAIL_MAX_SIZE = 128
 
 
 class ItemView(wx.Panel):
+
     def __init__(self, parent):
         super(ItemView, self).__init__(parent)
         self.SetBackgroundColour("#c1c8c5")
@@ -31,7 +32,7 @@ class ItemView(wx.Panel):
         return root
 
     def update_items(self):
-        self.sizer.Clear()
+        self.sizer.Clear(True)
         root = self.get_current_root()
         for item in root:
             index = len(self.sizer.GetChildren())
@@ -41,6 +42,7 @@ class ItemView(wx.Panel):
                 border=5,
                 userData=index,
             )
+        self.Layout()
 
     def OnMouseUp(self, event):
         target = event.GetEventObject()
@@ -68,7 +70,7 @@ class ItemView(wx.Panel):
             items = self.sizer.GetChildren()
             direction = 1 if self.last_clicked < index else -1
 
-            for i in range(self.last_clicked, index+direction, direction):
+            for i in range(self.last_clicked, index + direction, direction):
                 items[i].GetWindow().SetSelected(
                     items[self.last_clicked].GetWindow().IsSelected()
                 )
@@ -90,6 +92,7 @@ class ItemView(wx.Panel):
         '''
 
         connection = database.get_current_gallery('connection').cursor()
+        self.items = []
 
         def parse_items(items):
             result = []
@@ -97,10 +100,8 @@ class ItemView(wx.Panel):
                 if type(item) is int:  # item is db id
                     connection.execute(
                         (
-                            'SELECT file_name, location '
+                            'SELECT file_name, uuid '
                             'FROM file '
-                            'LEFT JOIN thumbnail '
-                            'ON fk_thumbnail_id=thumbnail.pk_id '
                             'WHERE file.pk_id=:id '
                         ),
                         {
@@ -111,9 +112,12 @@ class ItemView(wx.Panel):
                     if row is None:
                         raise ValueError('Item not found in database', item)
                     print(row)
+                    file_path = os.path.join(
+                        database.get_current_gallery("directory"),
+                        "files", row[1])
                     result.append({
                         'name': row[0],
-                        'path': row[1],  # TODO absolute thumbnail location
+                        'path': file_path,  # TODO absolute thumbnail location
                     })
                 elif type(item) is str:  # item is fs path
                     # TODO check if file or folder
@@ -154,6 +158,7 @@ class ItemView(wx.Panel):
 
 
 class Item(wx.Panel):
+
     def __init__(self, parent, name, path):
         super(Item, self).__init__(parent)
 
@@ -179,10 +184,10 @@ class Item(wx.Panel):
         size = image.GetSize()
         if size.GetWidth() > size.GetHeight():
             factor = THUMBNAIL_MAX_SIZE / size.GetWidth()
-            pos = (0, (THUMBNAIL_MAX_SIZE - image.GetHeight()*factor)/2)
+            pos = (0, (THUMBNAIL_MAX_SIZE - image.GetHeight() * factor) / 2)
         else:
             factor = THUMBNAIL_MAX_SIZE / size.GetHeight()
-            pos = ((THUMBNAIL_MAX_SIZE - image.GetWidth()*factor)/2, 0)
+            pos = ((THUMBNAIL_MAX_SIZE - image.GetWidth() * factor) / 2, 0)
         size.Scale(factor, factor)
         image.Rescale(size.GetWidth(), size.GetHeight())
         image.Resize((THUMBNAIL_MAX_SIZE, THUMBNAIL_MAX_SIZE), pos)
