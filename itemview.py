@@ -36,7 +36,7 @@ class ItemView(wx.Panel):
         root = self.get_current_root()
         if len(self.breadcrumbs) > 0:
             self.sizer.Add(
-                Item(self, '..', root['path']),
+                Item(self, root['path'], "..", root['image']),
                 flag=wx.ALL,
                 border=5,
                 userData=-1,
@@ -46,7 +46,7 @@ class ItemView(wx.Panel):
         for item in root:
             index = len(self.sizer.GetChildren())
             self.sizer.Add(
-                Item(self, item['name'], item['path']),
+                Item(self, item['path'], item['name'], item['image']),
                 flag=wx.ALL,
                 border=5,
                 userData=index,
@@ -167,11 +167,11 @@ class ItemView(wx.Panel):
                         result.append({
                             'name': name,
                             'path': parse_items(item),
+                            # TODO generic folder icon
                         })
                     elif os.path.isfile(item):
                         result.append({
-                            'name': name,
-                            'path': item,
+                            'image': item,
                         })
                     else:
                         raise TypeError('Encountered unsupported path', item)
@@ -200,7 +200,7 @@ class ItemView(wx.Panel):
 
 class Item(wx.Panel):
 
-    def __init__(self, parent, name, path):
+    def __init__(self, parent, path, name, image):
         super(Item, self).__init__(parent)
 
         self.path = path
