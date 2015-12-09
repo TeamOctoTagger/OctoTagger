@@ -1,9 +1,12 @@
 from __future__ import division
 import os
 import wx
+import wx.lib.newevent
 import database
 
 THUMBNAIL_SIZE = (128, 128)
+
+SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
 
 
 class ItemView(wx.ScrolledWindow):
@@ -106,6 +109,8 @@ class ItemView(wx.ScrolledWindow):
             target.ToggleSelected()
 
         self.last_clicked = index
+
+        wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
 
     def OnMouseDouble(self, event):
         target = event.GetEventObject()
