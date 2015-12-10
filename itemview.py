@@ -1,8 +1,11 @@
 from __future__ import division
+
+import thumbnail
+import database
+
 import os
 import wx
 import wx.lib.newevent
-import database
 
 THUMBNAIL_SIZE = (128, 128)
 
@@ -150,7 +153,7 @@ class ItemView(wx.ScrolledWindow):
                 if type(item) is int:  # item is db id
                     connection.execute(
                         (
-                            'SELECT file_name, uuid '
+                            'SELECT file_name '
                             'FROM file '
                             'WHERE file.pk_id=:id '
                         ),
@@ -162,28 +165,10 @@ class ItemView(wx.ScrolledWindow):
                     if row is None:
                         raise ValueError('Item not found in database', item)
 
-                    thumbnail_path = os.path.join(
-                        database.get_current_gallery("directory"),
-                        "thumbnails",
-                        row[1],
-                    )
-                    if not os.path.isfile(thumbnail_path):
-                        # no thumbnail available
-                        file_path = os.path.join(
-                            database.get_current_gallery("directory"),
-                            "files",
-                            row[1],
-                        )
-
-                        from PIL import Image
-                        image = Image.open(file_path).convert()
-                        image.thumbnail(THUMBNAIL_SIZE)
-                        image.save(thumbnail_path, "JPEG")
-
                     result.append({
                         'name': row[0],
                         'path': item,
-                        'image': thumbnail_path,
+                        'image': thumbnail.get_thumbnail(item),
                     })
                 elif type(item) is str:  # item is fs path
                     name = os.path.basename(item)
@@ -191,11 +176,13 @@ class ItemView(wx.ScrolledWindow):
                         result.append({
                             'name': name,
                             'path': parse_items(item),
-                            # TODO generic folder icon
+                            'image': thumbnail.GENERIC['folder'],
                         })
                     elif os.path.isfile(item):
                         result.append({
-                            'image': item,
+                            'name': name,
+                            'path': item,
+                            'image': thumbnail.get_thumbnail(item),
                         })
                     else:
                         raise TypeError('Encountered unsupported path', item)
@@ -246,6 +233,7 @@ class Item(wx.Panel):
             self,
             bitmap=image.ConvertToBitmap()
         )
+
         self.sizer.Add(
             self.bitmap,
             flag=wx.ALL,
