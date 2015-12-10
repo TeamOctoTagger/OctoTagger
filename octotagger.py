@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import wx
-import edit_output_folder
+#import edit_output_folder
 import create_output_folder
 import bulk_create_output_folders
 import settings
 import about
 import itemview
 import database
+import tagging
 import new_database
 import import_files
 
@@ -17,76 +18,49 @@ class MainWindow(wx.Frame):
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title, size=(1280, 720))
-        # self.control = wx.TextCtrl(self, style=wx.TE_MULTILINE)
-        self.CreateStatusBar()  # A StatusBar in the bottom of the window
+
+        # A StatusBar in the bottom of the window
+        self.CreateStatusBar()
 
         # Setting up the menus.
-        filemenu = wx.Menu()
+        self.filemenu = wx.Menu()
         toolmenu = wx.Menu()
         viewmenu = wx.Menu()
         helpmenu = wx.Menu()
-        menu_open_database = wx.Menu()
-
-        # Create list of galleries
-        gallery_list = []
-
-        # Get system connection
-
-        sys_conn = database.get_sys_db()
-        cursor = sys_conn.cursor()
-
-        # Select galleries
-        query_galleries = "SELECT pk_id, name FROM gallery"
-        cursor.execute(query_galleries)
-        galleries = cursor.fetchall()
-        for gallery in galleries:
-            gallery_list.append(gallery)
-
-        print gallery_list
-
-        # Open Database menu
-        for gallery in gallery_list:
-            menu_open_database.Append(
-                100 + gallery[0],
-                gallery[1],
-                "Switch to database: " + gallery[1]
-            )
-
-        # TODO
-        # Make switching functional
-        # Make list updateable
+        menu_open_database = self.get_gallery_menu()
 
         # FILEMENU
-        fileNewDatabase = filemenu.Append(
+        fileNewDatabase = self.filemenu.Append(
             1,
             "&New database",
             " Create a new database"
         )
-        filemenu.AppendMenu(wx.ID_ANY, "&Open database", menu_open_database)
+        self.filemenu.AppendMenu(wx.ID_ANY,
+                                 "&Open gallery", menu_open_database)
 
-        filemenu.AppendSeparator()
-        fileImportFiles = filemenu.Append(
+        self.filemenu.AppendSeparator()
+        fileImportFiles = self.filemenu.Append(
             3,
             "&Import Files",
             "Import files and folders into the program"
         )
-        item_create_bulk_output_folders = filemenu.Append(
+        item_create_bulk_output_folders = self.filemenu.Append(
             wx.ID_ANY,
             "&Create output folders",
             "Automatically create an output folder for each tag"
         )
-        item_create_output_folder = filemenu.Append(
+        item_create_output_folder = self.filemenu.Append(
             wx.ID_ANY,
             "&Create advanced output folder",
             "Dialog for editing a specific output folder"
         )
-        filemenu.AppendSeparator()
-        item_settings = filemenu.Append(
+        self.filemenu.AppendSeparator()
+        item_settings = self.filemenu.Append(
             wx.ID_ANY,
             "&Settings",
             "OctoTagger settings."
         )
-        fileExit = filemenu.Append(
+        fileExit = self.filemenu.Append(
             wx.ID_EXIT, "&Exit", " Terminate the program")
 
         # TOOLMENU
@@ -155,7 +129,7 @@ class MainWindow(wx.Frame):
         # Creating the menubar
         menuBar = wx.MenuBar()
         # Adding the "filemenu" to the MenuBar
-        menuBar.Append(filemenu, "&File")
+        menuBar.Append(self.filemenu, "&File")
         # Adding the "toolmenu" to the MenuBar
         menuBar.Append(toolmenu, "&Tools")
         # Adding the "viewmenu" to the MenuBar
@@ -178,47 +152,200 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
-        leftUpperPan = wx.Panel(self)
-        leftUpperPan1 = wx.Panel(self)
-        leftUpperPan2 = wx.Panel(self)
-        leftUpperPan3 = wx.Panel(self)
-        usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
-        mainPan = itemview.ItemView(self)
-        leftLowerPan = wx.Panel(self)
-        leftUpperPan.SetBackgroundColour("#3498db")
-        leftUpperPan1.SetBackgroundColour("#3498db")
-        leftUpperPan2.SetBackgroundColour("#3498db")
-        leftUpperPan3.SetBackgroundColour("#3498db")
-        leftLowerPan.SetBackgroundColour("#2ecc71")
-        mainBox = wx.BoxSizer(wx.HORIZONTAL)
-        leftBox = wx.BoxSizer(wx.VERTICAL)
-        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
-        leftInnerBox2 = wx.BoxSizer(wx.VERTICAL)
+        # TODO: Replace this with custom event!
+        self.Bind(wx.EVT_MENU, self.select_tags, toolIntegrityCheck)
 
-        leftInnerBox2.Add(leftUpperPan3, 1, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox2.Add(leftUpperPan, 8, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        for gallery in menu_open_database.GetMenuItems():
+            self.Bind(wx.EVT_MENU, self.on_switch_gallery, gallery)
 
-        leftInnerBox.Add(leftUpperPan1, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        # Tag and Context Pane
 
-        leftBox.Add(
-            leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftBox.Add(
-            leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        self.mainPan = itemview.ItemView(self)
 
-        mainBox.Add(leftBox, 1, wx.EXPAND)
-        mainBox.Add(mainPan, 3, wx.EXPAND)
+        main_box = wx.BoxSizer(wx.HORIZONTAL)
+        left_panel = wx.Panel(self, style=wx.SIMPLE_BORDER, size=(300, -1))
+        left_panel_sz = wx.BoxSizer(wx.VERTICAL)
+        left_panel.SetSizer(left_panel_sz)
 
-        self.SetSizer(mainBox)
+        tag_panel = wx.Panel(self)
+        tag_panel_sz = wx.BoxSizer(wx.VERTICAL)
+        tag_panel.SetSizer(tag_panel_sz)
+
+        query_field_panel = wx.Panel(self, size=(-1, 50))
+        query_field_panel_sz = wx.BoxSizer(wx.HORIZONTAL)
+        query_field_panel.SetSizer(query_field_panel_sz)
+
+        tag_list_panel = wx.Panel(self)
+        tag_list_panel_sz = wx.BoxSizer(wx.VERTICAL)
+        tag_list_panel.SetSizer(tag_list_panel_sz)
+
+        tag_panel_sz.Add(query_field_panel, 0, wx.EXPAND | wx.ALIGN_CENTER)
+        tag_panel_sz.Add(tag_list_panel, 1, wx.EXPAND)
+
+        self.query_field = wx.TextCtrl(
+            query_field_panel,
+            -1,
+            "")
+
+        query_field_panel_sz.Add(
+            self.query_field,
+            1,
+            wx.LEFT | wx.RIGHT | wx.UP,
+            20)
+
+        context_panel = wx.Panel(self, size=(-1, 150))
+
+        left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
+        left_panel_sz.Add(context_panel, 0, wx.EXPAND)
+
+        main_box.Add(left_panel, 0, wx.EXPAND)
+        main_box.Add(self.mainPan, 1, wx.EXPAND)
+
+        # Tag Pane
+
+        self.lb_pan = tag_list_panel
+        self.lb_sz = tag_list_panel_sz
+        self.update_tag_list()
+
+        # Check current gallery
+
+        current_gallery = database.get_current_gallery("id")
+        for gallery in menu_open_database.GetMenuItems():
+            if gallery.GetId() - 100 == current_gallery:
+                gallery.Check()
+
+        self.SetSizer(main_box)
         self.Layout()
         self.Show(True)
 
-    # define events
+        self.start_overview()
+
+    # Define events
+
+    def start_overview(self):
+        # Set items to all current database items
+        # Get gallery connection
+
+        gallery_conn = database.get_current_gallery("connection")
+        cursor = gallery_conn.cursor()
+
+        query_items = "SELECT pk_id FROM file"
+        cursor.execute(query_items)
+        result = cursor.fetchall()
+
+        items = []
+
+        for item in result:
+            items.append(item[0])
+
+        # Set items
+        self.mainPan.SetItems(items)
+        self.Refresh()
+        self.Layout()
+
+    def select_tags(self, e):
+        items = self.mainPan.GetSelectedItems()
+        for checkbox in self.lb.GetChecked():
+            self.lb.Check(checkbox, False)
+
+        selected_tags = []
+
+        checkboxes = self.lb.GetStrings()
+        print checkboxes
+        for item in items:
+
+            tags = []
+            for tag in tagging.get_tags(item):
+                tags.append(tagging.tag_id_to_name(tag))
+
+            for tag in tags:
+                print tag
+                if tag in checkboxes:
+                    selected_tags.append(tag)
+
+        self.lb.SetCheckedStrings(selected_tags)
+
+    def tag_selected(self, e):
+        items = self.mainPan.GetSelectedItems()
+        tags = self.lb.GetCheckedStrings()
+
+        for item in items:
+            for tag in tags:
+                tagging.tag_file(item, tag)
+
+        # TODO: Untag files
+
+    def update_tag_list(self):
+
+        # Remove previous list
+        self.lb_pan.DestroyChildren()
+
+        tags = tagging.get_all_tags()
+
+        self.lb = wx.CheckListBox(
+            self.lb_pan,
+            wx.ID_ANY,
+            (0, 0),
+            (-1, -1),
+            tags
+        )
+
+        self.lb_sz.Add(
+            self.lb,
+            1,
+            wx.EXPAND | wx.ALL,
+            20)
+
+        self.Bind(wx.EVT_CHECKLISTBOX, self.tag_selected, self.lb)
+        self.Layout()
+
+    def get_gallery_menu(self):
+        menu = wx.Menu()
+
+        # Create list of galleries
+        gallery_list = []
+
+        # Get system connection
+
+        sys_conn = database.get_sys_db()
+        cursor = sys_conn.cursor()
+
+        # Select galleries
+        query_galleries = "SELECT pk_id, name FROM gallery"
+        cursor.execute(query_galleries)
+        result = cursor.fetchall()
+        for gallery in result:
+            gallery_list.append(gallery)
+
+        # Open Database menu
+        for gallery in gallery_list:
+            item = wx.MenuItem(
+                id=100 + gallery[0],
+                text=gallery[1],
+                help="Switch to database: " + gallery[1],
+                kind=wx.ITEM_RADIO
+            )
+            menu.AppendItem(item)
+
+        return menu
+
+    def update_gallery_menu(self):
+        self.filemenu.DeleteItem(
+            self.filemenu.FindItemByPosition(1))
+        self.filemenu.InsertMenu(1, wx.ID_ANY, "Open gallery",
+                                 self.get_gallery_menu(), "")
+
+    def on_switch_gallery(self, e):
+        gallery_id = e.GetId() - 100
+        database.switch_gallery(gallery_id)
+        self.start_overview()
+        self.update_tag_list()
 
     def on_new_database(self, e):
         dlg = new_database.NewDatabase(self)
         dlg.ShowModal()
+        self.update_gallery_menu()
+        self.update_tag_list()
 
     def on_reset(self, e):
         dlg_export = wx.MessageBox(
@@ -271,6 +398,8 @@ class MainWindow(wx.Frame):
         else:
             print "Aborted clearing of files"
 
+        self.update_gallery_menu()
+
     def on_import(self, e):
         dlg_import = wx.FileDialog(self, "Import files", "", "",
                                    "All files (*.*)|*.*",
@@ -314,53 +443,42 @@ class MainWindow(wx.Frame):
 
 
 app = wx.App(False)
-frame = MainWindow(None, "Octotagger")
+frame = MainWindow(None, "OctoTagger")
 app.MainLoop()
 
 '''
 
-import wx
 
-class MyFrame(wx.Frame):
-   def __init__(self, parent, ID, title):
-       wx.Frame.__init__(self, parent, ID, title, size=(300, 250))
+        leftUpperPan = wx.Panel(self)
+        leftUpperPan1 = wx.Panel(self)
+        leftUpperPan2 = wx.Panel(self)
+        leftUpperPan3 = wx.Panel(self)
+        usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
+        self.mainPan = itemview.ItemView(self)
+        leftLowerPan = wx.Panel(self)
+        leftUpperPan.SetBackgroundColour("#3498db")
+        leftUpperPan1.SetBackgroundColour("#3498db")
+        leftUpperPan2.SetBackgroundColour("#3498db")
+        leftUpperPan3.SetBackgroundColour("#3498db")
+        leftLowerPan.SetBackgroundColour("#2ecc71")
+        mainBox = wx.BoxSizer(wx.HORIZONTAL)
+        leftBox = wx.BoxSizer(wx.VERTICAL)
+        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
+        leftInnerBox2 = wx.BoxSizer(wx.VERTICAL)
 
-       panel1 = wx.Panel(self,-1, style=wx.SUNKEN_BORDER)
-       panel2 = wx.Panel(self,-1, style=wx.SUNKEN_BORDER)
+        leftInnerBox2.Add(leftUpperPan3, 1, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox2.Add(leftUpperPan, 8, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
-       panel1.SetBackgroundColour("BLUE")
-       panel2.SetBackgroundColour("RED")
+        leftInnerBox.Add(leftUpperPan1, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
-       box = wx.BoxSizer(wx.HORIZONTAL)
-       box.Add(panel1, 2, wx.EXPAND)
-       box.Add(panel2, 1, wx.EXPAND)
+        leftBox.Add(
+            leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
+        leftBox.Add(
+            leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
 
-       self.SetAutoLayout(True)
-       self.SetSizer(box)
-       self.Layout()
-
-
-app = wx.PySimpleApp()
-frame = MyFrame(None, -1, "Sizer Test")
-frame.Show()
-app.MainLoop()
-
-
-
-        mainPan.SetItems([
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-            "92996172-60c0-47e1-b447-d0bbeb9eab97",
-        ])
-
+        mainBox.Add(leftBox, 1, wx.EXPAND)
+        mainBox.Add(self.mainPan, 3, wx.EXPAND)
 
 '''
-
-# TODO: Solve issue with displayed items (see above)

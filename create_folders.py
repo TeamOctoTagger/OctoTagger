@@ -5,6 +5,8 @@ import database
 import expression
 import os
 
+# TODO: Delete existing files first!
+
 
 def create_folders():
 

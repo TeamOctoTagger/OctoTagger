@@ -1,19 +1,32 @@
 from __future__ import division
 import os
 import wx
+import wx.lib.newevent
 import database
 
-THUMBNAIL_MAX_SIZE = 128
+THUMBNAIL_SIZE = (128, 128)
+
+SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
 
 
-class ItemView(wx.Panel):
+class ItemView(wx.ScrolledWindow):
+
     def __init__(self, parent):
-        super(ItemView, self).__init__(parent)
+        super(ItemView, self).__init__(
+            parent,
+            style=wx.VSCROLL,
+        )
         self.SetBackgroundColour("#c1c8c5")
 
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.SetSizer(self.sizer)
-        self.SetAutoLayout(True)
+
+        # scrollbars
+
+        # TODO include text and border
+        self.SetScrollRate(THUMBNAIL_SIZE[0], THUMBNAIL_SIZE[1])
+
+        self.Bind(wx.EVT_SIZE, self.OnSize)
 
         # selections
 
@@ -31,16 +44,36 @@ class ItemView(wx.Panel):
         return root
 
     def update_items(self):
-        self.sizer.Clear()
+        self.sizer.Clear(True)
+
         root = self.get_current_root()
+        if len(self.breadcrumbs) > 0:
+            self.sizer.Add(
+                Item(self, root['path'], "..", root['image']),
+                flag=wx.ALL,
+                border=5,
+                userData=-1,
+            )
+        if type(root) is dict:
+            root = root['path']
         for item in root:
             index = len(self.sizer.GetChildren())
             self.sizer.Add(
-                Item(self, item['name'], item['path']),
+                Item(self, item['path'], item['name'], item['image']),
                 flag=wx.ALL,
                 border=5,
                 userData=index,
             )
+        self.Layout()
+        self.AdjustScrollbars()
+
+    def OnSize(self, event):
+        # prevent horizontal overflow
+        size = self.GetSize()
+        vsize = self.GetVirtualSize()
+        self.SetVirtualSize((size[0], vsize[1]))
+
+        event.Skip()
 
     def OnMouseUp(self, event):
         target = event.GetEventObject()
@@ -68,7 +101,7 @@ class ItemView(wx.Panel):
             items = self.sizer.GetChildren()
             direction = 1 if self.last_clicked < index else -1
 
-            for i in range(self.last_clicked, index+direction, direction):
+            for i in range(self.last_clicked, index + direction, direction):
                 items[i].GetWindow().SetSelected(
                     items[self.last_clicked].GetWindow().IsSelected()
                 )
@@ -77,38 +110,92 @@ class ItemView(wx.Panel):
 
         self.last_clicked = index
 
+        wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
+
     def OnMouseDouble(self, event):
-        # TODO open folder or open tagging view
+        target = event.GetEventObject()
+
+        if target is self:
+            # clicked outside of any item
+            return
+
+        if not target.GetClientRect().Contains(event.GetPosition()):
+            # click dragged outside of target
+            return
+
+        while not isinstance(target, Item):
+            # clicked on a child of the item
+            target = target.GetParent()
+
+        index = self.sizer.GetItem(target).GetUserData()
+        if index == -1:
+            self.breadcrumbs.pop()
+        else:
+            self.breadcrumbs.append(index)
+
         self.last_clicked = None
         self.update_items()
-        pass
 
     def SetItems(self, items):
-        files_dir = os.path.join(
-            database.get_current_gallery("directory"),
-            "files"
-        )
+        '''
+        Sets which items are to be displayed. Pass ids from database as int or
+        paths from filesystem as str.
+        '''
+
+        connection = database.get_current_gallery('connection').cursor()
 
         def parse_items(items):
             result = []
             for item in items:
-                if type(item) is str:  # item is db uuid
+                if type(item) is int:  # item is db id
+                    connection.execute(
+                        (
+                            'SELECT file_name, uuid '
+                            'FROM file '
+                            'WHERE file.pk_id=:id '
+                        ),
+                        {
+                            'id': item,
+                        }
+                    )
+                    row = connection.fetchone()
+                    if row is None:
+                        raise ValueError('Item not found in database', item)
+
+                    thumbnail_path = os.path.join(
+                        database.get_current_gallery("directory"),
+                        "thumbnails",
+                        row[1],
+                    )
+                    if not os.path.isfile(thumbnail_path):
+                        # no thumbnail available
+                        file_path = os.path.join(
+                            database.get_current_gallery("directory"),
+                            "files",
+                            row[1],
+                        )
+
+                        from PIL import Image
+                        image = Image.open(file_path).convert()
+                        image.thumbnail(THUMBNAIL_SIZE)
+                        image.save(thumbnail_path, "JPEG")
+
                     result.append({
-                        'name': item,  # TODO get name from db
-                        'path': os.path.join(files_dir, item),
+                        'name': row[0],
+                        'path': item,
+                        'image': thumbnail_path,
                     })
-                elif type(item) is dict:  # item is fs reference
-                    # item['name'] == filename
-                    # item['path'] == location in fs or list of items in folder
-                    if type(item['path']) is list:  # folder
+                elif type(item) is str:  # item is fs path
+                    name = os.path.basename(item)
+                    if os.path.isdir(item):
                         result.append({
-                            'name': item['name'],
-                            'path': parse_items(item['path']),
+                            'name': name,
+                            'path': parse_items(item),
+                            # TODO generic folder icon
                         })
-                    elif type(item['path']) is dict:  # file
+                    elif os.path.isfile(item):
                         result.append({
-                            'name': item['name'],
-                            'path': item['path'],
+                            'image': item,
                         })
                     else:
                         raise TypeError('Encountered unsupported path', item)
@@ -136,39 +223,25 @@ class ItemView(wx.Panel):
 
 
 class Item(wx.Panel):
-    def __init__(self, parent, name, path):
+
+    def __init__(self, parent, path, name, image):
         super(Item, self).__init__(parent)
 
         self.path = path
         self.selected = False
-        self.is_folder = type(path) is list
 
         self.UpdateBackground()
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
-        self.SetAutoLayout(True)
 
         # controls
 
-        if self.is_folder:
-            image = wx.Image(path)  # FIXME path to image of folder
-        else:
-            image = wx.Image(path)
-
-        # center image
-        # FIXME center image on Windows
-        size = image.GetSize()
-        if size.GetWidth() > size.GetHeight():
-            factor = THUMBNAIL_MAX_SIZE / size.GetWidth()
-            pos = (0, (THUMBNAIL_MAX_SIZE - image.GetHeight()*factor)/2)
-        else:
-            factor = THUMBNAIL_MAX_SIZE / size.GetHeight()
-            pos = ((THUMBNAIL_MAX_SIZE - image.GetWidth()*factor)/2, 0)
-        size.Scale(factor, factor)
-        image.Rescale(size.GetWidth(), size.GetHeight())
-        image.Resize((THUMBNAIL_MAX_SIZE, THUMBNAIL_MAX_SIZE), pos)
-
+        image = wx.Image(image)
+        image.Resize(THUMBNAIL_SIZE, (
+            (THUMBNAIL_SIZE[0] - image.GetWidth()) / 2,
+            (THUMBNAIL_SIZE[1] - image.GetHeight()) / 2,
+        ))
         self.bitmap = wx.StaticBitmap(
             self,
             bitmap=image.ConvertToBitmap()
@@ -193,6 +266,8 @@ class Item(wx.Panel):
             flag=wx.ALL | wx.EXPAND | wx.ALIGN_CENTER,
             border=5
         )
+
+        self.Layout()
 
         # events
 

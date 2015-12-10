@@ -5,12 +5,8 @@ import wx
 import tagging
 import os
 from os.path import expanduser
-import sqlite3
-
-db = "./default/"
-db_file = os.path.normpath(os.path.join(db, "default.db"))
-conn = sqlite3.connect(db_file)
-cursor = conn.cursor()
+import database
+import create_folders
 
 
 class BulkCreateOutputFolders(wx.Dialog):
@@ -148,7 +144,8 @@ class BulkCreateOutputFolders(wx.Dialog):
 
     def OnBrowse(self, e):
         dlg_select_dir = wx.DirDialog(
-            self, "Choose a location in which the output folders will be generated", expanduser("~"))
+            self, ("Choose a location in which the "
+                   "output folders will be generated"), expanduser("~"))
 
         if dlg_select_dir.ShowModal() == wx.ID_CANCEL:
             print "Selection aborted."
@@ -158,6 +155,8 @@ class BulkCreateOutputFolders(wx.Dialog):
     def OnOk(self, e):
         register_folders(
             self.tc_directory.GetValue(), self.lb.GetCheckedStrings())
+        create_folders.create_folders()
+        self.Destroy()
 
     def OnClose(self, e):
         self.Destroy()
@@ -166,11 +165,33 @@ class BulkCreateOutputFolders(wx.Dialog):
 
 
 def register_folders(location, tags):
+
+    # Get default symlink type
+    # Init variable
+    use_softlink = True
+
+    # Get system connection
+    sys_conn = database.get_sys_db()
+    sys_cursor = sys_conn.cursor()
+
+    # Get setting
+    query_symlink = "SELECT use_softlink FROM settings"
+    sys_cursor.execute(query_symlink)
+    result = sys_cursor.fetchall()
+    for setting in result:
+        use_softlink = result[0][0]
+        print use_softlink
+
+    # Register folders
+    # Get gallery connection
+    gallery_conn = database.get_current_gallery("connection")
+    g_cursor = gallery_conn.cursor()
     location = os.path.normpath(location)
     for tag in tags:
-        query_insert_folder = "INSERT INTO folder(name, location, expression) VALUES (\'%s\', \'%s\', \'%s\')" % (
-            tag, location, tag)
-        cursor.execute(query_insert_folder)
+        query_insert_folder = ("INSERT INTO folder"
+                               "(name, location, expression, use_softlink) "
+                               "VALUES (\'%s\', \'%s\', \'%s\', %d)" % (
+                                   tag, location, tag, use_softlink))
+        g_cursor.execute(query_insert_folder)
 
-    conn.commit()
-    # TODO: Symlink type!
+    gallery_conn.commit()
