@@ -1,0 +1,4 @@
+*.pyc
+system.db
+default/
+
