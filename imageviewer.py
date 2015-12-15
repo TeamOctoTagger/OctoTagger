@@ -2,6 +2,10 @@ import wx, os
 #from PIL import Image
 #from PIL.ExifTags import TAGS
 
+
+# TODO: Arrows/NextPrevButtons in TopBar
+# TODO: Handle Case: Box Height > Box Width
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwargs):
         wx.Frame.__init__(self, *args, **kwargs)
@@ -9,25 +13,26 @@ class TestFrame(wx.Frame):
         self.jpgs = GetJpgList("./Images")
         self.CurrentJpg = 0
         self.newLoad = True
+        self.factor = 0.0
         self.loadCounter = 0
 
         self.MaxImageSize = 1000
 
         #topPan = wx.Panel(self)
-        #topLeftPan = wx.Panel(self)
-        #topRightPan = wx.Panel(self)
+        topLeftPan = wx.Panel(self)
+        topRightPan = wx.Panel(self)
 
         self.imgPan = wx.Panel(self)
 
-        #topLeftPan.SetBackgroundColour("#aaaaaa")
-        #topRightPan.SetBackgroundColour("#aaaaaa")
+        topLeftPan.SetBackgroundColour("#aaaaaa")
+        topRightPan.SetBackgroundColour("#aaaaaa")
 
         topBox = wx.BoxSizer(wx.HORIZONTAL)
         topInnerBox = wx.BoxSizer(wx.VERTICAL)
         topInnerLeftBox = wx.BoxSizer(wx.VERTICAL)
         topInnerRightBox = wx.BoxSizer(wx.VERTICAL)
         mainBox = wx.BoxSizer(wx.VERTICAL)
-        '''
+
         self.text = wx.StaticText(
             self,
             label=self.jpgs[self.CurrentJpg],
@@ -37,8 +42,7 @@ class TestFrame(wx.Frame):
                 wx.ST_NO_AUTORESIZE
             )
         )
-
-
+        '''
         img = wx.Image("arrow_left.png", wx.BITMAP_TYPE_ANY)
         img = img.Scale(40,40)
         imageCtrl2 = wx.StaticBitmap(topLeftPan, wx.ID_ANY,
@@ -67,6 +71,8 @@ class TestFrame(wx.Frame):
 
         '''
 
+
+
         self.Image = wx.StaticBitmap(self.imgPan, bitmap=wx.EmptyBitmap(1500, 1500))
 
         self.imgPan.Bind(wx.EVT_SIZE, self.ReSize)
@@ -75,39 +81,42 @@ class TestFrame(wx.Frame):
 
         self.box = wx.BoxSizer(wx.VERTICAL)
 
-        '''
+        self.button = wx.Button(self, -1, "Previous Image")
+        self.button.Bind(wx.EVT_BUTTON, self.DisplayPrev)
+
+        self.button2 = wx.Button(self, -1, "Next Image")
+        self.button2.Bind(wx.EVT_BUTTON, self.DisplayNext)
+
+
+
         topInnerBox.Add((1,1),1)
         topInnerBox.Add(self.text, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE, 10)
         topInnerBox.Add((1,1),1)
 
         topInnerLeftBox.Add((1,1),1)
-        topInnerLeftBox.Add(topLeftPan, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE, 10)
+        topInnerLeftBox.Add(self.button, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE, 10)
         topInnerLeftBox.Add((1,1),1)
 
         topInnerRightBox.Add((1,1),1)
-        topInnerRightBox.Add(topRightPan, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE, 10)
+        topInnerRightBox.Add(self.button2, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE, 10)
         topInnerRightBox.Add((1,1),1)
 
 
-
         topBox.Add(topInnerLeftBox, 1, wx.EXPAND)
-        topBox.Add(topInnerBox, 10, wx.EXPAND)
+        topBox.Add(topInnerBox, 0, wx.EXPAND)
         topBox.Add(topInnerRightBox, 1, wx.EXPAND)
 
-        '''
 
         self.box.Add((1,1),1)
         self.box.Add(self.imgPan, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE, 10)
         self.box.Add((1,1),1)
 
-        #mainBox.Add(topBox, 1, wx.EXPAND)
+        mainBox.Add(topBox, 1, wx.EXPAND)
         mainBox.Add(self.box, 12, wx.EXPAND)
 
         self.SetSizerAndFit(mainBox)
         
         wx.EVT_CLOSE(self, self.OnCloseWindow)
-
-    # TODO Bind image scale on EVT_SIZE (Frame resize - Panel.getSize), make image as big as possible in the Frame
 
     def DisplayNext(self, event=None):
 
@@ -122,19 +131,20 @@ class TestFrame(wx.Frame):
 
         print self.CurrentJpg, "Picture"
 
-        #self.text.SetLabel(os.path.basename(self.jpgs[self.CurrentJpg]))
+        self.text.SetLabel(os.path.basename(self.jpgs[self.CurrentJpg]))
 
         '''
-        W = Img.GetWidth()
-        H = Img.GetHeight()
+        W = Img.GetWidth()/2
+        H = Img.GetHeight()/2
         if W > H:
-            NewW = self.MaxImageSize
-            NewH = self.MaxImageSize * H / W
+            NewW = W
+            NewH = W * H / W
         else:
-            NewH = self.MaxImageSize
-            NewW = self.MaxImageSize * W / H
+            NewH = H
+            NewW = H * W / H
         '''
-        Img = Img.Scale(100,100)
+
+        Img = Img.Scale(800,500)
 
         self.Image.SetBitmap(wx.BitmapFromImage(Img))
 
@@ -154,16 +164,29 @@ class TestFrame(wx.Frame):
         if self.newLoad:
             self.Img = wx.Image(self.jpgs[self.CurrentJpg], wx.BITMAP_TYPE_JPEG)
             self.newLoad = False
+            self.factor = float(self.Img.GetWidth())/float(self.Img.GetHeight())
             print "Start Load"
 
         if self.loadCounter % 10 == 0:
             self.Img = self.Img = wx.Image(self.jpgs[self.CurrentJpg], wx.BITMAP_TYPE_JPEG)
             print "loader"
-        self.Img = self.Img.Scale(width,height)
+            print self.factor, "factor"
+
+        if width>height:
+            if height>width*float(self.Img.GetHeight())/float(self.Img.GetWidth()):
+                self.Img = self.Img.Scale(width,width*float(self.Img.GetHeight())/float(self.Img.GetWidth()))
+            else:
+                self.Img = self.Img.Scale(height*self.factor,height)
+        else:
+            if width>height*float(self.Img.GetWidth())/float(self.Img.GetHeight()):
+                self.Img = self.Img.Scale(height*float(self.Img.GetWidth())/float(self.Img.GetHeight()),height)
+            else:
+                self.Img = self.Img.Scale(width, width/self.factor)
+
 
         self.Image.SetBitmap(wx.BitmapFromImage(self.Img))
 
-        self.loadCounter = self.loadCounter + 1
+        self.loadCounter = self.loadCounter + 2
         #self.Fit()
         #self.Layout()
 
@@ -188,7 +211,7 @@ class TestFrame(wx.Frame):
         else:
             NewH = self.MaxImageSize
             NewW = self.MaxImageSize * W / H
-        Img = Img.Scale(NewW,NewH)
+        Img = Img.Scale(800,500)
 
         self.Image.SetBitmap(wx.BitmapFromImage(Img))
         self.newLoad = True
