@@ -14,7 +14,7 @@ CREATE TABLE folder (
 
 CREATE TABLE file (
     pk_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uuid TEXT,
+    uuid TEXT UNIQUE ON CONFLICT ABORT,
     file_name TEXT
 );
 
