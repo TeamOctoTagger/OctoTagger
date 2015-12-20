@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import shutil
 
 SQL_PATH = os.path.dirname(__file__)
 
@@ -28,6 +29,12 @@ def update_gallery():
     conn.executescript(query)
     conn.commit()
     conn.close()
+
+    # Copy db file to db folder
+    source = os.path.normpath("default/default.db")
+    dest = os.path.normpath("db/default.db")
+
+    shutil.copy(source, dest)
 
 
 if __name__ == '__main__':

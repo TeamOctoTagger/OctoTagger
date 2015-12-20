@@ -76,29 +76,29 @@ def create_gallery(name, location):
     location = os.path.normpath(location)
 
     # Create folders and database file
-    try:
-        folder_gallery = os.path.normpath(location + "/" + name)
-        folder_files = os.path.normpath(folder_gallery + "/files")
-        folder_thumbnails = os.path.normpath(folder_gallery + "/thumbnails")
 
-        file_default_gallery = os.path.normpath("./db/default.db")
-        file_new_gallery = os.path.join(folder_gallery, "%s.db" % (name))
+    folder_gallery = os.path.normpath(location + "/" + name)
+    folder_files = os.path.normpath(folder_gallery + "/files")
+    folder_thumbnails = os.path.normpath(folder_gallery + "/thumbnails")
 
-        os.mkdir(folder_gallery)
-        os.mkdir(folder_files)
-        os.mkdir(folder_thumbnails)
+    file_default_gallery = os.path.normpath("./db/default.db")
+    print os.path.abspath(file_default_gallery)
+    file_new_gallery = os.path.join(folder_gallery, "%s.db" % (name))
 
-        shutil.copy(file_default_gallery, file_new_gallery)
+    os.mkdir(folder_gallery)
+    os.mkdir(folder_files)
+    os.mkdir(folder_thumbnails)
 
-        # Get sys connection
-        sys_db = get_sys_db()
-        cursor = sys_db.cursor()
-    except:
-        return -1
+    shutil.copy(file_default_gallery, file_new_gallery)
+
+    # Get sys connection
+    sys_db = get_sys_db()
+    cursor = sys_db.cursor()
 
     # Insert new gallery into sys connection
     query_insert_gallery = "INSERT INTO gallery(name, location) VALUES (\'%s\', \'%s\')" % (
         name, location)
+    print query_insert_gallery
     cursor.execute(query_insert_gallery)
     sys_db.commit()
 

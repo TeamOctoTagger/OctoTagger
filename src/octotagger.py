@@ -12,6 +12,7 @@ import database
 import tagging
 import new_database
 import import_files
+import expression
 
 
 class MainWindow(wx.Frame):
@@ -153,10 +154,9 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
         # TODO: Replace this with custom event!
-        self.Bind(wx.EVT_MENU, self.select_tags, toolIntegrityCheck)
-
-        for gallery in menu_open_database.GetMenuItems():
-            self.Bind(wx.EVT_MENU, self.on_switch_gallery, gallery)
+        self.Bind(
+            itemview.EVT_SELECTION_CHANGE,
+            self.on_selection_change)
 
         # Tag and Context Pane
 
@@ -185,7 +185,15 @@ class MainWindow(wx.Frame):
         self.query_field = wx.TextCtrl(
             query_field_panel,
             -1,
-            "")
+            "",
+            style=wx.TE_PROCESS_ENTER)
+
+        self.Bind(wx.EVT_TEXT, self.on_query_text, self.query_field)
+
+        self.Bind(
+            wx.EVT_TEXT_ENTER,
+            self.on_query_text_enter,
+            self.query_field)
 
         query_field_panel_sz.Add(
             self.query_field,
@@ -207,13 +215,6 @@ class MainWindow(wx.Frame):
         self.lb_sz = tag_list_panel_sz
         self.update_tag_list()
 
-        # Check current gallery
-
-        current_gallery = database.get_current_gallery("id")
-        for gallery in menu_open_database.GetMenuItems():
-            if gallery.GetId() - 100 == current_gallery:
-                gallery.Check()
-
         self.SetSizer(main_box)
         self.Layout()
         self.Show(True)
@@ -221,6 +222,55 @@ class MainWindow(wx.Frame):
         self.start_overview()
 
     # Define events
+
+    def on_query_text(self, e):
+        if self.mainPan.GetSelectedItems():
+            return
+
+        # TODO: Check if input is a valid expression!
+        query_input = e.GetEventObject().GetValue()
+
+        if query_input == "":
+            self.start_overview()
+
+        else:
+            try:
+                query_files = ("SELECT pk_id FROM file WHERE %s" %
+                               (expression.parse(query_input)))
+
+                # Get file list
+                cursor = database.get_current_gallery("connection").cursor()
+                cursor.execute(query_files)
+                result = cursor.fetchall()
+
+                items = []
+
+                for item in result:
+                    items.append(item[0])
+
+                self.mainPan.SetItems(items)
+                self.Layout()
+
+            except:
+                print "Invalid expression!"
+                # self.start_overview()
+
+    def on_query_text_enter(self, e):
+        items = self.mainPan.GetSelectedItems()
+        query = e.GetEventObject().GetValue()
+
+        # TODO: Check if input is a valid tag name!
+        tag = query
+
+        if not (items and tag):
+            return
+
+        for item in items:
+            tagging.tag_file(item, tag)
+
+        self.update_tag_list()
+        self.select_tags()
+        e.GetEventObject().Clear()
 
     def start_overview(self):
         # Set items to all current database items
@@ -238,12 +288,17 @@ class MainWindow(wx.Frame):
         for item in result:
             items.append(item[0])
 
+        self.update_gallery_menu()
+
         # Set items
         self.mainPan.SetItems(items)
         self.Refresh()
         self.Layout()
 
-    def select_tags(self, e):
+    def on_selection_change(self, e):
+        self.select_tags()
+
+    def select_tags(self):
         items = self.mainPan.GetSelectedItems()
         for checkbox in self.lb.GetChecked():
             self.lb.Check(checkbox, False)
@@ -251,7 +306,6 @@ class MainWindow(wx.Frame):
         selected_tags = []
 
         checkboxes = self.lb.GetStrings()
-        print checkboxes
         for item in items:
 
             tags = []
@@ -259,23 +313,34 @@ class MainWindow(wx.Frame):
                 tags.append(tagging.tag_id_to_name(tag))
 
             for tag in tags:
-                print tag
                 if tag in checkboxes:
                     selected_tags.append(tag)
 
         self.lb.SetCheckedStrings(selected_tags)
 
-    def tag_selected(self, e):
+    def on_tag_selected(self, e):
         items = self.mainPan.GetSelectedItems()
-        tags = self.lb.GetCheckedStrings()
+        tags = self.lb.GetItems()
+        checked_tags = self.lb.GetCheckedStrings()
 
-        for item in items:
-            for tag in tags:
-                tagging.tag_file(item, tag)
+        if items:
+            # Files are selected -> tag them
+            for item in items:
+                item_tags = tagging.get_tag_names(item)
+                for tag in tags:
+                    if(tag not in item_tags and tag in checked_tags):
+                        tagging.tag_file(item, tag)
 
-        # TODO: Untag files
+                    elif(tag in item_tags and tag not in checked_tags):
+                        tagging.untag_file(item, tag)
+        else:
+            # No files are selected -> filter them
+            query_input = " ".join(checked_tags)
+            self.query_field.SetValue(query_input)
 
     def update_tag_list(self):
+
+        # TODO: 3 State checkbox list!
 
         # Remove previous list
         self.lb_pan.DestroyChildren()
@@ -296,7 +361,7 @@ class MainWindow(wx.Frame):
             wx.EXPAND | wx.ALL,
             20)
 
-        self.Bind(wx.EVT_CHECKLISTBOX, self.tag_selected, self.lb)
+        self.Bind(wx.EVT_CHECKLISTBOX, self.on_tag_selected, self.lb)
         self.Layout()
 
     def get_gallery_menu(self):
@@ -330,10 +395,24 @@ class MainWindow(wx.Frame):
         return menu
 
     def update_gallery_menu(self):
-        self.filemenu.DeleteItem(
-            self.filemenu.FindItemByPosition(1))
-        self.filemenu.InsertMenu(1, wx.ID_ANY, "Open gallery",
-                                 self.get_gallery_menu(), "")
+
+        menu_open_database = self.filemenu.FindItemByPosition(1)
+
+        self.filemenu.DeleteItem(menu_open_database)
+        menu_open_database = self.filemenu.InsertMenu(
+            1,
+            wx.ID_ANY,
+            "Open gallery",
+            self.get_gallery_menu(),
+            "")
+
+        # Check current gallery
+
+        current_gallery = database.get_current_gallery("id")
+        for gallery in menu_open_database.GetSubMenu().GetMenuItems():
+            self.Bind(wx.EVT_MENU, self.on_switch_gallery, gallery)
+            if gallery.GetId() - 100 == current_gallery:
+                gallery.Check()
 
     def on_switch_gallery(self, e):
         gallery_id = e.GetId() - 100
@@ -344,6 +423,7 @@ class MainWindow(wx.Frame):
     def on_new_database(self, e):
         dlg = new_database.NewDatabase(self)
         dlg.ShowModal()
+        self.start_overview()
         self.update_gallery_menu()
         self.update_tag_list()
 
@@ -361,6 +441,7 @@ class MainWindow(wx.Frame):
         print dlg_export
         if dlg_export == 4:
             database.reset_gallery(database.get_current_gallery("id"))
+            self.update_tag_list()
 
         elif dlg_export == 16:
             print "Canceled."
@@ -409,6 +490,7 @@ class MainWindow(wx.Frame):
             print "Import aborted."
         else:
             import_files.import_files(dlg_import.GetPaths())
+            self.start_overview()
 
     def OnManual(self, e):
         dlg = wx.MessageDialog(
@@ -445,40 +527,3 @@ class MainWindow(wx.Frame):
 app = wx.App(False)
 frame = MainWindow(None, "OctoTagger")
 app.MainLoop()
-
-'''
-
-
-        leftUpperPan = wx.Panel(self)
-        leftUpperPan1 = wx.Panel(self)
-        leftUpperPan2 = wx.Panel(self)
-        leftUpperPan3 = wx.Panel(self)
-        usertext = wx.TextCtrl(leftUpperPan, -1, "", size=(250, -1))
-        self.mainPan = itemview.ItemView(self)
-        leftLowerPan = wx.Panel(self)
-        leftUpperPan.SetBackgroundColour("#3498db")
-        leftUpperPan1.SetBackgroundColour("#3498db")
-        leftUpperPan2.SetBackgroundColour("#3498db")
-        leftUpperPan3.SetBackgroundColour("#3498db")
-        leftLowerPan.SetBackgroundColour("#2ecc71")
-        mainBox = wx.BoxSizer(wx.HORIZONTAL)
-        leftBox = wx.BoxSizer(wx.VERTICAL)
-        leftInnerBox = wx.BoxSizer(wx.HORIZONTAL)
-        leftInnerBox2 = wx.BoxSizer(wx.VERTICAL)
-
-        leftInnerBox2.Add(leftUpperPan3, 1, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox2.Add(leftUpperPan, 8, flag=wx.EXPAND | wx.ALIGN_CENTER)
-
-        leftInnerBox.Add(leftUpperPan1, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox.Add(leftInnerBox2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftInnerBox.Add(leftUpperPan2, 2, flag=wx.EXPAND | wx.ALIGN_CENTER)
-
-        leftBox.Add(
-            leftInnerBox, proportion=7, flag=wx.EXPAND | wx.ALIGN_CENTER)
-        leftBox.Add(
-            leftLowerPan, proportion=10, flag=wx.EXPAND | wx.ALIGN_CENTER)
-
-        mainBox.Add(leftBox, 1, wx.EXPAND)
-        mainBox.Add(self.mainPan, 3, wx.EXPAND)
-
-'''

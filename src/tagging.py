@@ -11,6 +11,7 @@ import database
 
 # Methods for assigning tags to files
 
+
 def tag_file(file_id, tag_name, amount=-1):
     # Get gallery connection
     gallery = database.get_current_gallery("connection")
@@ -24,7 +25,8 @@ def tag_file(file_id, tag_name, amount=-1):
         # Tag has been found
         for tag in tags:
             tag_id = tag[0]
-            query_link = "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) VALUES (%d, %d, %d)" % (file_id, tag_id, amount)
+            query_link = "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) VALUES (%d, %d, %d)" % (
+                file_id, tag_id, amount)
             cursor.execute(query_link)
     else:
         # Tag has not been found, create it
@@ -35,7 +37,8 @@ def tag_file(file_id, tag_name, amount=-1):
         else:
             is_numeric = 0
 
-        query_insert_tag = "INSERT INTO tag(name, is_numeric) VALUES (\'%s\', %d)" % (tag_name, is_numeric)
+        query_insert_tag = "INSERT INTO tag(name, is_numeric) VALUES (\'%s\', %d)" % (
+            tag_name, is_numeric)
         cursor.execute(query_insert_tag)
 
         # Get ID of newly created tag and create link between it and the file
@@ -44,11 +47,34 @@ def tag_file(file_id, tag_name, amount=-1):
         tags = cursor.fetchall()
         for tag in tags:
             tag_id = tag[0]
-            query_link = "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) VALUES (%d, %d, %d)" % (file_id, tag_id, amount)
+            query_link = "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) VALUES (%d, %d, %d)" % (
+                file_id, tag_id, amount)
             cursor.execute(query_link)
 
     # Write changes
     gallery.commit()
+
+
+def untag_file(file_id, tag_name):
+    # Get gallery connection
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+
+    # Get tag
+    query_get_tags = "SELECT pk_id FROM tag WHERE name = \'%s\'" % (tag_name)
+    cursor.execute(query_get_tags)
+    tags = cursor.fetchall()
+
+    for tag in tags:
+        tag_id = tag[0]
+        query_untag = (
+            "DELETE FROM file_has_tag WHERE pk_fk_file_id = %d "
+            "AND pk_fk_tag_id = %d" % (file_id, tag_id))
+        cursor.execute(query_untag)
+
+    # Write changes
+    gallery.commit()
+
 
 def tag_files(file_ids, tag_name, amount=-1):
     for file_id in file_ids:
@@ -65,9 +91,11 @@ def file_has_tag_id(file_id, tag_id):
     else:
         return False
 
+
 def file_has_tag(file_id, tag_name):
     tag_id = tag_name_to_id(tag_name)
     return file_has_tag_id(file_id, tag_id)
+
 
 def get_tags(file_id):
     # Get gallery connection
@@ -75,7 +103,8 @@ def get_tags(file_id):
     cursor = gallery.cursor()
 
     tags = []
-    query_get_tags = "SELECT pk_fk_tag_id FROM file_has_tag WHERE pk_fk_file_id = %d" % (file_id)
+    query_get_tags = "SELECT pk_fk_tag_id FROM file_has_tag WHERE pk_fk_file_id = %d" % (
+        file_id)
     cursor.execute(query_get_tags)
     result = cursor.fetchall()
     for tag in result:
@@ -83,6 +112,16 @@ def get_tags(file_id):
 
     gallery.commit()
     return tags
+
+
+def get_tag_names(file_id):
+    tag_ids = get_tags(file_id)
+    tags = []
+    for tag_id in tag_ids:
+        tags.append(tag_id_to_name(tag_id))
+
+    return tags
+
 
 def tag_id_to_name(tag_id):
     # Get gallery connection
@@ -99,6 +138,7 @@ def tag_id_to_name(tag_id):
     else:
         return False
 
+
 def tag_name_to_id(tag_name):
     # Get gallery connection
     gallery = database.get_current_gallery("connection")
@@ -114,6 +154,7 @@ def tag_name_to_id(tag_name):
     else:
         return False
 
+
 def get_all_tag_ids():
     # Get gallery connection
     gallery = database.get_current_gallery("connection")
@@ -128,6 +169,7 @@ def get_all_tag_ids():
 
     gallery.commit()
     return tag_ids
+
 
 def get_all_tags():
     # Get gallery connection

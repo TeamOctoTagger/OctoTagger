@@ -59,8 +59,9 @@ class ItemView(wx.ScrolledWindow):
             )
         if type(root) is dict:
             root = root['path']
+
+        index = len(self.sizer.GetChildren())
         for item in root:
-            index = len(self.sizer.GetChildren())
             self.sizer.Add(
                 Item(self, item['path'], item['name'], item['image']),
                 flag=wx.ALL,
