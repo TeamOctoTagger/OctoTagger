@@ -13,6 +13,7 @@ import tagging
 import new_database
 import import_files
 import expression
+import TagList
 
 
 class MainWindow(wx.Frame):
@@ -163,7 +164,7 @@ class MainWindow(wx.Frame):
         self.mainPan = itemview.ItemView(self)
 
         main_box = wx.BoxSizer(wx.HORIZONTAL)
-        left_panel = wx.Panel(self, style=wx.SIMPLE_BORDER, size=(300, -1))
+        left_panel = wx.Panel(self, size=(300, -1))
         left_panel_sz = wx.BoxSizer(wx.VERTICAL)
         left_panel.SetSizer(left_panel_sz)
 
@@ -226,6 +227,8 @@ class MainWindow(wx.Frame):
     def on_query_text(self, e):
         if self.mainPan.GetSelectedItems():
             return
+
+        print "yes"
 
         # TODO: Check if input is a valid expression!
         query_input = e.GetEventObject().GetValue()
@@ -300,28 +303,45 @@ class MainWindow(wx.Frame):
 
     def select_tags(self):
         items = self.mainPan.GetSelectedItems()
-        for checkbox in self.lb.GetChecked():
-            self.lb.Check(checkbox, False)
 
-        selected_tags = []
+        self.lb.CheckAll(wx.CHK_UNCHECKED)
 
-        checkboxes = self.lb.GetStrings()
+        checked = []
+        undetermined = []
+        # checkboxes = self.lb.GetStrings()
+
         for item in items:
 
             tags = []
             for tag in tagging.get_tags(item):
                 tags.append(tagging.tag_id_to_name(tag))
 
-            for tag in tags:
-                if tag in checkboxes:
-                    selected_tags.append(tag)
+            if not checked:
+                for tag in tags:
+                    checked.append(tag)
 
-        self.lb.SetCheckedStrings(selected_tags)
+            else:
+                scrapbook = []
+                for tag in checked:
+                    scrapbook.append(tag)
+
+                for checked_tag in scrapbook:
+                    if checked_tag not in tags:
+                        checked.remove(checked_tag)
+                        undetermined.append(checked_tag)
+
+                for tag in tags:
+                    if tag not in checked:
+                        undetermined.append(tag)
+
+        self.lb.SetCheckedStrings(checked)
+        self.lb.SetUndeterminedStrings(undetermined)
 
     def on_tag_selected(self, e):
         items = self.mainPan.GetSelectedItems()
-        tags = self.lb.GetItems()
+        tags = self.lb.GetStrings()
         checked_tags = self.lb.GetCheckedStrings()
+        undetermined_tags = self.lb.GetUndeterminedStrings()
 
         if items:
             # Files are selected -> tag them
@@ -331,7 +351,9 @@ class MainWindow(wx.Frame):
                     if(tag not in item_tags and tag in checked_tags):
                         tagging.tag_file(item, tag)
 
-                    elif(tag in item_tags and tag not in checked_tags):
+                    elif(tag in item_tags and
+                         tag not in checked_tags and
+                            tag not in undetermined_tags):
                         tagging.untag_file(item, tag)
         else:
             # No files are selected -> filter them
@@ -340,28 +362,27 @@ class MainWindow(wx.Frame):
 
     def update_tag_list(self):
 
-        # TODO: 3 State checkbox list!
-
         # Remove previous list
         self.lb_pan.DestroyChildren()
 
         tags = tagging.get_all_tags()
 
-        self.lb = wx.CheckListBox(
+        self.lb = TagList.TagList(
             self.lb_pan,
-            wx.ID_ANY,
-            (0, 0),
-            (-1, -1),
-            tags
+            id=wx.ID_ANY,
+            pos=(0, 0),
+            size=(-1, -1),
+            tags=tags,
         )
 
         self.lb_sz.Add(
             self.lb,
             1,
             wx.EXPAND | wx.ALL,
-            20)
+            20,
+        )
 
-        self.Bind(wx.EVT_CHECKLISTBOX, self.on_tag_selected, self.lb)
+        self.Bind(TagList.EVT_TAGLIST_CHECK, self.on_tag_selected, self.lb)
         self.Layout()
 
     def get_gallery_menu(self):
