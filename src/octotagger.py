@@ -13,7 +13,7 @@ import tagging
 import new_database
 import import_files
 import expression
-import TagList
+import taglist
 import taggingview
 
 
@@ -386,7 +386,7 @@ class MainWindow(wx.Frame):
 
         tags = tagging.get_all_tags()
 
-        self.lb = TagList.TagList(
+        self.lb = taglist.TagList(
             self.lb_pan,
             id=wx.ID_ANY,
             pos=(0, 0),
@@ -401,7 +401,7 @@ class MainWindow(wx.Frame):
             20,
         )
 
-        self.Bind(TagList.EVT_TAGLIST_CHECK, self.on_tag_selected, self.lb)
+        self.Bind(taglist.EVT_TAGLIST_CHECK, self.on_tag_selected, self.lb)
         self.Layout()
 
     def get_gallery_menu(self):
