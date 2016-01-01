@@ -45,7 +45,7 @@ def get_gallery(gallery_id, property):
     elif(property == "directory"):
         return os.path.join(gallery_location, gallery_name)
     elif(property == "file"):
-        return os.path.normpath(os.path.join(gallery_location, gallery_name, (gallery_name + '.db')))
+        return os.path.join(gallery_location, gallery_name, (gallery_name + '.db'))
     elif(property == "connection"):
         return sqlite3.connect(os.path.normpath(os.path.join(gallery_location, gallery_name, (gallery_name + '.db'))))
     else:

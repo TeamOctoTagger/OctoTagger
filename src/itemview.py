@@ -204,6 +204,15 @@ class ItemView(wx.ScrolledWindow):
 
         return result
 
+    def GetItems(self):
+        result = []
+        items = self.sizer.GetChildren()
+
+        for item in items:
+            result.append(item.GetWindow().GetPath())
+
+        return result
+
     def SetSelectedAll(self, selected=True):
         items = self.sizer.GetChildren()
         for item in items:

@@ -14,12 +14,16 @@ import new_database
 import import_files
 import expression
 import TagList
+import taggingview
 
 
 class MainWindow(wx.Frame):
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title, size=(1280, 720))
+
+        # Modes: overview, tagging, import, folder
+        self.mode = "overview"
 
         # A StatusBar in the bottom of the window
         self.CreateStatusBar()
@@ -153,6 +157,11 @@ class MainWindow(wx.Frame):
                   item_create_bulk_output_folders)
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
+        self.Bind(
+            wx.EVT_MENU,
+            self.on_start_tagging_mode,
+            toolStartTaggingMode,
+        )
 
         # TODO: Replace this with custom event!
         self.Bind(
@@ -163,7 +172,7 @@ class MainWindow(wx.Frame):
 
         self.mainPan = itemview.ItemView(self)
 
-        main_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.main_box = wx.BoxSizer(wx.HORIZONTAL)
         left_panel = wx.Panel(self, size=(300, -1))
         left_panel_sz = wx.BoxSizer(wx.VERTICAL)
         left_panel.SetSizer(left_panel_sz)
@@ -207,8 +216,8 @@ class MainWindow(wx.Frame):
         left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
         left_panel_sz.Add(context_panel, 0, wx.EXPAND)
 
-        main_box.Add(left_panel, 0, wx.EXPAND)
-        main_box.Add(self.mainPan, 1, wx.EXPAND)
+        self.main_box.Add(left_panel, 0, wx.EXPAND)
+        self.main_box.Add(self.mainPan, 1, wx.EXPAND)
 
         # Tag Pane
 
@@ -216,13 +225,23 @@ class MainWindow(wx.Frame):
         self.lb_sz = tag_list_panel_sz
         self.update_tag_list()
 
-        self.SetSizer(main_box)
+        self.SetSizer(self.main_box)
         self.Layout()
         self.Show(True)
 
         self.start_overview()
 
     # Define events
+
+    def on_start_tagging_mode(self, e=None):
+        items = self.mainPan.GetItems()
+        self.main_box.Remove(self.mainPan)
+        self.mainPan.Destroy()
+        self.mainPan = taggingview.TaggingView(self, items)
+        self.main_box.Add(self.mainPan, 1, wx.EXPAND)
+
+        self.Layout()
+        self.Refresh()
 
     def on_query_text(self, e):
         if self.mainPan.GetSelectedItems():
