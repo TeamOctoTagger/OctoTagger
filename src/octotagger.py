@@ -243,6 +243,10 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.Refresh()
 
+        self.mainPan.ReSize()
+
+        print self.mainPan.GetSize()
+
     def on_query_text(self, e):
         if self.mainPan.GetSelectedItems():
             return

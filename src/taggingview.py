@@ -4,9 +4,10 @@
 import wx
 import os
 import database
+from PIL import Image
+import time
 
-# TODO: Arrows/NextPrevButtons in TopBar
-# TODO: Handle Case: Box Height > Box Width
+# TODO: Exit Tagging View, Tagging functionality, Context pane
 
 
 class TaggingView(wx.Panel):
@@ -15,29 +16,15 @@ class TaggingView(wx.Panel):
         wx.Panel.__init__(self, parent)
 
         self.files = files
-        print self.files
-
         self.current_file = files[0]
-        self.newLoad = True
-        self.factor = 0.0
-        self.loadCounter = 0
+        self.first = True
 
-        self.MaxImageSize = 1000
+        self.init_ui()
 
-        #topPan = wx.Panel(self)
-        topLeftPan = wx.Panel(self)
-        topRightPan = wx.Panel(self)
-
+    def init_ui(self):
         self.imgPan = wx.Panel(self)
 
-        topLeftPan.SetBackgroundColour("#aaaaaa")
-        topRightPan.SetBackgroundColour("#aaaaaa")
-
         topBox = wx.BoxSizer(wx.HORIZONTAL)
-        topInnerBox = wx.BoxSizer(wx.VERTICAL)
-        topInnerLeftBox = wx.BoxSizer(wx.VERTICAL)
-        topInnerRightBox = wx.BoxSizer(wx.VERTICAL)
-        mainBox = wx.BoxSizer(wx.VERTICAL)
 
         self.text = wx.StaticText(
             self,
@@ -45,105 +32,54 @@ class TaggingView(wx.Panel):
             style=(
                 wx.ALIGN_CENTRE_HORIZONTAL |
                 wx.ST_ELLIPSIZE_END |
-                wx.ST_NO_AUTORESIZE
+                wx.ST_NO_AUTORESIZE |
+                wx.SIMPLE_BORDER
             )
         )
-        '''
-        img = wx.Image("arrow_left.png", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(40,40)
-        imageCtrl2 = wx.StaticBitmap(topLeftPan, wx.ID_ANY,
-                                         wx.BitmapFromImage(img))
 
+        self.Image = wx.StaticBitmap(self.imgPan)
 
-        imageCtrl2.SetBitmap(wx.BitmapFromImage(img))
+        self.SetBackgroundColour("#c1c8c5")
+        self.imgPan.SetBackgroundColour("#c1c8c5")
 
-        imageCtrl2.Bind(wx.EVT_LEFT_DOWN, self.DisplayNext)
+        btn_prev = wx.Button(self, -1, "<")
+        btn_prev.Bind(wx.EVT_BUTTON, self.DisplayPrev)
 
-        imageCtrl2.SetBackgroundColour("#aaaaaa")
+        btn_next = wx.Button(self, -1, ">")
+        btn_next.Bind(wx.EVT_BUTTON, self.DisplayNext)
 
-        topLeftPan.Refresh()
+        btn_exit = wx.Button(self, -1, "X")
+        btn_exit.Bind(wx.EVT_BUTTON, self.OnExit)
 
-        img = wx.Image("arrow_right.png", wx.BITMAP_TYPE_ANY)
-        img = img.Scale(40,40)
-        imageCtrl3 = wx.StaticBitmap(topRightPan, wx.ID_ANY,
-                                         wx.BitmapFromImage(img))
-        imageCtrl3.SetBitmap(wx.BitmapFromImage(img))
+        topBox.Add(btn_prev, 0, wx.EXPAND)
+        topBox.Add(self.text, 1, wx.EXPAND)
+        topBox.Add(btn_next, 0, wx.EXPAND)
+        topBox.Add(btn_exit, 0, wx.EXPAND)
 
-        imageCtrl3.Bind(wx.EVT_LEFT_DOWN, self.DisplayNext)
-
-        imageCtrl3.SetBackgroundColour("#aaaaaa")
-
-        topRightPan.Refresh()
-
-        '''
-
-        self.Image = wx.StaticBitmap(
-            self.imgPan, bitmap=wx.EmptyBitmap(1500, 1500))
-
-        self.imgPan.Bind(wx.EVT_SIZE, self.ReSize)
-
-        self.DisplayNext()
-
-        self.box = wx.BoxSizer(wx.VERTICAL)
-
-        self.button = wx.Button(self, -1, "Previous Image")
-        self.button.Bind(wx.EVT_BUTTON, self.DisplayPrev)
-
-        self.button2 = wx.Button(self, -1, "Next Image")
-        self.button2.Bind(wx.EVT_BUTTON, self.DisplayNext)
-
-        topInnerBox.Add((1, 1), 1)
-        topInnerBox.Add(
-            self.text,
-            0,
-            wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE,
-            10,
+        imgPan_sz = wx.BoxSizer(wx.VERTICAL)
+        imgPan_sz.Add(
+            self.Image,
+            1,
+            wx.ALIGN_CENTER | wx.ALL | wx.ADJUST_MINSIZE
         )
-        topInnerBox.Add((1, 1), 1)
+        self.imgPan.SetSizer(imgPan_sz)
 
-        topInnerLeftBox.Add((1, 1), 1)
-        topInnerLeftBox.Add(
-            self.button,
-            0,
-            wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE,
-            10,
-        )
-        topInnerLeftBox.Add((1, 1), 1)
-
-        topInnerRightBox.Add((1, 1), 1)
-        topInnerRightBox.Add(
-            self.button2,
-            0,
-            wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE,
-            10,
-        )
-        topInnerRightBox.Add((1, 1), 1)
-
-        topBox.Add(topInnerLeftBox, 1, wx.EXPAND)
-        topBox.Add(topInnerBox, 0, wx.EXPAND)
-        topBox.Add(topInnerRightBox, 1, wx.EXPAND)
-
-        self.box.Add((1, 1), 1)
-        self.box.Add(
-            self.imgPan,
-            0,
-            wx.ALIGN_CENTER_HORIZONTAL | wx.ALL | wx.ADJUST_MINSIZE,
-            10,
-        )
-        self.box.Add((1, 1), 1)
-
-        mainBox.Add(topBox, 1, wx.EXPAND)
-        mainBox.Add(self.box, 12, wx.EXPAND)
+        mainBox = wx.BoxSizer(wx.VERTICAL)
+        mainBox.Add(topBox, 0, wx.EXPAND)
+        mainBox.Add(self.imgPan, 1, wx.ALL | wx.EXPAND)
 
         self.SetSizerAndFit(mainBox)
 
-        wx.EVT_CLOSE(self, self.OnCloseWindow)
+        print self.GetSize()
+        
+        self.Layout()
+        self.Refresh()
+        self.Bind(wx.EVT_SIZE, self.ReSize)
+
+        self.ReSize()
+
 
     def DisplayNext(self, event=None):
-
-        print self.files
-        print self.imgPan.GetSize()
-        # print self.box.GetSize() FUNKTIONIERT NICHT! Muss gefixt werden
 
         index = self.files.index(self.current_file)
         if index == len(self.files) - 1:
@@ -155,20 +91,11 @@ class TaggingView(wx.Panel):
         image = result[0]
         image_name = result[1]
 
-        print self.current_file, "Picture"
-
         self.text.SetLabel(os.path.basename(image_name))
 
-        image = image.Scale(800, 500)
-
-        self.Image.SetBitmap(wx.BitmapFromImage(image))
-
-        self.newLoad = True
-        self.Fit()
+        self.ReSize()
         self.Layout()
         self.Refresh()
-
-        print self.current_file
 
     def GetImage(self, file):
         cursor = database.get_current_gallery("connection").cursor()
@@ -180,50 +107,29 @@ class TaggingView(wx.Panel):
             "files/",
             result[0])
 
-        return [wx.Image(path), result[1]]
+        return [wx.Image(path), result[1], path]
 
     def ReSize(self, event=None):
 
-        # print self.box.GetSize()
-        print self.loadCounter % 10
-        width, height = self.box.GetSize()
+        # TODO: When window is resized quickly, doesn't resize image correctly.
 
-        if self.newLoad:
-            self.Img = self.GetImage(self.current_file)[0]
-            self.factor = float(
-                self.Img.GetWidth()) / float(self.Img.GetHeight())
-            print "Start Load"
+        size = self.imgPan.GetSize()
+        print size
 
-        if self.loadCounter % 10 == 0:
-            self.Img = self.GetImage(self.current_file)[0]
-            print "loader"
-            print self.factor, "factor"
+        image = Image.open(self.GetImage(self.current_file)[2])
 
-        if width > height:
-            if height > width * float(self.Img.GetHeight()) / float(self.Img.GetWidth()):
-                self.Img = self.Img.Scale(
-                    width, width * float(self.Img.GetHeight()) / float(self.Img.GetWidth()))
-            else:
-                self.Img = self.Img.Scale(height * self.factor, height)
-        else:
-            if width > height * float(self.Img.GetWidth()) / float(self.Img.GetHeight()):
-                self.Img = self.Img.Scale(
-                    height * float(self.Img.GetWidth()) / float(self.Img.GetHeight()), height)
-            else:
-                self.Img = self.Img.Scale(width, width / self.factor)
+        image.thumbnail(size, Image.ANTIALIAS)
+        new_image = self.ConvertPILToWX(image)
 
-        self.Image.SetBitmap(wx.BitmapFromImage(self.Img))
+        try:
+            self.Image.SetBitmap(wx.BitmapFromImage(new_image))
+        except:
+            print "No luck"
 
-        self.loadCounter = self.loadCounter + 2
-        # self.Fit()
-        # self.Layout()
-
+        self.Layout()
         self.Refresh()
 
     def DisplayPrev(self, event=None):
-        print self.files
-        print self.imgPan.GetSize()
-        # print self.box.GetSize() FUNKTIONIERT NICHT! Muss gefixt werden
 
         index = self.files.index(self.current_file)
         if index == 0:
@@ -244,17 +150,32 @@ class TaggingView(wx.Panel):
         self.Image.SetBitmap(wx.BitmapFromImage(image))
 
         self.newLoad = True
-        self.Fit()
+        self.ReSize()
         self.Layout()
         self.Refresh()
 
-        print self.current_file
+    def ConvertPILToWX(self, pil, alpha=True):
+
+        if alpha:
+            image = apply(wx.EmptyImage, pil.size)
+            image.SetData(pil.convert("RGB").tostring())
+            image.SetAlphaData(pil.convert("RGBA").tostring()[3::4])
+        else:
+            image = wx.EmptyImage(pil.size[0], pil.size[1])
+            new_image = pil.convert('RGB')
+            data = new_image.tostring()
+            image.SetData(data)
+
+        return image 
 
     def GetItems(self):
         return self.files
 
-    def OnCloseWindow(self, event):
+    def OnExit(self, event):
         self.Destroy()
+
+
+
 '''
     def get_exif(fn):
         ret = {}
@@ -266,16 +187,36 @@ class TaggingView(wx.Panel):
         return ret
 '''
 
+'''
 
-class App(wx.App):
+# print self.box.GetSize()
 
-    def OnInit(self):
+'''
 
-        frame = TestFrame(None, files=[1, 2, 3, 4, 5, 6, 7, 8])
-        self.SetTopWindow(frame)
-        frame.Show(True)
-        return True
+'''
+        factor = float(image.GetWidth()) / float(image.GetHeight())
 
-if __name__ == "__main__":
-    app = App(0)
-    app.MainLoop()
+        if width > height:
+            if height > width * float(image.GetHeight()) / float(image.GetWidth()):
+                new_width = width
+                new_height = width * float(image.GetHeight()) / float(image.GetWidth())
+            else:
+                new_width = height * factor
+                new_height = height
+        else:
+            if width > height * float(image.GetWidth()) / float(image.GetHeight()):
+                new_width = height * float(image.GetWidth()) / float(image.GetHeight())
+                new_height = height
+            else:
+                new_width = width
+                new_height = width / factor
+        try:
+            pil_im = self.ConvertWXToPIL(image)
+            pil_im = pil_im.resize((new_width, new_height), Image.ANTIALIAS)
+            image = self.ConvertPILToWX(pil_im)
+            
+            print "Yay!"
+        except Exception as e:
+            print e
+
+'''
