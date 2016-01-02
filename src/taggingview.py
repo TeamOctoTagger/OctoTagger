@@ -7,6 +7,9 @@ import database
 from PIL import Image
 
 # TODO: Context pane
+# TODO: Switch from PIL to Pillow
+# TODO: Generic icons for generic files
+# OPTIONAL: Animated gif support, open file with application
 
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()

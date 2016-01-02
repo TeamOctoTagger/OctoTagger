@@ -154,6 +154,21 @@ def tag_name_to_id(tag_name):
     else:
         return False
 
+def path_to_id(path):
+    # Get gallery connection
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+
+    location, name = os.path.split(path)
+
+    query_get_folders = "SELECT pk_id FROM folder WHERE location = \'%s\' AND name = \'%s\'" % (location, name)
+    cursor.execute(query_get_folders)
+    folder = cursor.fetchone()
+    if folder:
+        return folder[0]
+    else:
+        return False
+
 
 def get_all_tag_ids():
     # Get gallery connection

@@ -6,11 +6,13 @@ import database
 import os
 import wx
 import wx.lib.newevent
+import tagging
 
 THUMBNAIL_SIZE = (128, 128)
 
 SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
 DoubleClickItemEvent, EVT_ITEM_DOUBLE_CLICK = wx.lib.newevent.NewCommandEvent()
+RightClickItemEvent, EVT_ITEM_RIGHT_CLICK = wx.lib.newevent.NewCommandEvent()
 
 class ItemView(wx.ScrolledWindow):
 
@@ -38,6 +40,7 @@ class ItemView(wx.ScrolledWindow):
         self.last_clicked = None
 
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnRightMouseUp)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
 
     def get_current_root(self):
@@ -116,6 +119,49 @@ class ItemView(wx.ScrolledWindow):
 
         wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
 
+    def OnRightMouseUp(self, event):
+        # So that rightclicking an item selects it,
+        # without removing a multiselection
+
+        target = event.GetEventObject()
+        if target is self:
+            # clicked outside of any item
+            return
+
+        if not target.GetClientRect().Contains(event.GetPosition()):
+            # click dragged outside of target
+            return
+
+        while not isinstance(target, Item):
+            # clicked on a child of the item
+            target = target.GetParent()
+
+        index = self.sizer.GetItem(target).GetUserData()
+
+        selected = self.GetSelectedItems()
+        item = target.GetPath()
+
+        if not selected:
+            pass
+        elif not item in selected:
+            pass
+        elif item in selected:
+            return
+
+        if event.ControlDown() or event.ShiftDown():
+            return
+
+        # clear selection
+        items = self.sizer.GetChildren()
+        for item in items:
+            item.GetWindow().SetSelected(False)
+
+        target.ToggleSelected()
+
+        self.last_clicked = index
+
+        wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
+
     def OnMouseDouble(self, event):
         target = event.GetEventObject()
 
@@ -175,10 +221,11 @@ class ItemView(wx.ScrolledWindow):
                     })
                 elif type(item) is str:  # item is fs path
                     name = os.path.basename(item)
+                    print item
                     if os.path.isdir(item):
                         result.append({
                             'name': name,
-                            'path': parse_items(item),
+                            'path': item,
                             'image': thumbnail.GENERIC['folder'],
                         })
                     elif os.path.isfile(item):
@@ -188,7 +235,8 @@ class ItemView(wx.ScrolledWindow):
                             'image': thumbnail.get_thumbnail(item),
                         })
                     else:
-                        raise TypeError('Encountered unsupported path', item)
+                        print ('Encountered unsupported path', item)
+
                 else:
                     raise TypeError('Encountered unsupported item', item)
             return result
@@ -287,7 +335,9 @@ class Item(wx.Panel):
         # events
 
         self.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+        self.Bind(wx.EVT_RIGHT_UP, self.PropagateEvent)
         self.bitmap.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+        self.bitmap.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
         self.bitmap.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
         
@@ -319,3 +369,11 @@ class Item(wx.Panel):
 
     def OnMouseDouble(self, event):
         wx.PostEvent(self, DoubleClickItemEvent(self.path))
+
+    def OnMouseRight(self, event):
+        new_event = RightClickItemEvent(self.GetId(), position=event.GetPosition())
+        wx.PostEvent(
+            self,
+            new_event,
+        )
+        self.PropagateEvent(event)

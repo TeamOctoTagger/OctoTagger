@@ -105,6 +105,12 @@ class TagList(wx.ScrolledWindow):
             if item.GetLabelText() in strings:
                 item.Set3StateValue(wx.CHK_UNDETERMINED)
 
+    def EnableAll(self, enable):
+        items = self.GetItems()
+
+        for item in items:
+            item.Enable(enable)
+
     def Check(self, checkbox, state):
         checkbox.Set3StateValue(state)
 
