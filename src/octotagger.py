@@ -16,6 +16,8 @@ import expression
 import taglist
 import taggingview
 
+# TODO: Scale images in taggingview when maximized
+# TODO: Optimize switching between ItemView and TaggingView
 
 class MainWindow(wx.Frame):
 
@@ -27,6 +29,9 @@ class MainWindow(wx.Frame):
 
         # A StatusBar in the bottom of the window
         self.CreateStatusBar()
+
+        # Setting icon
+        self.SetIcon(wx.Icon("icons/logo.ico", wx.BITMAP_TYPE_ICO))
 
         # Setting up the menus.
         self.filemenu = wx.Menu()
@@ -159,11 +164,13 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
         self.Bind(
             wx.EVT_MENU,
-            self.on_start_tagging_mode,
+            self.start_tagging_mode,
             toolStartTaggingMode,
         )
 
-        # TODO: Replace this with custom event!
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnKey)
+        #self.Bind(wx.EVT_CHAR, self.OnChar)
+
         self.Bind(
             itemview.EVT_SELECTION_CHANGE,
             self.on_selection_change)
@@ -171,6 +178,7 @@ class MainWindow(wx.Frame):
         # Tag and Context Pane
 
         self.mainPan = itemview.ItemView(self)
+        self.Bind(itemview.EVT_ITEM_DOUBLE_CLICK, self.on_double_click_item)
 
         self.main_box = wx.BoxSizer(wx.HORIZONTAL)
         left_panel = wx.Panel(self, size=(300, -1))
@@ -198,7 +206,15 @@ class MainWindow(wx.Frame):
             "",
             style=wx.TE_PROCESS_ENTER)
 
-        self.Bind(wx.EVT_TEXT, self.on_query_text, self.query_field)
+        self.Bind(
+            wx.EVT_TEXT,
+            self.on_query_text,
+            self.query_field)
+
+        self.Bind(
+            wx.EVT_MAXIMIZE,
+            self.OnMaximize,
+        )
 
         self.Bind(
             wx.EVT_TEXT_ENTER,
@@ -233,56 +249,95 @@ class MainWindow(wx.Frame):
 
     # Define events
 
-    def on_start_tagging_mode(self, e=None):
-        items = self.mainPan.GetItems()
+    def start_tagging_mode(self, e=None, start_file=None):
+        self.mode = "tagging"
+
+        self.items = self.mainPan.GetItems()
+        self.selected_items = self.mainPan.GetSelectedItems()
+
         self.main_box.Remove(self.mainPan)
         self.mainPan.Destroy()
-        self.mainPan = taggingview.TaggingView(self, items)
+
+        if start_file:
+            self.mainPan = taggingview.TaggingView(self, self.items, start_file)
+        elif self.selected_items:
+            start_file = self.selected_items[0]
+            self.mainPan = taggingview.TaggingView(self, self.items, start_file)
+        else:
+            self.mainPan = taggingview.TaggingView(self, self.items)
+
+        self.Bind(
+            taggingview.EVT_EXIT_TAGGING_VIEW, 
+            self.on_resume_overview_mode,
+        )
+        self.Bind(
+            taggingview.EVT_ITEM_CHANGE,
+            self.on_selection_change,
+        )
+
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
 
         self.Layout()
         self.Refresh()
-
         self.mainPan.ReSize()
 
-        print self.mainPan.GetSize()
+    def on_resume_overview_mode(self, e):
+        self.mode = "overview"
+
+        self.main_box.Remove(self.mainPan)
+        self.mainPan.Destroy()
+        self.mainPan = itemview.ItemView(self)
+        self.Bind(itemview.EVT_ITEM_DOUBLE_CLICK, self.on_double_click_item)
+        self.main_box.Add(self.mainPan, 1, wx.EXPAND)
+        self.start_overview()
+
+        self.mainPan.SetItems(self.items)
+        self.mainPan.SetSelectedItems(self.selected_items)
+
+        self.update_tag_list()
+
+    def on_double_click_item(self, e):
+        item = e.GetId()
+        self.start_tagging_mode(item)
 
     def on_query_text(self, e):
-        if self.mainPan.GetSelectedItems():
-            return
+        if self.mode == "overview":
+            if self.mainPan.GetSelectedItems():
+                return
 
-        print "yes"
+            # TODO: Check if input is a valid expression!
+            query_input = e.GetEventObject().GetValue()
 
-        # TODO: Check if input is a valid expression!
-        query_input = e.GetEventObject().GetValue()
+            if query_input == "":
+                self.start_overview()
 
-        if query_input == "":
-            self.start_overview()
+            else:
+                try:
+                    query_files = ("SELECT pk_id FROM file WHERE %s" %
+                                   (expression.parse(query_input)))
 
-        else:
-            try:
-                query_files = ("SELECT pk_id FROM file WHERE %s" %
-                               (expression.parse(query_input)))
+                    # Get file list
+                    cursor = database.get_current_gallery("connection").cursor()
+                    cursor.execute(query_files)
+                    result = cursor.fetchall()
 
-                # Get file list
-                cursor = database.get_current_gallery("connection").cursor()
-                cursor.execute(query_files)
-                result = cursor.fetchall()
+                    items = []
 
-                items = []
+                    for item in result:
+                        items.append(item[0])
 
-                for item in result:
-                    items.append(item[0])
+                    self.mainPan.SetItems(items)
+                    self.Layout()
 
-                self.mainPan.SetItems(items)
-                self.Layout()
-
-            except:
-                print "Invalid expression!"
-                # self.start_overview()
+                except:
+                    print "Invalid expression!"
 
     def on_query_text_enter(self, e):
-        items = self.mainPan.GetSelectedItems()
+        if self.mode == "overview":
+            items = self.mainPan.GetSelectedItems()
+        elif self.mode == "tagging":
+            items = [self.mainPan.GetCurrentItem()]
+
         query = e.GetEventObject().GetValue()
 
         # TODO: Check if input is a valid tag name!
@@ -325,7 +380,10 @@ class MainWindow(wx.Frame):
         self.select_tags()
 
     def select_tags(self):
-        items = self.mainPan.GetSelectedItems()
+        if(self.mode == "overview"):
+            items = self.mainPan.GetSelectedItems()
+        elif(self.mode == "tagging"):
+            items = [self.mainPan.GetCurrentItem()]
 
         self.lb.CheckAll(wx.CHK_UNCHECKED)
 
@@ -361,27 +419,42 @@ class MainWindow(wx.Frame):
         self.lb.SetUndeterminedStrings(undetermined)
 
     def on_tag_selected(self, e):
-        items = self.mainPan.GetSelectedItems()
-        tags = self.lb.GetStrings()
-        checked_tags = self.lb.GetCheckedStrings()
-        undetermined_tags = self.lb.GetUndeterminedStrings()
+        if self.mode == "overview":
+            items = self.mainPan.GetSelectedItems()
+            tags = self.lb.GetStrings()
+            checked_tags = self.lb.GetCheckedStrings()
+            undetermined_tags = self.lb.GetUndeterminedStrings()
 
-        if items:
-            # Files are selected -> tag them
-            for item in items:
-                item_tags = tagging.get_tag_names(item)
-                for tag in tags:
-                    if(tag not in item_tags and tag in checked_tags):
-                        tagging.tag_file(item, tag)
+            if items:
+                # Files are selected -> tag them
+                for item in items:
+                    item_tags = tagging.get_tag_names(item)
+                    for tag in tags:
+                        if(tag not in item_tags and tag in checked_tags):
+                            tagging.tag_file(item, tag)
 
-                    elif(tag in item_tags and
-                         tag not in checked_tags and
-                            tag not in undetermined_tags):
-                        tagging.untag_file(item, tag)
-        else:
-            # No files are selected -> filter them
-            query_input = " ".join(checked_tags)
-            self.query_field.SetValue(query_input)
+                        elif(tag in item_tags and
+                             tag not in checked_tags and
+                                tag not in undetermined_tags):
+                            tagging.untag_file(item, tag)
+            else:
+                # No files are selected -> filter them
+                query_input = " ".join(checked_tags)
+                self.query_field.SetValue(query_input)
+
+        elif self.mode == "tagging":
+            item = self.mainPan.GetCurrentItem()
+            tags = self.lb.GetStrings()
+            checked_tags = self.lb.GetCheckedStrings()
+
+            item_tags = tagging.get_tag_names(item)
+            for tag in tags:
+                if(tag not in item_tags and tag in checked_tags):
+                    tagging.tag_file(item, tag)
+
+                elif(tag in item_tags and tag not in checked_tags):
+                    tagging.untag_file(item, tag)
+
 
     def update_tag_list(self):
 
@@ -563,6 +636,45 @@ class MainWindow(wx.Frame):
         dlg = settings.Settings(self)
         dlg.ShowModal()
         dlg.Destroy()
+
+    def OnMaximize(self, e):
+        print self.mainPan.GetSize()
+        self.Layout()
+        self.Refresh()
+
+        if self.mode == "tagging":
+            self.mainPan.Layout()
+            self.mainPan.Refresh()
+            print self.mainPan.GetSize()
+            self.mainPan.ReSize()
+
+        print self.mainPan.GetSize()
+
+    # Custom key shortcuts
+
+    def OnKey(self, e):
+        if self.mode == "tagging":
+            if e.GetKeyCode() == wx.WXK_RIGHT:
+                self.mainPan.DisplayNext()
+            elif e.GetKeyCode() == wx.WXK_LEFT:
+                self.mainPan.DisplayPrev()
+            elif e.GetKeyCode() == wx.WXK_ESCAPE:
+                self.mainPan.OnExit()
+        elif self.mode == "overview":
+            try:
+                char = chr(e.GetKeyCode())
+            except:
+                return
+
+            if char == "A" and e.ControlDown():
+                if not self.mainPan.IsSelectedAll():
+                    self.mainPan.SetSelectedAll(True)
+                else:
+                    self.mainPan.SetSelectedAll(False)
+
+                self.select_tags()
+
+        e.Skip()
 
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())

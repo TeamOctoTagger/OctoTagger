@@ -15,7 +15,7 @@ def getInfo():
 
     info = wx.AboutDialogInfo()
 
-    info.SetIcon(wx.Icon('logo.png', wx.BITMAP_TYPE_PNG))
+    info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
     info.SetName('OctoTagger')
     info.SetVersion('0.1')
     info.SetDescription(description)
@@ -27,5 +27,4 @@ def getInfo():
     info.AddDeveloper('Christoph Führer')
     info.AddDocWriter('Julian Lorenz')
     info.AddArtist('Julian Lorenz')
-    info.AddTranslator('Julian Lorenz')
     return info

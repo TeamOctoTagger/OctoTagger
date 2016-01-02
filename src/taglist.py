@@ -6,14 +6,14 @@ import wx
 TagListCheckEvent, EVT_TAGLIST_CHECK = wx.lib.newevent.NewCommandEvent()
 
 # TODO: Find workaround for appearance of undetermined state in some GTK themes
-
+# OPTIONAL: Improve order of tags in list 
 
 class TagList(wx.ScrolledWindow):
 
     def __init__(self, parent, id, pos, size, tags):
         super(TagList, self).__init__(
             parent,
-            style=wx.VSCROLL | wx.SIMPLE_BORDER,
+            style=wx.VSCROLL,
             id=id,
             pos=pos,
             size=size,

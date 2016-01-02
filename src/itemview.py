@@ -10,7 +10,7 @@ import wx.lib.newevent
 THUMBNAIL_SIZE = (128, 128)
 
 SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
-
+DoubleClickItemEvent, EVT_ITEM_DOUBLE_CLICK = wx.lib.newevent.NewCommandEvent()
 
 class ItemView(wx.ScrolledWindow):
 
@@ -137,6 +137,8 @@ class ItemView(wx.ScrolledWindow):
         else:
             self.breadcrumbs.append(index)
 
+        print index
+
         self.last_clicked = None
         self.update_items()
 
@@ -204,6 +206,13 @@ class ItemView(wx.ScrolledWindow):
 
         return result
 
+    def SetSelectedItems(self, selected):
+        items = self.sizer.GetChildren()
+
+        for item in items:
+            if item.GetWindow().GetPath in selected:
+                item.GetWindow().SetSelected(True)
+
     def GetItems(self):
         result = []
         items = self.sizer.GetChildren()
@@ -212,6 +221,14 @@ class ItemView(wx.ScrolledWindow):
             result.append(item.GetWindow().GetPath())
 
         return result
+
+    def IsSelectedAll(self):
+        items = self.sizer.GetChildren()
+        for item in items:
+            if not item.GetWindow().IsSelected():
+                return False
+
+        return True
 
     def SetSelectedAll(self, selected=True):
         items = self.sizer.GetChildren()
@@ -271,7 +288,9 @@ class Item(wx.Panel):
 
         self.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
         self.bitmap.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+        self.bitmap.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+        
 
     def GetPath(self):
         return self.path
@@ -297,3 +316,6 @@ class Item(wx.Panel):
     def ToggleSelected(self):
         self.selected = not self.selected
         self.UpdateBackground()
+
+    def OnMouseDouble(self, event):
+        wx.PostEvent(self, DoubleClickItemEvent(self.path))

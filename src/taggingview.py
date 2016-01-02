@@ -5,18 +5,22 @@ import wx
 import os
 import database
 from PIL import Image
-import time
 
-# TODO: Exit Tagging View, Tagging functionality, Context pane
+# TODO: Context pane
 
+TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
+ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
 
 class TaggingView(wx.Panel):
 
-    def __init__(self, parent, files):
+    def __init__(self, parent, files, start_file=None):
         wx.Panel.__init__(self, parent)
 
         self.files = files
-        self.current_file = files[0]
+        if start_file and start_file in files:
+            self.current_file = start_file
+        else:
+            self.current_file = files[0]
         self.first = True
 
         self.init_ui()
@@ -68,16 +72,15 @@ class TaggingView(wx.Panel):
         mainBox.Add(topBox, 0, wx.EXPAND)
         mainBox.Add(self.imgPan, 1, wx.ALL | wx.EXPAND)
 
-        self.SetSizerAndFit(mainBox)
+        self.UpdateLabel()
 
-        print self.GetSize()
+        wx.PostEvent(self, ItemChangeEvent(self.GetId()))
+
+        self.SetSizerAndFit(mainBox)
         
         self.Layout()
         self.Refresh()
         self.Bind(wx.EVT_SIZE, self.ReSize)
-
-        self.ReSize()
-
 
     def DisplayNext(self, event=None):
 
@@ -88,16 +91,36 @@ class TaggingView(wx.Panel):
             self.current_file = self.files[index + 1]
 
         result = self.GetImage(self.current_file)
-        image = result[0]
         image_name = result[1]
 
-        self.text.SetLabel(os.path.basename(image_name))
+        wx.PostEvent(self, ItemChangeEvent(self.GetId()))
 
+        self.UpdateLabel()
+        self.ReSize()
+        self.Layout()
+        self.Refresh()
+
+    def DisplayPrev(self, event=None):
+
+        index = self.files.index(self.current_file)
+        print index
+        if index == 0:
+            self.current_file = self.files[len(self.files) - 1]
+        else:
+            self.current_file = self.files[index - 1]
+
+        result = self.GetImage(self.current_file)
+        image_name = result[1]
+
+        wx.PostEvent(self, ItemChangeEvent(self.GetId()))
+
+        self.UpdateLabel()
         self.ReSize()
         self.Layout()
         self.Refresh()
 
     def GetImage(self, file):
+
         cursor = database.get_current_gallery("connection").cursor()
         query = "SELECT uuid, file_name FROM file WHERE pk_id = %s" % (file)
         cursor.execute(query)
@@ -109,12 +132,21 @@ class TaggingView(wx.Panel):
 
         return [wx.Image(path), result[1], path]
 
+    def UpdateLabel(self):
+        label = (
+            "%s  (%d/%d)" % (
+                os.path.basename(self.GetImage(self.current_file)[1]),
+                self.files.index(self.current_file) + 1,
+                len(self.files),
+            )
+        )
+        self.text.SetLabel(label)
+
     def ReSize(self, event=None):
 
         # TODO: When window is resized quickly, doesn't resize image correctly.
 
         size = self.imgPan.GetSize()
-        print size
 
         image = Image.open(self.GetImage(self.current_file)[2])
 
@@ -126,31 +158,6 @@ class TaggingView(wx.Panel):
         except:
             print "No luck"
 
-        self.Layout()
-        self.Refresh()
-
-    def DisplayPrev(self, event=None):
-
-        index = self.files.index(self.current_file)
-        if index == 0:
-            self.current_file = len(self.files)
-        else:
-            self.current_file = self.files[index - 1]
-
-        result = self.GetImage(self.current_file)
-        image = result[0]
-        image_name = result[1]
-
-        print self.current_file, "Picture"
-
-        self.text.SetLabel(os.path.basename(image_name))
-
-        image = image.Scale(800, 500)
-
-        self.Image.SetBitmap(wx.BitmapFromImage(image))
-
-        self.newLoad = True
-        self.ReSize()
         self.Layout()
         self.Refresh()
 
@@ -171,8 +178,12 @@ class TaggingView(wx.Panel):
     def GetItems(self):
         return self.files
 
-    def OnExit(self, event):
-        self.Destroy()
+    def GetCurrentItem(self):
+        return self.current_file
+
+    def OnExit(self, event=None):
+        wx.PostEvent(self, TaggingViewExitEvent(self.GetId()))
+        #self.Destroy()
 
 
 
