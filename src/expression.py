@@ -28,6 +28,8 @@ def parse(string):
         Or
     """
 
+    print string
+
     def identity(scanner, token):
         return token
 

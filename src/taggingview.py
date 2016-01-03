@@ -5,6 +5,8 @@ import wx
 import os
 import database
 from PIL import Image
+# TODO: Move rightclick event somewhere other than taggingview
+import itemview
 
 # TODO: Context pane
 # TODO: Switch from PIL to Pillow
@@ -84,6 +86,8 @@ class TaggingView(wx.Panel):
         self.Layout()
         self.Refresh()
         self.Bind(wx.EVT_SIZE, self.ReSize)
+        self.imgPan.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
+        self.Image.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
     def DisplayNext(self, event=None):
 
@@ -184,9 +188,11 @@ class TaggingView(wx.Panel):
     def GetCurrentItem(self):
         return self.current_file
 
+    def OnMouseRight(self, event):
+        wx.PostEvent(self, itemview.RightClickItemEvent(self.GetId()))
+
     def OnExit(self, event=None):
         wx.PostEvent(self, TaggingViewExitEvent(self.GetId()))
-        #self.Destroy()
 
 
 

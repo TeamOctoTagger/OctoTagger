@@ -2,8 +2,11 @@
 # -*- coding: utf-8 --
 
 import wx
+import tagging
+import database
 
 TagListCheckEvent, EVT_TAGLIST_CHECK = wx.lib.newevent.NewCommandEvent()
+TagListUpdateEvent, EVT_TAGLIST_UPDATE = wx.lib.newevent.NewCommandEvent()
 
 # TODO: Find workaround for appearance of undetermined state in some GTK themes
 # OPTIONAL: Improve order of tags in list 
@@ -24,12 +27,9 @@ class TagList(wx.ScrolledWindow):
         self.checked = []
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
-
         self.SetScrollRate(10, 10)
+        self.edit_tag = None
 
-        self.init_ui()
-
-    def init_ui(self):
         for tag in self.tags:
             self.Insert(tag)
 
@@ -41,6 +41,7 @@ class TagList(wx.ScrolledWindow):
         )
         self.sizer.Add(checkbox, 0, flag=wx.ALL, border=2)
         self.Bind(wx.EVT_CHECKBOX, self.OnCheck)
+        checkbox.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
     def OnCheck(self, e):
         cb = e.GetEventObject()
@@ -117,3 +118,109 @@ class TagList(wx.ScrolledWindow):
     def CheckAll(self, state):
         for cb in self.GetItems():
             cb.Set3StateValue(state)
+
+    def OnMouseRight(self, event):
+        if not event.GetEventObject().IsEnabled():
+            return
+
+        item = event.GetEventObject().GetLabelText()
+        self.edit_tag = item
+
+        menu = wx.Menu()
+        item_rename = menu.Append(
+            wx.ID_ANY,
+            "Rename",
+            "Rename this tag.",
+        )
+        item_remove = menu.Append(
+            wx.ID_ANY,
+            "Remove",
+            "Remove this tag from the database.",
+        )
+
+        self.Bind(wx.EVT_MENU, self.RemoveTag, item_remove)
+        self.Bind(wx.EVT_MENU, self.RenameTag, item_rename)
+        self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
+
+    def RenameTag(self, event):
+
+        # TODO: Change tag in all expressions!
+        # Possible Solution: Save expressions with IDs instead of names?
+
+        self.EnableAll(False)
+
+        for child in self.GetChildren():
+            if child.GetLabelText() == self.edit_tag:
+                cb = child
+                break
+
+        text = wx.TextCtrl(
+            self,
+            wx.ID_ANY,
+            self.edit_tag,
+            style=wx.TE_PROCESS_ENTER,
+        )
+        text.SetFocus()
+        text.SelectAll()
+
+        self.Bind(
+            wx.EVT_TEXT_ENTER,
+            self.OnNewName,
+            text,
+        )
+
+        self.sizer.Replace(
+            cb,
+            text,
+        )
+        cb.Show(False)
+        self.Layout()
+
+    def OnNewName(self, event):
+
+        tag_id = tagging.tag_name_to_id(self.edit_tag)
+
+        gallery = database.get_current_gallery("connection")
+        cursor = gallery.cursor()
+
+        text = event.GetEventObject()
+        new_name = text.GetValue()
+
+        # TODO: Check if tag name is valid
+
+        query_tag = (
+            "UPDATE tag "
+            "SET name = \'%s\' "
+            "WHERE pk_id = %d"
+            % (new_name, tag_id)
+        )
+
+        cursor.execute(query_tag)
+        gallery.commit()
+
+        wx.PostEvent(self, TagListUpdateEvent(self.GetId()))
+
+    def RemoveTag(self, event):
+        tag_id = tagging.tag_name_to_id(self.edit_tag)
+
+        gallery = database.get_current_gallery("connection")
+        cursor = gallery.cursor()
+
+        query_has_tag = (
+            "DELETE FROM file_has_tag "
+            "WHERE pk_fk_tag_id = %d"
+            % tag_id
+        )
+        query_tag = (
+            "DELETE FROM tag "
+            "WHERE pk_id = %d"
+            % tag_id
+        )
+
+        cursor.execute(query_has_tag)
+        cursor.execute(query_tag)
+
+        gallery.commit()
+
+        wx.PostEvent(self, TagListUpdateEvent(self.GetId()))
+

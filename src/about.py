@@ -9,7 +9,7 @@ import wx
 
 
 def getInfo():
-    description = ("OctoTagger is a simple yet powerful software for"
+    description = ("OctoTagger is a simple yet powerful software for "
                    "organizing your files.")
     licence = open("LICENSE").read()
 

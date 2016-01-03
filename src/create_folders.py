@@ -47,23 +47,28 @@ def create_folders():
             destination = os.path.join(dest, name)
 
             if not os.path.exists(destination):
-                print database.get_current_gallery("directory")
 
                 source = os.path.join(
                     os.path.join(database.get_current_gallery("directory"),
                                  "files"), uuid)
 
-                print source
-
                 symlink(source, destination, use_softlink)
 
 
 def symlink(src, dest, use_softlink):
-    if os.name == "nt":
-                # TODO: Windows function!
-        return
-    else:
-        if use_softlink:
-            os.symlink(src, dest)
+    src = os.path.abspath(src)
+
+    if not os.path.exists(dest):
+        try:
+            os.remove(dest)
+        except:
+            pass
+
+        if os.name == "nt":
+            # TODO: Windows function!
+            return
         else:
-            os.link(src, dest)
+            if use_softlink:
+                os.symlink(src, dest)
+            else:
+                os.link(src, dest)

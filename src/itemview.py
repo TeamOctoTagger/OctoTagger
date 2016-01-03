@@ -40,7 +40,7 @@ class ItemView(wx.ScrolledWindow):
         self.last_clicked = None
 
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
-        self.Bind(wx.EVT_RIGHT_UP, self.OnRightMouseUp)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnContextBackground)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
 
     def get_current_root(self):
@@ -119,36 +119,19 @@ class ItemView(wx.ScrolledWindow):
 
         wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
 
-    def OnRightMouseUp(self, event):
+    def OnRightMouseUp(self, target, modifiers):
         # So that rightclicking an item selects it,
         # without removing a multiselection
-
-        target = event.GetEventObject()
-        if target is self:
-            # clicked outside of any item
-            return
-
-        if not target.GetClientRect().Contains(event.GetPosition()):
-            # click dragged outside of target
-            return
-
-        while not isinstance(target, Item):
-            # clicked on a child of the item
-            target = target.GetParent()
 
         index = self.sizer.GetItem(target).GetUserData()
 
         selected = self.GetSelectedItems()
-        item = target.GetPath()
+        path = target.GetPath()
 
-        if not selected:
-            pass
-        elif not item in selected:
-            pass
-        elif item in selected:
+        if modifiers:
             return
 
-        if event.ControlDown() or event.ShiftDown():
+        elif path in selected:
             return
 
         # clear selection
@@ -161,6 +144,10 @@ class ItemView(wx.ScrolledWindow):
         self.last_clicked = index
 
         wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
+
+    def OnContextBackground(self, event):
+        new_event = RightClickItemEvent(self.GetId(), item=None)
+        wx.PostEvent(self, new_event)
 
     def OnMouseDouble(self, event):
         target = event.GetEventObject()
@@ -182,8 +169,6 @@ class ItemView(wx.ScrolledWindow):
             self.breadcrumbs.pop()
         else:
             self.breadcrumbs.append(index)
-
-        print index
 
         self.last_clicked = None
         self.update_items()
@@ -221,7 +206,6 @@ class ItemView(wx.ScrolledWindow):
                     })
                 elif type(item) is str:  # item is fs path
                     name = os.path.basename(item)
-                    print item
                     if os.path.isdir(item):
                         result.append({
                             'name': name,
@@ -335,11 +319,17 @@ class Item(wx.Panel):
         # events
 
         self.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
-        self.Bind(wx.EVT_RIGHT_UP, self.PropagateEvent)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
+
         self.bitmap.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+        self.bitmap.Bind(wx.EVT_RIGHT_UP, self.PropagateEvent)
         self.bitmap.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
         self.bitmap.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
+
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
+        self.text.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
+        self.text.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
         
 
     def GetPath(self):
@@ -371,9 +361,6 @@ class Item(wx.Panel):
         wx.PostEvent(self, DoubleClickItemEvent(self.path))
 
     def OnMouseRight(self, event):
-        new_event = RightClickItemEvent(self.GetId(), position=event.GetPosition())
-        wx.PostEvent(
-            self,
-            new_event,
-        )
-        self.PropagateEvent(event)
+        modifiers = event.ControlDown() or event.ShiftDown()
+        new_event = RightClickItemEvent(self.GetId(), item=self, modifiers=modifiers)
+        wx.PostEvent(self, new_event)

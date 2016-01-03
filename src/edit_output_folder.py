@@ -253,6 +253,8 @@ class EditOutputFolder(wx.Dialog):
         cursor.execute(query_insert_folder)
         gallery_conn.commit()
 
+        # TODO: Delete old folder
+
         # Create folders
         create_folders.create_folders()
 

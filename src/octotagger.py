@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import wx
-#import edit_output_folder
+import edit_output_folder
 import create_output_folder
 import bulk_create_output_folders
 import settings
@@ -17,6 +17,8 @@ import taglist
 import taggingview
 import os
 
+#import create_folders
+
 # TODO: Scale images in taggingview when maximized
 # TODO: Optimize switching between ItemView and TaggingView
 
@@ -24,7 +26,9 @@ class MainWindow(wx.Frame):
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title, size=(1280, 720))
-
+        
+        #create_folders.create_folders()
+        
         # Modes: overview, tagging, import, folder
         self.mode = "overview"
 
@@ -255,7 +259,7 @@ class MainWindow(wx.Frame):
 
     # Define events
 
-    def on_start_folder_mode(self, e):
+    def on_start_folder_mode(self, e=None):
         self.mode = "folder"
 
         # Set items to all current database items
@@ -272,7 +276,6 @@ class MainWindow(wx.Frame):
 
         for folder in result:
             path = os.path.join(folder[1], folder[2])
-            print type(path.encode('utf-8'))
             folders.append(path.encode('utf-8'))
 
         self.update_gallery_menu()
@@ -285,11 +288,12 @@ class MainWindow(wx.Frame):
 
 
     def on_show_tagged(self, e):
-        if not self.mode == "overview":
-            return
+        self.mode = "overview"
 
         # Set items to all untagged files
         # Get gallery connection
+
+        self.lb.EnableAll(True)
 
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
@@ -313,11 +317,12 @@ class MainWindow(wx.Frame):
         self.Layout()       
 
     def on_show_untagged(self, e):
-        if not self.mode == "overview":
-            return
+        self.mode = "overview"
 
         # Set items to all untagged files
         # Get gallery connection
+
+        self.lb.EnableAll(True)
 
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
@@ -383,81 +388,10 @@ class MainWindow(wx.Frame):
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
         self.start_overview()
 
-        self.mainPan.SetItems(self.items)
-        self.mainPan.SetSelectedItems(self.selected_items)
+        #self.mainPan.SetItems(self.items)
+        #self.mainPan.SetSelectedItems(self.selected_items)
 
         self.update_tag_list()
-
-    def on_double_click_item(self, e):
-        item = e.GetId()
-        self.start_tagging_mode(item)
-
-    def on_right_click_item(self, e):
-        items = self.mainPan.GetSelectedItems()
-
-        if self.mode == "folder":
-            for item in items:
-                item = tagging.path_to_id(item)
-
-            menu = wx.Menu()
-
-            if len(items) == 1:
-
-                item_rename = menu.Append(
-                    wx.ID_ANY,
-                    "Rename",
-                    "Rename this folder."
-                )
-                item_expression = menu.Append(
-                    wx.ID_ANY,
-                    "Change Expression",
-                    "Modify the expression of this folder."
-                )
-                item_location = menu.Append(
-                    wx.ID_ANY,
-                    "Change location",
-                    "Change the location of this folder on your file system."
-                )
-
-                # Change symlink type
-                menu_symlink = wx.Menu()
-                item_softlink = menu_symlink.Append(
-                    wx.ID_ANY,
-                    "Softlinks",
-                    "Set this folder to use softlinks.",
-                    kind=wx.ITEM_RADIO
-                )
-                item_hardlink = menu_symlink.Append(
-                    wx.ID_ANY,
-                    "Hardlinks",
-                    "Set this folder to use Hardlinks.",
-                    kind=wx.ITEM_RADIO
-                )
-                menu.AppendMenu(
-                    wx.ID_ANY,
-                    "Change link type",
-                    menu_symlink,
-                )
-                item_open = menu.Append(
-                    wx.ID_ANY,
-                    "Open in file explorer",
-                    "Open this folder in your file explorer."
-                )
-                item_remove = menu.Append(
-                    wx.ID_ANY,
-                    "Remove",
-                    "Remove this folder from the database (files remain untouched)."
-                )
-
-            elif len(items) > 1:
-                
-                item_remove = menu.Append(
-                    wx.ID_ANY,
-                    "Remove",
-                    "Remove the selected folders from the database (files remain untouched)."
-                )
-
-            self.mainPan.PopupMenu(menu, e.position)
 
     def on_query_text(self, e):
         if self.mode == "overview":
@@ -496,6 +430,8 @@ class MainWindow(wx.Frame):
             items = self.mainPan.GetSelectedItems()
         elif self.mode == "tagging":
             items = [self.mainPan.GetCurrentItem()]
+        elif self.mode == "folder":
+            return
 
         query = e.GetEventObject().GetValue()
 
@@ -515,6 +451,9 @@ class MainWindow(wx.Frame):
     def start_overview(self, e=None):
         # Set items to all current database items
         # Get gallery connection
+
+        self.lb.EnableAll(True)
+        self.mode = "overview"
 
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
@@ -539,10 +478,12 @@ class MainWindow(wx.Frame):
         self.select_tags()
 
     def select_tags(self):
-        if(self.mode == "overview"):
+        if self.mode == "overview":
             items = self.mainPan.GetSelectedItems()
-        elif(self.mode == "tagging"):
+        elif self.mode == "tagging":
             items = [self.mainPan.GetCurrentItem()]
+        elif self.mode == "folder":
+            return
 
         self.lb.CheckAll(wx.CHK_UNCHECKED)
 
@@ -615,7 +556,7 @@ class MainWindow(wx.Frame):
                     tagging.untag_file(item, tag)
 
 
-    def update_tag_list(self):
+    def update_tag_list(self, event=None):
 
         # Remove previous list
         self.lb_pan.DestroyChildren()
@@ -638,6 +579,7 @@ class MainWindow(wx.Frame):
         )
 
         self.Bind(taglist.EVT_TAGLIST_CHECK, self.on_tag_selected, self.lb)
+        self.Bind(taglist.EVT_TAGLIST_UPDATE, self.update_tag_list, self.lb)
         self.Layout()
 
     def get_gallery_menu(self):
@@ -786,6 +728,9 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
+        if self.mode == "folder":
+            self.on_start_folder_mode()
+
     def OnBulkCreate(self, e):
         dlg = bulk_create_output_folders.BulkCreateOutputFolders(self)
         dlg.ShowModal()
@@ -797,7 +742,6 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnMaximize(self, e):
-        print self.mainPan.GetSize()
         self.Layout()
         self.Refresh()
 
@@ -809,7 +753,10 @@ class MainWindow(wx.Frame):
 
         print self.mainPan.GetSize()
 
-    # Custom key shortcuts
+    def OnAbout(self, e):
+        wx.AboutBox(about.getInfo())
+
+    # Key events
 
     def OnKey(self, e):
         if self.mode == "tagging":
@@ -819,24 +766,232 @@ class MainWindow(wx.Frame):
                 self.mainPan.DisplayPrev()
             elif e.GetKeyCode() == wx.WXK_ESCAPE:
                 self.mainPan.OnExit()
+            elif e.GetKeyCode() == wx.WXK_DELETE:
+                self.RemoveItem()
         elif self.mode == "overview":
             try:
                 char = chr(e.GetKeyCode())
             except:
-                return
+                char = None
 
-            if char == "A" and e.ControlDown():
-                if not self.mainPan.IsSelectedAll():
-                    self.mainPan.SetSelectedAll(True)
-                else:
-                    self.mainPan.SetSelectedAll(False)
+            if char:
+                if char == "A" and e.ControlDown():
+                    if not self.mainPan.IsSelectedAll():
+                        self.mainPan.SetSelectedAll(True)
+                    else:
+                        self.mainPan.SetSelectedAll(False)
 
-                self.select_tags()
+                    self.select_tags()
+
+            if e.GetKeyCode() == wx.WXK_DELETE:
+                self.RemoveItem()
+
+        elif self.mode == "folder":
+            if e.GetKeyCode() == wx.WXK_DELETE:
+                self.RemoveItem()
 
         e.Skip()
 
-    def OnAbout(self, e):
-        wx.AboutBox(about.getInfo())
+    def on_double_click_item(self, e):
+        item = e.GetId()
+        self.start_tagging_mode(item)
+
+    def on_right_click_item(self, e):
+
+        menu = wx.Menu()
+
+        if self.mode == "folder":
+
+            if e.item:
+                self.mainPan.OnRightMouseUp(e.item, e.modifiers)
+
+            items = self.mainPan.GetSelectedItems()
+
+            if len(items) == 0:
+                item_add = menu.Append(
+                    wx.ID_ANY,
+                    "Add folder",
+                    "Create a new folder."
+                )
+                self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder, item_add)
+
+            elif len(items) == 1:
+
+                item_edit = menu.Append(
+                    wx.ID_ANY,
+                    "Edit",
+                    "Edit this folder."
+                )
+                self.Bind(wx.EVT_MENU, self.EditFolder, item_edit)
+                # OPTIONAL
+                '''
+                item_open = menu.Append(
+                    wx.ID_ANY,
+                    "Open in file explorer",
+                    "Open this folder in your file explorer."
+                )
+                '''
+                item_remove = menu.Append(
+                    wx.ID_ANY,
+                    "Remove",
+                    "Remove this folder from the database (files remain untouched)."
+                )
+                self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
+
+            elif len(items) > 1:
+                
+                item_remove = menu.Append(
+                    wx.ID_ANY,
+                    "Remove",
+                    "Remove the selected folders from the database (files remain untouched)."
+                )
+                self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
+
+        elif self.mode == "overview":
+
+            if e.item:
+                # Clicked an item
+
+                self.mainPan.OnRightMouseUp(e.item, e.modifiers)
+                items = self.mainPan.GetSelectedItems()
+
+                if len(items) == 1:
+                    item_rename = menu.Append(
+                            wx.ID_ANY,
+                            "Rename",
+                            "Rename this files."
+                    )
+
+                item_remove = menu.Append(
+                        wx.ID_ANY,
+                        "Delete",
+                        "Delete the selected files (this can not be undone)."
+                )
+                self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
+                # TODO: Bind to and make function
+                item_restore = menu.Append(
+                        wx.ID_ANY,
+                        "Restore",
+                        "Remove the selected files from the database and move them to the desired location."
+                )
+                # TODO: Bind to and make function
+            else:
+                # Clicked into the background
+                return
+
+        elif self.mode == "tagging":
+
+            item_rename = menu.Append(
+                    wx.ID_ANY,
+                    "Rename",
+                    "Rename this file."
+            )
+            item_remove = menu.Append(
+                    wx.ID_ANY,
+                    "Delete",
+                    "Delete this file (this can not be undone)."
+            )
+            self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
+            # TODO: Bind to and make function
+            item_restore = menu.Append(
+                    wx.ID_ANY,
+                    "Restore",
+                    "Remove this file from the database and move it to the desired location."
+            )
+            # TODO: Bind to and make function
+      
+          
+        self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
+
+    def EditFolder(self, e):
+        if not self.mode == "folder":
+            return
+
+        items = self.mainPan.GetSelectedItems()
+        if len(items) != 1:
+            print "Can not edit more than one folder at once."
+
+        folder = tagging.path_to_id(items[0])
+        dlg = edit_output_folder.EditOutputFolder(self, folder)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+        self.on_start_folder_mode()
+
+    def RemoveItem(self, e=None):
+        if self.mode == "folder":
+            items = self.mainPan.GetSelectedItems()
+            ids = []
+
+            for item in items:
+                ids.append(str(tagging.path_to_id(item)))
+
+            # Delete folders
+
+            gallery = database.get_current_gallery("connection")
+            cursor = gallery.cursor()
+
+            query_folders = (
+                "DELETE FROM folder WHERE pk_id IN (%s)"
+                % ", ".join(ids)
+            )
+            cursor.execute(query_folders)
+            gallery.commit()
+
+            self.on_start_folder_mode()
+
+        elif self.mode == "overview":
+            
+            items = self.mainPan.GetSelectedItems()
+            ids = []
+
+            for item in items:
+                ids.append(str(item))
+
+            # TODO: Confirmation?
+            # Delete files
+
+            gallery = database.get_current_gallery("connection")
+            cursor = gallery.cursor()
+
+            query_files = (
+                "DELETE FROM file WHERE pk_id IN (%s)"
+                % ", ".join(ids)
+            )
+            query_tags = (
+                "DELETE FROM file_has_tag WHERE pk_fk_file_id IN (%s)"
+                % ", ".join(ids)
+            )
+            cursor.execute(query_files)
+            cursor.execute(query_tags)
+            gallery.commit()
+
+            self.select_tags()
+            self.start_overview()
+
+        elif self.mode == "tagging":
+
+            item = self.mainPan.GetCurrentItem()
+
+            # TODO: Confirmation?
+            # Delete files
+
+            gallery = database.get_current_gallery("connection")
+            cursor = gallery.cursor()
+
+            query_files = (
+                "DELETE FROM file WHERE pk_id = %d"
+                % item
+            )
+            query_tags = (
+                "DELETE FROM file_has_tag WHERE pk_fk_file_id = %d"
+                % item
+            )
+            cursor.execute(query_files)
+            cursor.execute(query_tags)
+            gallery.commit()
+
+            self.mainPan.DisplayNext()
 
 
 app = wx.App(False)
