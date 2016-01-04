@@ -172,12 +172,12 @@ class TaggingView(wx.Panel):
 
         if alpha:
             image = apply(wx.EmptyImage, pil.size)
-            image.SetData(pil.convert("RGB").tostring())
-            image.SetAlphaData(pil.convert("RGBA").tostring()[3::4])
+            image.SetData(pil.convert("RGB").tobytes())
+            image.SetAlphaData(pil.convert("RGBA").tobytes()[3::4])
         else:
             image = wx.EmptyImage(pil.size[0], pil.size[1])
             new_image = pil.convert('RGB')
-            data = new_image.tostring()
+            data = new_image.tobytes()
             image.SetData(data)
 
         return image 
