@@ -22,6 +22,7 @@ import os
 # TODO: Scale images in taggingview when maximized
 # TODO: Optimize switching between ItemView and TaggingView
 # TODO: Make folders functionsl in Import Mode
+# TODO: Many things don't work at all in Windows right now for some reason...
 
 class MainWindow(wx.Frame):
 
@@ -29,6 +30,10 @@ class MainWindow(wx.Frame):
         wx.Frame.__init__(self, parent, title=title, size=(1280, 720))
         
         #create_folders.create_folders()
+
+        # Fix working directory
+        if os.path.basename(os.getcwd()) != "OctoTagger":
+            os.chdir("..")
         
         # Modes: overview, tagging, import, folder
         self.mode = "overview"
@@ -188,11 +193,11 @@ class MainWindow(wx.Frame):
         )
 
         self.Bind(wx.EVT_CHAR_HOOK, self.OnKey)
-        #self.Bind(wx.EVT_CHAR, self.OnChar)
 
         self.Bind(
             itemview.EVT_SELECTION_CHANGE,
-            self.on_selection_change)
+            self.on_selection_change,
+        )
 
         # Tag and Context Pane
 
@@ -201,19 +206,19 @@ class MainWindow(wx.Frame):
         self.Bind(itemview.EVT_ITEM_RIGHT_CLICK, self.on_right_click_item)
 
         self.main_box = wx.BoxSizer(wx.HORIZONTAL)
-        left_panel = wx.Panel(self, size=(300, -1))
+        left_panel = wx.Panel(self, size=(300, -1), name="left_panel")
         left_panel_sz = wx.BoxSizer(wx.VERTICAL)
         left_panel.SetSizer(left_panel_sz)
 
-        tag_panel = wx.Panel(self)
+        tag_panel = wx.Panel(left_panel, name="tag_panel")
         tag_panel_sz = wx.BoxSizer(wx.VERTICAL)
         tag_panel.SetSizer(tag_panel_sz)
 
-        query_field_panel = wx.Panel(self, size=(-1, 50))
+        query_field_panel = wx.Panel(tag_panel, size=(-1, 50), name="query_field_panel")
         query_field_panel_sz = wx.BoxSizer(wx.HORIZONTAL)
         query_field_panel.SetSizer(query_field_panel_sz)
 
-        tag_list_panel = wx.Panel(self)
+        tag_list_panel = wx.Panel(tag_panel)
         tag_list_panel_sz = wx.BoxSizer(wx.VERTICAL)
         tag_list_panel.SetSizer(tag_list_panel_sz)
 
@@ -224,12 +229,19 @@ class MainWindow(wx.Frame):
             query_field_panel,
             -1,
             "",
-            style=wx.TE_PROCESS_ENTER)
+            style=wx.TE_PROCESS_ENTER
+        )
+
+        left_panel.Bind(
+            wx.EVT_CHILD_FOCUS,
+            self.OnChildFocus,
+        )
 
         self.Bind(
             wx.EVT_TEXT,
             self.on_query_text,
-            self.query_field)
+            self.query_field,
+        )
 
         self.Bind(
             wx.EVT_MAXIMIZE,
@@ -239,7 +251,8 @@ class MainWindow(wx.Frame):
         self.Bind(
             wx.EVT_TEXT_ENTER,
             self.on_query_text_enter,
-            self.query_field)
+            self.query_field,
+        )
 
         query_field_panel_sz.Add(
             self.query_field,
@@ -322,7 +335,7 @@ class MainWindow(wx.Frame):
     def CancelImportWarning(self):
         dlg_cancel = wx.MessageBox(
             'Do you really want to exit the import process? '
-            'All your progress is lost. '
+            'All your progress will be lost. '
             'The tags you have already assigned will not be saved, '
             'and nothing will be imported.\n',
             'In order to save your progress, please import beforehand. '
@@ -580,7 +593,24 @@ class MainWindow(wx.Frame):
         self.Layout()
 
     def on_selection_change(self, e):
+        #self.Fix(self)
+
+        self.Refresh()
+        self.Layout()
         self.select_tags()
+
+    def Fix(self, widget):
+        # TODO: Remove
+
+        try:
+            widget.Layout()
+            widget.Refresh()
+            widget.Update()
+        except:
+            print "Nope"
+
+        for child in widget.GetChildren():
+            self.Fix(child)
 
     def select_tags(self):
 
@@ -806,7 +836,6 @@ class MainWindow(wx.Frame):
             'Warning',
             wx.CANCEL | wx.OK | wx.CANCEL_DEFAULT | wx.ICON_WARNING
         )
-        print dlg_export
         if dlg_export == 4:
             database.reset_gallery(database.get_current_gallery("id"))
             self.update_tag_list()
@@ -887,8 +916,8 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnMaximize(self, e):
-        self.Layout()
-        self.Refresh()
+        #self.Layout()
+        #self.Refresh()
 
         if self.mode == "tagging":
             self.mainPan.Layout()
@@ -900,6 +929,11 @@ class MainWindow(wx.Frame):
         wx.AboutBox(about.getInfo())
 
     # Key events
+
+    def OnChildFocus(self, event):
+        #self.Fix(self)
+        print event.GetWindow().FindFocus()
+        event.Skip()
 
     def OnKey(self, e):
         if self.mode == "tagging":
@@ -1188,7 +1222,10 @@ class MainWindow(wx.Frame):
 
             self.mainPan.DisplayNext()
 
-
 app = wx.App(False)
 frame = MainWindow(None, "OctoTagger")
+
+#import wx.lib.inspection
+#wx.lib.inspection.InspectionTool().Show()
+
 app.MainLoop()

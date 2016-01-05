@@ -20,6 +20,7 @@ def update_gallery():
     os.mkdir("default")
     os.mkdir("default/files")
     os.mkdir("default/thumbnails")
+    os.mkdir("default/thumbnails/temp")
 
     conn = sqlite3.connect("default/default.db")
     query_path = os.path.join(SQL_PATH, "gallery.sql")
