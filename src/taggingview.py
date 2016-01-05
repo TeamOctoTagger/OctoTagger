@@ -11,7 +11,7 @@ import itemview
 # TODO: Context pane
 # TODO: Switch from PIL to Pillow
 # TODO: Generic icons for generic files
-# OPTIONAL: Animated gif support, open file with application
+# OPTIONAL: Animated gif support, open file with application, preload next files
 
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
@@ -180,7 +180,7 @@ class TaggingView(wx.Panel):
             data = new_image.tobytes()
             image.SetData(data)
 
-        return image 
+        return image
 
     def GetItems(self):
         return self.files
@@ -193,7 +193,6 @@ class TaggingView(wx.Panel):
 
     def OnExit(self, event=None):
         wx.PostEvent(self, TaggingViewExitEvent(self.GetId()))
-
 
 
 '''

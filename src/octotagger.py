@@ -21,6 +21,7 @@ import os
 
 # TODO: Scale images in taggingview when maximized
 # TODO: Optimize switching between ItemView and TaggingView
+# TODO: Make folders functionsl in Import Mode
 
 class MainWindow(wx.Frame):
 
@@ -31,6 +32,9 @@ class MainWindow(wx.Frame):
         
         # Modes: overview, tagging, import, folder
         self.mode = "overview"
+
+        # Map of temporary files and tags, for import mode
+        self.temp_file_tags = {}
 
         # A StatusBar in the bottom of the window
         self.CreateStatusBar()
@@ -47,7 +51,7 @@ class MainWindow(wx.Frame):
 
         # FILEMENU
         fileNewDatabase = self.filemenu.Append(
-            1,
+            wx.ID_ANY,
             "&New database",
             " Create a new database"
         )
@@ -56,9 +60,14 @@ class MainWindow(wx.Frame):
 
         self.filemenu.AppendSeparator()
         fileImportFiles = self.filemenu.Append(
-            3,
-            "&Import Files",
-            "Import files and folders into the program"
+            wx.ID_ANY,
+            "&Start file import process...",
+            "Start the import process of files and folders"
+        )
+        fileDirectImportFiles = self.filemenu.Append(
+            wx.ID_ANY,
+            "&Direct file import",
+            "Import files directly, without going through the process"
         )
         item_create_bulk_output_folders = self.filemenu.Append(
             wx.ID_ANY,
@@ -81,19 +90,19 @@ class MainWindow(wx.Frame):
 
         # TOOLMENU
         toolStartTaggingMode = toolmenu.Append(
-            7,
+            wx.ID_ANY,
             "&Start tagging mode",
             "Enter the tagging mode"
         )
         toolmenu.AppendSeparator()
         toolIntegrityCheck = toolmenu.Append(
-            8,
+            wx.ID_ANY,
             "&Integrity check",
             "Execute an Integrity check"
         )
         toolmenu.AppendSeparator()
         toolResetCurrentDatabase = toolmenu.Append(
-            9,
+            wx.ID_ANY,
             "&Reset current database",
             "Reset the current database"
         )
@@ -103,36 +112,36 @@ class MainWindow(wx.Frame):
             "Completely removes the current database."
         )
         toolExportDatabase = toolmenu.Append(
-            10,
+            wx.ID_ANY,
             "&Export database",
             " Exports the current database"
         )
         toolmenu.AppendSeparator()
         toolRestoreAllFiles = toolmenu.Append(
-            11,
+            wx.ID_ANY,
             "&Restore all files",
             " Restores all Files"
         )
 
         # VIEWMENU
         viewShowAllFiles = viewmenu.Append(
-            12,
+            wx.ID_ANY,
             "&Show all files",
             " Shows every file"
         )
         viewShowTaggedFiles = viewmenu.Append(
-            13,
+            wx.ID_ANY,
             "&Show tagged files",
             " Shows the tagged files only"
         )
         viewShowUntaggedFiles = viewmenu.Append(
-            14,
+            wx.ID_ANY,
             "&Show untagged files",
             " Shows the untagged files only"
         )
         viewmenu.AppendSeparator()
         viewShowOutputFolders = viewmenu.Append(
-            15,
+            wx.ID_ANY,
             "&Show output folders",
             " Shows the output folders"
         )
@@ -162,7 +171,8 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_new_database, fileNewDatabase)
         self.Bind(wx.EVT_MENU, self.on_reset, toolResetCurrentDatabase)
         self.Bind(wx.EVT_MENU, self.on_delete, tool_delete_database)
-        self.Bind(wx.EVT_MENU, self.on_import, fileImportFiles)
+        self.Bind(wx.EVT_MENU, self.on_start_import, fileImportFiles)
+        self.Bind(wx.EVT_MENU, self.on_direct_import, fileDirectImportFiles)
         self.Bind(wx.EVT_MENU, self.OnManual, helpManual)
         self.Bind(wx.EVT_MENU, self.OnExit, fileExit)
         self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder,
@@ -257,9 +267,88 @@ class MainWindow(wx.Frame):
 
         self.start_overview()
 
-    # Define events
+    def on_start_import(self, e):
+        dlg_import = wx.DirDialog(
+            self, 
+            "Select the folder containing the "
+            "files you want to import",
+            style= wx.DD_DIR_MUST_EXIST | wx.DD_DEFAULT_STYLE)
+
+        if dlg_import.ShowModal() == wx.ID_CANCEL:
+            print "Import process aborted."
+            return
+
+        if self.mode == "tagging":
+            self.mode = "import"
+            self.on_resume_overview_mode()
+        else:
+            self.mode = "import"
+
+        path = dlg_import.GetPath()
+        items = self.GetFolderItems(path)
+
+        self.InitImportFiles(path)
+
+        self.mainPan.SetItems(items)
+        self.update_tag_list()
+        self.Layout()
+
+    def InitImportFiles(self, path):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                self.temp_file_tags[file_path] = []
+
+    def GetFolderItems(self, path):
+        items = []
+        folders = []
+        files = []
+
+        for item in os.listdir(path):
+            item = os.path.join(path, item).encode('utf-8')
+            if os.path.isfile(item):
+                files.append(item)
+            elif os.path.isdir(item):
+                folders.append(item)
+
+        for folder in folders:
+            items.append(folder)
+
+        for file in files:
+            items.append(file)
+
+        return items
+
+    def CancelImportWarning(self):
+        dlg_cancel = wx.MessageBox(
+            'Do you really want to exit the import process? '
+            'All your progress is lost. '
+            'The tags you have already assigned will not be saved, '
+            'and nothing will be imported.\n',
+            'In order to save your progress, please import beforehand. '
+            'Click "Ok" to continue, and "Cancel" to return.'
+            'Warning',
+            wx.CANCEL | wx.OK | wx.CANCEL_DEFAULT | wx.ICON_WARNING
+        )
+
+        return dlg_cancel == wx.OK
+
+    def on_direct_import(self, e):
+        dlg_import = wx.FileDialog(self, "Import files", "", "",
+                                   "All files (*.*)|*.*",
+                                   wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST)
+
+        if dlg_import.ShowModal() == wx.ID_CANCEL:
+            print "Import aborted."
+        else:
+            import_files.import_files(dlg_import.GetPaths())
+            self.start_overview()
 
     def on_start_folder_mode(self, e=None):
+        if self.mode == "import":
+            if not self.CancelImportWarning():
+                return
+
         self.mode = "folder"
 
         # Set items to all current database items
@@ -377,8 +466,7 @@ class MainWindow(wx.Frame):
         self.Refresh()
         self.mainPan.ReSize()
 
-    def on_resume_overview_mode(self, e):
-        self.mode = "overview"
+    def on_resume_overview_mode(self, event=None):
 
         self.main_box.Remove(self.mainPan)
         self.mainPan.Destroy()
@@ -386,14 +474,15 @@ class MainWindow(wx.Frame):
         self.Bind(itemview.EVT_ITEM_DOUBLE_CLICK, self.on_double_click_item)
         self.Bind(itemview.EVT_ITEM_RIGHT_CLICK, self.on_right_click_item)
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
-        self.start_overview()
-
-        #self.mainPan.SetItems(self.items)
-        #self.mainPan.SetSelectedItems(self.selected_items)
-
         self.update_tag_list()
+    
+        self.start_overview()
+            
 
     def on_query_text(self, e):
+
+        # TODO: Add functionality for import mode
+
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems():
                 return
@@ -426,12 +515,14 @@ class MainWindow(wx.Frame):
                     print "Invalid expression!"
 
     def on_query_text_enter(self, e):
-        if self.mode == "overview":
+
+        if self.mode == "folder":
+            return
+
+        if self.mode in ["overview", "import"]:
             items = self.mainPan.GetSelectedItems()
         elif self.mode == "tagging":
             items = [self.mainPan.GetCurrentItem()]
-        elif self.mode == "folder":
-            return
 
         query = e.GetEventObject().GetValue()
 
@@ -442,15 +533,29 @@ class MainWindow(wx.Frame):
             return
 
         for item in items:
-            tagging.tag_file(item, tag)
+            if self.mode == "import":
+
+                # Create tag if necessary
+                tag_id = tagging.create_tag(tag)
+
+                # Append id
+                if not tag_id in self.temp_file_tags[item]:
+                    self.temp_file_tags[item].append(tag_id)
+
+            else:
+                tagging.tag_file(item, tag)
 
         self.update_tag_list()
         self.select_tags()
         e.GetEventObject().Clear()
 
-    def start_overview(self, e=None):
+    def start_overview(self, e=None, warn_import=True):
         # Set items to all current database items
         # Get gallery connection
+
+        if self.mode == "import" and warn_import:
+            if not self.CancelImportWarning():
+                return
 
         self.lb.EnableAll(True)
         self.mode = "overview"
@@ -478,24 +583,45 @@ class MainWindow(wx.Frame):
         self.select_tags()
 
     def select_tags(self):
-        if self.mode == "overview":
-            items = self.mainPan.GetSelectedItems()
+
+        if self.mode == "folder":
+            return
+
         elif self.mode == "tagging":
             items = [self.mainPan.GetCurrentItem()]
-        elif self.mode == "folder":
-            return
+
+        else:
+            items = self.mainPan.GetSelectedItems()
+        
+        if self.mode == "import":
+            item_tags = {}
+            for item in items:
+
+                tag_ids = self.temp_file_tags[item]
+                tag_names = []
+                for tag_id in tag_ids:
+                    tag_names.append(tagging.tag_id_to_name(tag_id))
+
+                item_tags[item] = tag_names
+
+        else:
+            item_tags = {}
+            for item in items:
+                tag_ids = tagging.get_tags(item)
+                tag_names = []
+                for tag_id in tag_ids:
+                    tag_names.append(tagging.tag_id_to_name(tag_id))
+                
+                item_tags[item] = tag_names
 
         self.lb.CheckAll(wx.CHK_UNCHECKED)
 
         checked = []
         undetermined = []
-        # checkboxes = self.lb.GetStrings()
 
         for item in items:
 
-            tags = []
-            for tag in tagging.get_tags(item):
-                tags.append(tagging.tag_id_to_name(tag))
+            tags = item_tags[item]
 
             if not checked:
                 for tag in tags:
@@ -519,7 +645,7 @@ class MainWindow(wx.Frame):
         self.lb.SetUndeterminedStrings(undetermined)
 
     def on_tag_selected(self, e):
-        if self.mode == "overview":
+        if self.mode in ["overview", "import"]:
             items = self.mainPan.GetSelectedItems()
             tags = self.lb.GetStrings()
             checked_tags = self.lb.GetCheckedStrings()
@@ -528,15 +654,39 @@ class MainWindow(wx.Frame):
             if items:
                 # Files are selected -> tag them
                 for item in items:
-                    item_tags = tagging.get_tag_names(item)
-                    for tag in tags:
-                        if(tag not in item_tags and tag in checked_tags):
-                            tagging.tag_file(item, tag)
+                    if self.mode == "overview":
+                        item_tags = tagging.get_tag_names(item)
+                        for tag in tags:
+                            if(tag not in item_tags and tag in checked_tags):
+                                tagging.tag_file(item, tag)
 
-                        elif(tag in item_tags and
-                             tag not in checked_tags and
-                                tag not in undetermined_tags):
-                            tagging.untag_file(item, tag)
+                            elif(tag in item_tags and
+                                 tag not in checked_tags and
+                                    tag not in undetermined_tags):
+                                tagging.untag_file(item, tag)
+                    elif self.mode == "import":
+                        # Convert ID's to names
+                        item_tag_ids = self.temp_file_tags[item]
+                        item_tags = []
+                        for item_tag_id in item_tag_ids:
+                            item_tags.append(tagging.tag_id_to_name(item_tag_id))
+
+                        for tag in tags:
+                            # Convert tag name to ID
+                            tag_id = tagging.tag_name_to_id(tag)
+
+                            # If tag should be added
+                            if(tag not in item_tags and tag in checked_tags):
+
+                                self.temp_file_tags[item].append(tag_id)
+
+                            # If tag should be removed
+                            elif(tag in item_tags and
+                                 tag not in checked_tags and
+                                    tag not in undetermined_tags):
+                                
+                                self.temp_file_tags[item].remove(tag_id)
+
             else:
                 # No files are selected -> filter them
                 query_input = " ".join(checked_tags)
@@ -691,24 +841,16 @@ class MainWindow(wx.Frame):
                 print "Export files now"
                 # TODO: Export files!
 
+
             # Delete everything now!
             database.delete_gallery(database.get_current_gallery("id"))
+            if self.mode == "tagging":
+                self.on_resume_overview_mode()
+
+            self.update_gallery_menu()
 
         else:
             print "Aborted clearing of files"
-
-        self.update_gallery_menu()
-
-    def on_import(self, e):
-        dlg_import = wx.FileDialog(self, "Import files", "", "",
-                                   "All files (*.*)|*.*",
-                                   wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST)
-
-        if dlg_import.ShowModal() == wx.ID_CANCEL:
-            print "Import aborted."
-        else:
-            import_files.import_files(dlg_import.GetPaths())
-            self.start_overview()
 
     def OnManual(self, e):
         dlg = wx.MessageDialog(
@@ -721,7 +863,10 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnExit(self, e):
-        self.Close(True)
+        # TODO: Bind to X clicking of the frame
+
+        if self.CancelImportWarning():
+            self.Close(True)
 
     def OnCreateOutputFolder(self, e):
         dlg = create_output_folder.CreateOutputFolder(self)
@@ -750,8 +895,6 @@ class MainWindow(wx.Frame):
             self.mainPan.Refresh()
             print self.mainPan.GetSize()
             self.mainPan.ReSize()
-
-        print self.mainPan.GetSize()
 
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
@@ -793,8 +936,9 @@ class MainWindow(wx.Frame):
         e.Skip()
 
     def on_double_click_item(self, e):
-        item = e.GetId()
-        self.start_tagging_mode(item)
+        if self.mode == "overview":
+            item = e.GetId()
+            self.start_tagging_mode(item)
 
     def on_right_click_item(self, e):
 
@@ -899,11 +1043,62 @@ class MainWindow(wx.Frame):
                     "Remove this file from the database and move it to the desired location."
             )
             # TODO: Bind to and make function
-      
-          
-        self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
+        
+        elif self.mode == "import":
 
-    def EditFolder(self, e):
+            if e.item:
+                self.mainPan.OnRightMouseUp(e.item, e.modifiers)
+
+            items = self.mainPan.GetSelectedItems()
+
+            if len(items) == 0:
+                item_abort = menu.Append(
+                    wx.ID_ANY,
+                    "Abort import",
+                    "Abort the import, all files remain where they are."
+                )
+                self.Bind(wx.EVT_MENU, self.start_overview, item_abort)
+                item_import_all = menu.Append(
+                    wx.ID_ANY,
+                    "Import all",
+                    "Import all files."
+                )
+                self.Bind(wx.EVT_MENU, self.ImportAll, item_import_all)
+                item_import_tagged = menu.Append(
+                    wx.ID_ANY,
+                    "Import tagged",
+                    "Import all files that have at least one tag assigned."
+                )
+                self.Bind(wx.EVT_MENU, self.ImportTagged, item_import_tagged)
+
+            elif len(items) >= 1:
+                item_remove = menu.Append(
+                    wx.ID_ANY,
+                    "Remove from import",
+                    "Remove the selected items from the import (they remain where they are)."
+                )
+                self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
+        
+        print menu.GetMenuItemCount()
+        if menu.GetMenuItemCount() > 0:
+            self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
+
+    def ImportAll(self, event):
+        
+        import_files.import_files(self.temp_file_tags)
+
+    def ImportTagged(self, event):
+
+        tagged_files = {}
+        for item, tags in self.temp_file_tags.iteritems():
+            if len(tags) > 0:
+                tagged_files[item] = tags
+
+        import_files.import_files(tagged_files)
+
+        self.start_overview(False)
+
+    def EditFolder(self, event):
         if not self.mode == "folder":
             return
 
@@ -918,7 +1113,7 @@ class MainWindow(wx.Frame):
 
         self.on_start_folder_mode()
 
-    def RemoveItem(self, e=None):
+    def RemoveItem(self, event=None):
         if self.mode == "folder":
             items = self.mainPan.GetSelectedItems()
             ids = []

@@ -95,7 +95,7 @@ class NewDatabase(wx.Dialog):
     def on_browse(self, e):
         dlg_browse = wx.DirDialog(self,
                                   "Choose a location in which the "
-                                  "output folders will be generated",
+                                  "database and files will be stored",
                                   expanduser("~"))
 
         if dlg_browse.ShowModal() == wx.ID_CANCEL:

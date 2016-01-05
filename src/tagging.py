@@ -11,6 +11,33 @@ import database
 
 # Methods for assigning tags to files
 
+def create_tag(tag_name, is_numeric=False):
+    # Get gallery connection
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+
+    # Try to find existing tag
+    query_get_tags = "SELECT * FROM tag WHERE name = \'%s\'" % (tag_name)
+    cursor.execute(query_get_tags)
+    tag = cursor.fetchone()
+    if tag:
+        # Tag already exists
+        pass
+
+    else:
+        # Tag needs to be created
+        query_insert_tag = "INSERT INTO tag(name, is_numeric) VALUES (\'%s\', %d)" % (
+            tag_name, is_numeric)
+        cursor.execute(query_insert_tag)
+        gallery.commit()
+
+    # Get ID of the tag
+    query_get_tags = "SELECT pk_id FROM tag WHERE name = \'%s\'" % (tag_name)
+    cursor.execute(query_get_tags)
+    tag_id = cursor.fetchone()
+
+    return tag_id[0]
+
 
 def tag_file(file_id, tag_name, amount=-1):
     # Get gallery connection
@@ -19,6 +46,7 @@ def tag_file(file_id, tag_name, amount=-1):
 
     # Try to find existing tag
     query_get_tags = "SELECT * FROM tag WHERE name = \'%s\'" % (tag_name)
+    print query_get_tags
     cursor.execute(query_get_tags)
     tags = cursor.fetchall()
     if tags:

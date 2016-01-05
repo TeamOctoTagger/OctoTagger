@@ -80,6 +80,7 @@ def create_gallery(name, location):
     folder_gallery = os.path.normpath(location + "/" + name)
     folder_files = os.path.normpath(folder_gallery + "/files")
     folder_thumbnails = os.path.normpath(folder_gallery + "/thumbnails")
+    folder_temp = os.path.join(folder_thumbnails, "temp")
 
     file_default_gallery = os.path.normpath("./db/default.db")
     print os.path.abspath(file_default_gallery)
@@ -88,6 +89,7 @@ def create_gallery(name, location):
     os.mkdir(folder_gallery)
     os.mkdir(folder_files)
     os.mkdir(folder_thumbnails)
+    os.mkdir(folder_temp)
 
     shutil.copy(file_default_gallery, file_new_gallery)
 

@@ -4,6 +4,7 @@ import itemview
 import mimetypes
 import os
 import types
+import hashlib
 
 DEFAULT_ICON = "./icons/generic.png"
 
@@ -13,6 +14,7 @@ GENERIC = {
 
 _map = {}
 
+# TODO: Error handling when loading thumbnails
 
 def register(mime_type, handler):
     if mime_type in _map:
@@ -31,6 +33,9 @@ def register(mime_type, handler):
 
 
 def get_thumbnail(item):
+    
+    is_db_item = True
+
     if type(item) is int:  # item is db id
         connection = database.get_current_gallery("connection").cursor()
         connection.execute(
@@ -54,11 +59,17 @@ def get_thumbnail(item):
         )
     elif type(item) is str:  # item is fs path
         path = item
+        is_db_item = False
     else:
         raise TypeError("Unknown item type", item)
 
     # FIXME mimetypes uses file extension, switch to libmagic
-    file_type, file_encoding = mimetypes.guess_type(row[0])
+    if is_db_item:
+        file_type, file_encoding = mimetypes.guess_type(row[0])
+    else:
+        file_type, file_encoding = mimetypes.guess_type(
+            os.path.basename(item)
+        )
 
     if file_type not in _map:
         # no icon specified
@@ -69,14 +80,30 @@ def get_thumbnail(item):
     if type(handler) is str:
         return handler
     elif isinstance(handler, types.FunctionType):
-        thumbnail_path = os.path.join(
-            database.get_current_gallery("directory"),
-            "thumbnails",
-            row[1],
-        )
-        if not os.path.isfile(thumbnail_path):
+
+        if is_db_item:
+            thumbnail_path = os.path.join(
+                database.get_current_gallery("directory"),
+                "thumbnails",
+                row[1],
+            )
+            if not os.path.isfile(thumbnail_path):
+                handler(path, thumbnail_path)
+            return thumbnail_path
+        else:
+            # Generate unique name
+            md5 = hashlib.md5()
+            md5.update(item)
+            thumbnail_name = md5.hexdigest()
+
+            thumbnail_path = os.path.join(
+                database.get_current_gallery("directory"),
+                "thumbnails",
+                "temp",
+                thumbnail_name
+            )
             handler(path, thumbnail_path)
-        return thumbnail_path
+            return thumbnail_path
 
 
 def _handler_pil(source, destination):
