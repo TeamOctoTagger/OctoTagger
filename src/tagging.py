@@ -8,6 +8,7 @@ Functionality for assigning tags to imported files.
 import os
 import sqlite3
 import database
+import output
 
 # Methods for assigning tags to files
 
@@ -35,6 +36,23 @@ def create_tag(tag_name, is_numeric=False):
     query_get_tags = "SELECT pk_id FROM tag WHERE name = \'%s\'" % (tag_name)
     cursor.execute(query_get_tags)
     tag_id = cursor.fetchone()
+
+    cursor.execute("SELECT pk_id, add_new_tag FROM gallery_folder")
+    gallery_folders = cursor.fetchall()
+    for gallery_folder in gallery_folders:
+        if not gallery_folder[1]:
+            continue
+        cursor.execute(
+            (
+                "INSERT INTO gallery_folder_has_tag "
+                "VALUES(:gallery, :tag)"
+            ),
+            {
+                "gallery": gallery_folder[0],
+                "tag": tag_id
+            }
+        )
+    cursor.commit()
 
     return tag_id[0]
 
@@ -81,6 +99,7 @@ def tag_file(file_id, tag_name, amount=-1):
 
     # Write changes
     gallery.commit()
+    output.change(file_id, tag_id, True)
 
 
 def untag_file(file_id, tag_name):
@@ -102,6 +121,7 @@ def untag_file(file_id, tag_name):
 
     # Write changes
     gallery.commit()
+    output.change(file_id, tag_id, False)
 
 
 def tag_files(file_ids, tag_name, amount=-1):

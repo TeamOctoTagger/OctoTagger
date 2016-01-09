@@ -43,12 +43,15 @@ def check():
     c.execute("SELECT name, location, use_softlink FROM folder")
     for folder in c.fetchall():
         folder_path = os.path.join(folder["location"], folder["name"])
-        files = os.listdir(folder_path)
+        files = set(os.listdir(folder_path))
+
         # TODO check expression
-        result["folder"]["untracked"].extend([
+
+        result["folder"]["directories"].extend([
             f for f in files if
             os.path.isdir(os.path.join(folder_path, f))
         ])
+
         if folder["use_softlink"] == True:
             untracked_files = [
                 f for f in files if
@@ -68,6 +71,10 @@ def check():
 
     c.close()
     return result
+
+
+def apply(diffs):
+    pass
 
 
 print(check())
