@@ -5,6 +5,7 @@ import wx
 import edit_output_folder
 import create_output_folder
 import bulk_create_output_folders
+import output
 import settings
 import about
 import itemview
@@ -556,6 +557,7 @@ class MainWindow(wx.Frame):
                     self.temp_file_tags[item].append(tag_id)
 
             else:
+                # FIXME tag not created if necessary?
                 tagging.tag_file(item, tag)
 
         self.update_tag_list()
@@ -1180,6 +1182,9 @@ class MainWindow(wx.Frame):
             # TODO: Confirmation?
             # Delete files
 
+            for item in items:
+                output.remove(item)
+
             gallery = database.get_current_gallery("connection")
             cursor = gallery.cursor()
 
@@ -1204,6 +1209,8 @@ class MainWindow(wx.Frame):
 
             # TODO: Confirmation?
             # Delete files
+
+            output.remove(item)
 
             gallery = database.get_current_gallery("connection")
             cursor = gallery.cursor()

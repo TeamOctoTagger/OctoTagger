@@ -49,10 +49,10 @@ def create_tag(tag_name, is_numeric=False):
             ),
             {
                 "gallery": gallery_folder[0],
-                "tag": tag_id
+                "tag": tag_id[0]
             }
         )
-    cursor.commit()
+    gallery.commit()
 
     return tag_id[0]
 

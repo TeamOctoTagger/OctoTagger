@@ -6,7 +6,9 @@ import os
 
 def change(item, tag, create):
     connection = database.get_current_gallery("connection")
-    connection.execute(
+    c = connection.cursor()
+
+    c.execute(
         (
             "SELECT uuid, file_name "
             "FROM file "
@@ -17,7 +19,7 @@ def change(item, tag, create):
         }
     )
     # TODO better var name
-    g_file = connection.fetchone()
+    g_file = c.fetchone()
     if g_file is None:
         raise ValueError("No file with this id", item)
     target = os.path.join(
@@ -28,14 +30,14 @@ def change(item, tag, create):
 
     # gallery output folders
 
-    connection.execute(
+    c.execute(
         "SELECT pk_id, location, name, use_softlink "
         "FROM gallery_folder"
     )
-    folders = connection.fetchall()
+    folders = c.fetchall()
 
     for folder in folders:
-        connection.execute(
+        c.execute(
             (
                 "SELECT name "
                 "FROM gallery_folder_has_tag "
@@ -47,7 +49,7 @@ def change(item, tag, create):
                 "tag": tag
             }
         )
-        tag_name = connection.fetchone()
+        tag_name = c.fetchone()
         if tag_name is None:
             # gallery output does not use this tag
             continue
@@ -71,15 +73,15 @@ def change(item, tag, create):
 
     # advanced output folders
 
-    connection.execute(
+    c.execute(
         "SELECT location, name, expression, use_softlink "
         "FROM folder"
     )
-    folders = connection.fetchall()
+    folders = c.fetchall()
     for folder in folders:
         path = os.path.join(folder[0], folder[1])
         link = os.path.join(path, g_file[1])
-        connection.execute(
+        c.execute(
             (
                 "SELECT pk_id "
                 "FROM file "
@@ -90,10 +92,60 @@ def change(item, tag, create):
                 "id": item
             }
         )
-        matches = connection.fetchone()
+        matches = c.fetchone()
         if matches is None and os.path.islink(link):
             os.remove(link)
         elif matches is not None and not os.path.islink(link):
             if not os.path.isdir(path):
                 os.makedirs(path)
             create_folders.symlink(target, link, folder[3])
+
+
+def remove(item):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    c.execute(
+        "SELECT file_name FROM file WHERE pk_id=:file",
+        {
+            "file": item
+        }
+    )
+    filename = c.fetchone()
+    if filename is None:
+        raise ValueError("No file with this id", item)
+
+    c.execute(
+        (
+            "SELECT location, name FROM gallery_folder AS g "
+            "LEFT JOIN gallery_folder_has_tag AS gt "
+            "ON g.pk_id = gt.pk_fk_gallery_folder_id "
+            "LEFT JOIN file_has_tag AS ft "
+            "ON gt.pk_fk_tag_id = ft.pk_fk_tag_id "
+            "WHERE ft.pk_fk_file_id=:file"
+        ),
+        {
+            "file": item
+        }
+    )
+    folders = c.fetchall()
+
+    for folder in c.execute("SELECT location, name, expression FROM folder"):
+        c.execute(
+            (
+                "SELECT pk_id FROM file "
+                "WHERE :expression AND pk_id=:file"
+            ),
+            {
+                "expression": expression.parse(folder[2]),
+                "file": item
+            }
+        )
+        if c.fetchone() is None:
+            continue
+
+        folders.append(folder[0:2])
+
+    for folder in folders:
+        path = os.path.join(folder[0], folder[1], filename)
+        os.remove(path)
