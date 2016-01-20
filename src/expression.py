@@ -1,9 +1,11 @@
 import re
 
 
-REG_TAG = r'[a-z]+'
-REG_OP = r'=|-|/'
-REG_GROUP = r'\(|\)'
+REG_TAG_NAME = r'[a-zA-Z][a-zA-Z0-9_]+'
+REG_TAG_ID = r'[0-9]+'
+REG_TAG = r'({}|{})'.format(REG_TAG_NAME, REG_TAG_ID)
+REG_OP = r'(=|-|/)'
+REG_GROUP = r'(\(|\))'
 REG_NUM = r'\d+(\.\.\d+)?'
 REG_TAG_MATCH = r'{}(={})?'.format(REG_TAG, REG_NUM)
 
@@ -28,8 +30,6 @@ def parse(string):
         Or
     """
 
-    print string
-
     def identity(scanner, token):
         return token
 
@@ -37,12 +37,12 @@ def parse(string):
         raise ValueError("Unknown token", token)
 
     scanner = re.Scanner([
+        (REG_NUM, identity),
         (REG_TAG, identity),
         (REG_OP, identity),
         (REG_GROUP, identity),
-        (REG_NUM, identity),
         (r'\s+', None),
-        (r'.', unknown),
+        (r'', unknown),
     ])
 
     tokens = scanner.scan(string)[0]
@@ -51,21 +51,28 @@ def parse(string):
         raise ValueError('Unbalanced parentheses')
 
     def query_matching_files(match):
-        if '=' in match:
-            [tag, number] = match.split('=')
-            clause = 'name = "{}"'.format(tag)
-            if '..' in match:
-                [lower, upper] = number.split('..')
+        parts = match.split("=")
+
+        if re.match(reg_full(REG_TAG_NAME), parts[0]):
+            clause = 'name = "{}"'.format(parts[0])
+        elif re.match(reg_full(REG_TAG_ID), parts[0]):
+            clause = 'pk_id = {}'.format(parts[0])
+        else:
+            raise ValueError("Found invalid tag specifier", parts[0])
+
+        if len(parts) > 2:
+            raise ValueError("Found too many `='", match)
+        elif len(parts) == 2:
+            if '..' in parts[1]:
+                [lower, upper] = parts[1].split('..')
                 clause += ' AND amount BETWEEN {} AND {}'.format(lower, upper)
             else:
-                clause += ' AND amount = {}'.format(number)
-        else:
-            clause = 'name = "{}"'.format(match)
+                clause += ' AND amount = {}'.format(parts[1])
 
         return (
             "file.pk_id IN ("
             "SELECT pk_fk_file_id FROM file_has_tag"
-            " LEFT JOIN tag ON pk_fk_tag_id = pk_id"
+            " LEFT JOIN t)) ON pk_fk_tag_id = pk_id"
             " WHERE " + clause + ")"
         )
 
@@ -78,18 +85,27 @@ def parse(string):
             while True:
                 token = tokens.next()
                 if token == '=':
-                    if not re.match(reg_full(REG_TAG), result[-1]):
+                    if len(result) == 0:
+                        raise ValueError("Expected tag before `='")
+                    elif not re.match(reg_full(REG_TAG), result[-1]):
                         raise ValueError(
                             "Expected tag before `='",
                             result[-1]
                         )
-                    number = tokens.next()
+
+                    try:
+                        number = tokens.next()
+                    except StopIteration:
+                        raise ValueError("Expected something after `='")
+
                     if not re.match(reg_full(REG_NUM), number):
                         raise ValueError(
                             "Expected number after `='",
                             number
                         )
                     result[-1] += '=' + number  # group the tokens
+                elif '..' in token:
+                    raise ValueError("An amount requires a tag")
                 else:
                     result.append(token)
         except StopIteration:
