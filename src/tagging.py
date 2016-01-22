@@ -129,6 +129,29 @@ def tag_files(file_ids, tag_name, amount=-1):
         tag_file(file_id, tag_name, amount)
 
 
+def remove_file(file_id):
+    gallery = database.get_current_gallery("connection")
+    c = gallery.cursor()
+
+    c.execute(
+        (
+            "SELECT pk_id FROM tag "
+            "JOIN file_has_tag ON pk_id=pk_fk_tag_id "
+            "WHERE pk_fk_file_id=:file"
+        ),
+        {
+            "file": file_id
+        }
+    )
+    tags = c.fetchall()
+    for tag in tags:
+        output.change(file_id, tag[0], False)
+
+    c.execute("DELETE FROM file WHERE pk_id=?", file_id)
+    c.execute("DELETE FROM file_has_tag WHERE pk_fk_file_id=?", file_id)
+    gallery.commit()
+
+
 # Methods for analyzing assigned tags
 
 

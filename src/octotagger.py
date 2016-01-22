@@ -33,7 +33,7 @@ class MainWindow(wx.Frame):
 
         # Create_folders.create_folders()
         # Fix working directory
-        if os.path.basename(os.getcwd()) != "OctoTagger":
+        if os.path.basename(os.getcwd()) == "src":
             os.chdir("..")
 
         # Modes: overview, tagging, import, folder
