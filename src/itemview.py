@@ -2,17 +2,17 @@ from __future__ import division
 
 import thumbnail
 import database
-
 import os
 import wx
 import wx.lib.newevent
-import tagging
+
 
 THUMBNAIL_SIZE = (128, 128)
 
 SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
 DoubleClickItemEvent, EVT_ITEM_DOUBLE_CLICK = wx.lib.newevent.NewCommandEvent()
 RightClickItemEvent, EVT_ITEM_RIGHT_CLICK = wx.lib.newevent.NewCommandEvent()
+
 
 class ItemView(wx.ScrolledWindow):
 

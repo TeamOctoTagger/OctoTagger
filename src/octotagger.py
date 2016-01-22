@@ -25,17 +25,17 @@ import os
 # TODO: Make folders functionsl in Import Mode
 # TODO: Many things don't work at all in Windows right now for some reason...
 
+
 class MainWindow(wx.Frame):
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title, size=(1280, 720))
-        
-        #create_folders.create_folders()
 
+        # Create_folders.create_folders()
         # Fix working directory
         if os.path.basename(os.getcwd()) != "OctoTagger":
             os.chdir("..")
-        
+
         # Modes: overview, tagging, import, folder
         self.mode = "overview"
 
@@ -489,9 +489,9 @@ class MainWindow(wx.Frame):
         self.Bind(itemview.EVT_ITEM_RIGHT_CLICK, self.on_right_click_item)
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
         self.update_tag_list()
-    
+
         self.start_overview()
-            
+
 
     def on_query_text(self, e):
 
@@ -513,7 +513,10 @@ class MainWindow(wx.Frame):
                                    (expression.parse(query_input)))
 
                     # Get file list
-                    cursor = database.get_current_gallery("connection").cursor()
+                    cursor = (
+                        database.get_current_gallery("connection").cursor()
+                    )
+
                     cursor.execute(query_files)
                     result = cursor.fetchall()
 
@@ -595,7 +598,6 @@ class MainWindow(wx.Frame):
         self.Layout()
 
     def on_selection_change(self, e):
-        #self.Fix(self)
 
         self.Refresh()
         self.Layout()
@@ -624,7 +626,7 @@ class MainWindow(wx.Frame):
 
         else:
             items = self.mainPan.GetSelectedItems()
-        
+
         if self.mode == "import":
             item_tags = {}
             for item in items:
@@ -643,7 +645,7 @@ class MainWindow(wx.Frame):
                 tag_names = []
                 for tag_id in tag_ids:
                     tag_names.append(tagging.tag_id_to_name(tag_id))
-                
+
                 item_tags[item] = tag_names
 
         self.lb.CheckAll(wx.CHK_UNCHECKED)
@@ -676,9 +678,30 @@ class MainWindow(wx.Frame):
         self.lb.SetCheckedStrings(checked)
         self.lb.SetUndeterminedStrings(undetermined)
 
+    def GetSelectedItems(self, path=None):
+        if self.mode == "import":
+            items = []
+            if path:
+                folder_items = os.listdir(path)
+            else:
+                folder_items = self.mainPan.GetSelectedItems()
+
+            for item in folder_items:
+                if os.path.isdir(item):
+                    print "Folder: ", item
+                    items = items + self.GetSelectedItems(item)
+                else:
+                    print "File: ", item
+                    items.append(item)
+            return item
+        else:
+            items = self.mainPan.GetSelectedItems()
+            return items
+
     def on_tag_selected(self, e):
         if self.mode in ["overview", "import"]:
-            items = self.mainPan.GetSelectedItems()
+
+            items = self.GetSelectedItems()
             tags = self.lb.GetStrings()
             checked_tags = self.lb.GetCheckedStrings()
             undetermined_tags = self.lb.GetUndeterminedStrings()
@@ -701,7 +724,9 @@ class MainWindow(wx.Frame):
                         item_tag_ids = self.temp_file_tags[item]
                         item_tags = []
                         for item_tag_id in item_tag_ids:
-                            item_tags.append(tagging.tag_id_to_name(item_tag_id))
+                            item_tags.append(
+                                tagging.tag_id_to_name(item_tag_id)
+                            )
 
                         for tag in tags:
                             # Convert tag name to ID
@@ -716,7 +741,7 @@ class MainWindow(wx.Frame):
                             elif(tag in item_tags and
                                  tag not in checked_tags and
                                     tag not in undetermined_tags):
-                                
+
                                 self.temp_file_tags[item].remove(tag_id)
 
             else:
@@ -1079,7 +1104,7 @@ class MainWindow(wx.Frame):
                     "Remove this file from the database and move it to the desired location."
             )
             # TODO: Bind to and make function
-        
+
         elif self.mode == "import":
 
             if e.item:
@@ -1111,16 +1136,16 @@ class MainWindow(wx.Frame):
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Remove from import",
-                    "Remove the selected items from the import (they remain where they are)."
+                    "Remove the selected items from the import "
+                    "(they remain where they are)."
                 )
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
-        
+
         print menu.GetMenuItemCount()
         if menu.GetMenuItemCount() > 0:
             self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
 
     def ImportAll(self, event):
-        
         import_files.import_files(self.temp_file_tags)
 
     def ImportTagged(self, event):
@@ -1172,7 +1197,7 @@ class MainWindow(wx.Frame):
             self.on_start_folder_mode()
 
         elif self.mode == "overview":
-            
+
             items = self.mainPan.GetSelectedItems()
             ids = []
 

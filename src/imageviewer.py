@@ -7,9 +7,14 @@ import wx, os
 # TODO: Handle Case: Box Height > Box Width
 
 class TestFrame(wx.Frame):
-    def __init__(self, *args, **kwargs):
-        wx.Frame.__init__(self, *args, **kwargs)
+    def __init__(self, parent, files):
+        wx.Frame.__init__(self, parent)
 
+        self.files = files
+        print self.files
+
+        self.SetTitle("Tagging View")
+        self.SetSize((100, 100))
         self.jpgs = GetJpgList("./Images")
         self.CurrentJpg = 0
         self.newLoad = True
@@ -241,7 +246,7 @@ def GetJpgList(dir):
 class App(wx.App):
     def OnInit(self):
 
-        frame = TestFrame(None, -1, "Tagging View", wx.DefaultPosition,(100,100))
+        frame = TestFrame(None, files=[1, 2, 3])
         self.SetTopWindow(frame)
         frame.Show(True)
         return True
