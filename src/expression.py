@@ -72,7 +72,7 @@ def parse(string):
         return (
             "file.pk_id IN ("
             "SELECT pk_fk_file_id FROM file_has_tag"
-            " LEFT JOIN t)) ON pk_fk_tag_id = pk_id"
+            " LEFT JOIN tag ON pk_fk_tag_id = pk_id"
             " WHERE " + clause + ")"
         )
 
