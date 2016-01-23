@@ -23,8 +23,11 @@ class ItemView(wx.ScrolledWindow):
         )
         self.SetBackgroundColour("#c1c8c5")
 
+        self.mainsizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
-        self.SetSizer(self.sizer)
+
+        self.mainsizer.Add(self.sizer, 0, wx.EXPAND)
+        self.SetSizer(self.mainsizer)
 
         # scrollbars
 
@@ -330,7 +333,6 @@ class Item(wx.Panel):
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
         self.text.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
         self.text.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
-        
 
     def GetPath(self):
         return self.path
@@ -358,9 +360,14 @@ class Item(wx.Panel):
         self.UpdateBackground()
 
     def OnMouseDouble(self, event):
-        wx.PostEvent(self, DoubleClickItemEvent(self.path))
+        new_event = DoubleClickItemEvent(self.GetId(), item=self.path)
+        wx.PostEvent(self, new_event)
 
     def OnMouseRight(self, event):
         modifiers = event.ControlDown() or event.ShiftDown()
-        new_event = RightClickItemEvent(self.GetId(), item=self, modifiers=modifiers)
+        new_event = RightClickItemEvent(
+            self.GetId(),
+            item=self,
+            modifiers=modifiers
+        )
         wx.PostEvent(self, new_event)

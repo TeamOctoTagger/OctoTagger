@@ -215,7 +215,11 @@ class MainWindow(wx.Frame):
         tag_panel_sz = wx.BoxSizer(wx.VERTICAL)
         tag_panel.SetSizer(tag_panel_sz)
 
-        query_field_panel = wx.Panel(tag_panel, size=(-1, 50), name="query_field_panel")
+        query_field_panel = wx.Panel(
+            tag_panel,
+            size=(-1, 50),
+            name="query_field_panel",
+        )
         query_field_panel_sz = wx.BoxSizer(wx.HORIZONTAL)
         query_field_panel.SetSizer(query_field_panel_sz)
 
@@ -231,11 +235,6 @@ class MainWindow(wx.Frame):
             -1,
             "",
             style=wx.TE_PROCESS_ENTER
-        )
-
-        left_panel.Bind(
-            wx.EVT_CHILD_FOCUS,
-            self.OnChildFocus,
         )
 
         self.Bind(
@@ -283,10 +282,10 @@ class MainWindow(wx.Frame):
 
     def on_start_import(self, e):
         dlg_import = wx.DirDialog(
-            self, 
+            self,
             "Select the folder containing the "
             "files you want to import",
-            style= wx.DD_DIR_MUST_EXIST | wx.DD_DEFAULT_STYLE)
+            style=wx.DD_DIR_MUST_EXIST | wx.DD_DEFAULT_STYLE)
 
         if dlg_import.ShowModal() == wx.ID_CANCEL:
             print "Import process aborted."
@@ -298,12 +297,37 @@ class MainWindow(wx.Frame):
         else:
             self.mode = "import"
 
+        # Set Items
         path = dlg_import.GetPath()
-        items = self.GetFolderItems(path)
+        items = self.GetFolderItems(path, True)
 
         self.InitImportFiles(path)
-
         self.mainPan.SetItems(items)
+
+        # Add Topbar
+        self.current_directory = wx.StaticText(
+            self.mainPan,
+            label="",
+            style=(
+                wx.ALIGN_CENTRE_HORIZONTAL |
+                wx.ST_ELLIPSIZE_END |
+                wx.ST_NO_AUTORESIZE |
+                wx.SIMPLE_BORDER
+            )
+        )
+
+        topBox = wx.BoxSizer(wx.HORIZONTAL)
+
+        btn_up = wx.Button(self.mainPan, -1, "^")
+        btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
+
+        topBox.Add(btn_up, 0, wx.EXPAND)
+        topBox.Add(self.current_directory, 1, wx.EXPAND | wx.ALIGN_CENTER)
+
+        print self.mainPan.mainsizer.Insert(0, topBox, 0, wx.EXPAND)
+        self.mainPan.Layout()
+        self.mainPan.Refresh()
+
         self.update_tag_list()
         self.Layout()
 
@@ -313,7 +337,7 @@ class MainWindow(wx.Frame):
                 file_path = os.path.join(root, file)
                 self.temp_file_tags[file_path] = []
 
-    def GetFolderItems(self, path):
+    def GetFolderItems(self, path, isRoot=False):
         items = []
         folders = []
         files = []
@@ -326,9 +350,13 @@ class MainWindow(wx.Frame):
                 folders.append(item)
 
         for folder in folders:
+            if not isRoot:
+                item = os.path.join(path, folder)
             items.append(folder)
 
         for file in files:
+            if not isRoot:
+                item = os.path.join(path, file)
             items.append(file)
 
         return items
@@ -533,14 +561,7 @@ class MainWindow(wx.Frame):
 
     def on_query_text_enter(self, e):
 
-        if self.mode == "folder":
-            return
-
-        if self.mode in ["overview", "import"]:
-            items = self.mainPan.GetSelectedItems()
-        elif self.mode == "tagging":
-            items = [self.mainPan.GetCurrentItem()]
-
+        items = self.GetSelectedItems()
         query = e.GetEventObject().GetValue()
 
         # TODO: Check if input is a valid tag name!
@@ -621,11 +642,8 @@ class MainWindow(wx.Frame):
         if self.mode == "folder":
             return
 
-        elif self.mode == "tagging":
-            items = [self.mainPan.GetCurrentItem()]
-
         else:
-            items = self.mainPan.GetSelectedItems()
+            items = self.GetSelectedItems()
 
         if self.mode == "import":
             item_tags = {}
@@ -692,16 +710,31 @@ class MainWindow(wx.Frame):
                     items = items + self.GetSelectedItems(item)
                 else:
                     print "File: ", item
-                    items.append(item)
-            return item
-        else:
-            items = self.mainPan.GetSelectedItems()
+                    items.append(os.path.join(path, item))
+
             return items
+
+        elif self.mode in ["overview", "folder"]:
+            return self.mainPan.GetSelectedItems()
+
+        elif self.mode == "tagging":
+            return [self.mainPan.GetCurrentItem()]
+
+    def ChangeFolder(self, path):
+        items = self.GetFolderItems(path)
+        print items
+        self.mainPan.SetItems(items)
+        self.Layout()
+        self.Refresh()
+
+    def ChangeFolderUp(self, event=None):
+        print self.current_directory.GetLabelText()
 
     def on_tag_selected(self, e):
         if self.mode in ["overview", "import"]:
 
             items = self.GetSelectedItems()
+            print items
             tags = self.lb.GetStrings()
             checked_tags = self.lb.GetCheckedStrings()
             undetermined_tags = self.lb.GetUndeterminedStrings()
@@ -949,18 +982,12 @@ class MainWindow(wx.Frame):
         if self.mode == "tagging":
             self.mainPan.Layout()
             self.mainPan.Refresh()
-            print self.mainPan.GetSize()
             self.mainPan.ReSize()
 
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
 
     # Key events
-
-    def OnChildFocus(self, event):
-        #self.Fix(self)
-        print event.GetWindow().FindFocus()
-        event.Skip()
 
     def OnKey(self, e):
         if self.mode == "tagging":
@@ -998,8 +1025,16 @@ class MainWindow(wx.Frame):
 
     def on_double_click_item(self, e):
         if self.mode == "overview":
-            item = e.GetId()
+            item = e.item
             self.start_tagging_mode(item)
+
+        elif self.mode == "import":
+            item = e.item
+            if os.path.isdir(item):
+                self.ChangeFolder(item)
+            else:
+                # TODO (Optional): Implement tagging view?
+                print "Not a folder"
 
     def on_right_click_item(self, e):
 
@@ -1141,7 +1176,6 @@ class MainWindow(wx.Frame):
                 )
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
 
-        print menu.GetMenuItemCount()
         if menu.GetMenuItemCount() > 0:
             self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
 

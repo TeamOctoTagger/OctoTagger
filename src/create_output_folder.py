@@ -232,6 +232,9 @@ class CreateOutputFolder(wx.Dialog):
 
         # Create database entry
 
+        # Convert Expression to TagId
+        expression
+
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 

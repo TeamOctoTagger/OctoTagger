@@ -7,15 +7,16 @@ import database
 from PIL import Image
 # TODO: Move rightclick event somewhere other than taggingview
 import itemview
-import time
 
 # TODO: Context pane
 # TODO: Switch from PIL to Pillow
 # TODO: Generic icons for generic files
-# OPTIONAL: Animated gif support, open file with application, preload next files
+# OPTIONAL: Animated gif support,
+# open file with application, preload next files
 
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
+
 
 class TaggingView(wx.Panel):
 
@@ -34,8 +35,6 @@ class TaggingView(wx.Panel):
     def init_ui(self):
         self.imgPan = wx.Panel(self)
 
-        topBox = wx.BoxSizer(wx.HORIZONTAL)
-
         self.text = wx.StaticText(
             self,
             label="file",
@@ -51,6 +50,8 @@ class TaggingView(wx.Panel):
 
         self.SetBackgroundColour("#c1c8c5")
         self.imgPan.SetBackgroundColour("#c1c8c5")
+
+        topBox = wx.BoxSizer(wx.HORIZONTAL)
 
         btn_prev = wx.Button(self, -1, "<")
         btn_prev.Bind(wx.EVT_BUTTON, self.DisplayPrev)
@@ -83,7 +84,7 @@ class TaggingView(wx.Panel):
         wx.PostEvent(self, ItemChangeEvent(self.GetId()))
 
         self.SetSizerAndFit(mainBox)
-        
+
         self.Layout()
         self.Refresh()
         self.Bind(wx.EVT_SIZE, self.ReSize)

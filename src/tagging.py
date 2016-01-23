@@ -37,22 +37,23 @@ def create_tag(tag_name, is_numeric=False):
     cursor.execute(query_get_tags)
     tag_id = cursor.fetchone()
 
-    cursor.execute("SELECT pk_id, add_new_tag FROM gallery_folder")
-    gallery_folders = cursor.fetchall()
-    for gallery_folder in gallery_folders:
-        if not gallery_folder[1]:
-            continue
-        cursor.execute(
-            (
-                "INSERT INTO gallery_folder_has_tag "
-                "VALUES(:gallery, :tag)"
-            ),
-            {
-                "gallery": gallery_folder[0],
-                "tag": tag_id[0]
-            }
-        )
-    gallery.commit()
+    if tag:
+        cursor.execute("SELECT pk_id, add_new_tag FROM gallery_folder")
+        gallery_folders = cursor.fetchall()
+        for gallery_folder in gallery_folders:
+            if not gallery_folder[1]:
+                continue
+            cursor.execute(
+                (
+                    "INSERT INTO gallery_folder_has_tag "
+                    "VALUES(:gallery, :tag)"
+                ),
+                {
+                    "gallery": gallery_folder[0],
+                    "tag": tag_id[0]
+                }
+            )
+        gallery.commit()
 
     return tag_id[0]
 
@@ -121,6 +122,7 @@ def untag_file(file_id, tag_name):
 
     # Write changes
     gallery.commit()
+    print "UNTAG"
     output.change(file_id, tag_id, False)
 
 
