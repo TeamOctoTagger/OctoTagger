@@ -165,8 +165,6 @@ class CreateOutputFolder(wx.Dialog):
             else:
                 use_softlink = False
 
-        print use_softlink
-
         # Apply setting to UI
         self.rb_softlinks.SetValue(use_softlink)
         self.rb_hardlinks.SetValue(not use_softlink)

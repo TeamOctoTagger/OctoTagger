@@ -16,6 +16,7 @@ _map = {}
 
 # TODO: Error handling when loading thumbnails
 
+
 def register(mime_type, handler):
     if mime_type in _map:
         raise KeyError("Handler for this type already exists", mime_type)
@@ -33,7 +34,7 @@ def register(mime_type, handler):
 
 
 def get_thumbnail(item):
-    
+
     is_db_item = True
 
     if type(item) is int:  # item is db id
@@ -88,7 +89,10 @@ def get_thumbnail(item):
                 row[1],
             )
             if not os.path.isfile(thumbnail_path):
-                handler(path, thumbnail_path)
+                try:
+                    handler(path, thumbnail_path)
+                except:
+                    return DEFAULT_ICON
             return thumbnail_path
         else:
             # Generate unique name
@@ -108,6 +112,8 @@ def get_thumbnail(item):
 
 def _handler_pil(source, destination):
     from PIL import Image
+    # FIXME: "struct.error: unpack requires a string argument of length 4"
+    # with some images.
     image = Image.open(source).convert()
     image.thumbnail(itemview.THUMBNAIL_SIZE)
     image.save(destination, "PNG")

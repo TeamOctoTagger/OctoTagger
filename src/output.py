@@ -35,7 +35,6 @@ def change(item, tag, create):
         "FROM gallery_folder"
     )
     folders = c.fetchall()
-
     for folder in folders:
         c.execute(
             (
@@ -69,7 +68,9 @@ def change(item, tag, create):
             )
         else:
             # delete
-            os.remove(os.path.join(path, g_file[1]))
+            link_path = os.path.join(path, g_file[1])
+            if os.path.lexists(link_path):
+                os.remove(link_path)
 
     # advanced output folders
 

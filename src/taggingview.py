@@ -110,7 +110,6 @@ class TaggingView(wx.Panel):
     def DisplayPrev(self, event=None):
 
         index = self.files.index(self.current_file)
-        print index
         if index == 0:
             self.current_file = self.files[len(self.files) - 1]
         else:

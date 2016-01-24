@@ -15,8 +15,7 @@ class EditOutputFolder(wx.Dialog):
     def __init__(self, *args, **kw):
         super(EditOutputFolder, self).__init__(*args, **kw)
 
-        for arg in args:
-            self.folder_id = arg
+        self.folder_id = args[-1]
 
         self.SetSize((450, 350))
         self.SetTitle("Edit Output Folder")

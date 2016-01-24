@@ -9,7 +9,8 @@ TagListCheckEvent, EVT_TAGLIST_CHECK = wx.lib.newevent.NewCommandEvent()
 TagListUpdateEvent, EVT_TAGLIST_UPDATE = wx.lib.newevent.NewCommandEvent()
 
 # TODO: Find workaround for appearance of undetermined state in some GTK themes
-# OPTIONAL: Improve order of tags in list 
+# OPTIONAL: Improve order of tags in list
+
 
 class TagList(wx.ScrolledWindow):
 
@@ -223,4 +224,3 @@ class TagList(wx.ScrolledWindow):
         gallery.commit()
 
         wx.PostEvent(self, TagListUpdateEvent(self.GetId()))
-

@@ -4,7 +4,7 @@
 import wx
 import edit_output_folder
 import create_output_folder
-import bulk_create_output_folders
+import edit_gallery_folder
 import output
 import settings
 import about
@@ -16,9 +16,10 @@ import import_files
 import expression
 import taglist
 import taggingview
+import export
 import os
 
-#import create_folders
+# import create_folders
 
 # TODO: Scale images in taggingview when maximized
 # TODO: Optimize switching between ItemView and TaggingView
@@ -59,10 +60,12 @@ class MainWindow(wx.Frame):
         fileNewDatabase = self.filemenu.Append(
             wx.ID_ANY,
             "&New database",
-            " Create a new database"
+            " Create a new database",
         )
         self.filemenu.AppendMenu(wx.ID_ANY,
-                                 "&Open gallery", menu_open_database)
+                                 "&Open gallery",
+                                 menu_open_database,
+                                 )
 
         self.filemenu.AppendSeparator()
         fileImportFiles = self.filemenu.Append(
@@ -117,11 +120,6 @@ class MainWindow(wx.Frame):
             "&Delete current database",
             "Completely removes the current database."
         )
-        toolExportDatabase = toolmenu.Append(
-            wx.ID_ANY,
-            "&Export database",
-            " Exports the current database"
-        )
         toolmenu.AppendSeparator()
         toolRestoreAllFiles = toolmenu.Append(
             wx.ID_ANY,
@@ -170,12 +168,14 @@ class MainWindow(wx.Frame):
         self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
 
         # Set events
-        self.Bind(wx.EVT_MENU, self.on_start_folder_mode, viewShowOutputFolders)
+        self.Bind(
+            wx.EVT_MENU, self.on_start_folder_mode, viewShowOutputFolders)
         self.Bind(wx.EVT_MENU, self.start_overview, viewShowAllFiles)
         self.Bind(wx.EVT_MENU, self.on_show_tagged, viewShowTaggedFiles)
         self.Bind(wx.EVT_MENU, self.on_show_untagged, viewShowUntaggedFiles)
         self.Bind(wx.EVT_MENU, self.on_new_database, fileNewDatabase)
         self.Bind(wx.EVT_MENU, self.on_reset, toolResetCurrentDatabase)
+        self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
         self.Bind(wx.EVT_MENU, self.on_delete, tool_delete_database)
         self.Bind(wx.EVT_MENU, self.on_start_import, fileImportFiles)
         self.Bind(wx.EVT_MENU, self.on_direct_import, fileDirectImportFiles)
@@ -183,8 +183,8 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExit, fileExit)
         self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder,
                   item_create_output_folder)
-        self.Bind(wx.EVT_MENU, self.OnBulkCreate,
-                  item_create_bulk_output_folders)
+        #self.Bind(wx.EVT_MENU, self.OnBulkCreate,
+        #          item_create_bulk_output_folders)
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
         self.Bind(
@@ -298,16 +298,17 @@ class MainWindow(wx.Frame):
             self.mode = "import"
 
         # Set Items
-        path = dlg_import.GetPath()
-        items = self.GetFolderItems(path, True)
+        self.import_path = dlg_import.GetPath()
+        self.InitImportFiles(self.import_path)
 
-        self.InitImportFiles(path)
+        items = self.GetFolderItems(self.import_path, True)
+        self.InitImportFiles(self.import_path)
         self.mainPan.SetItems(items)
 
         # Add Topbar
         self.current_directory = wx.StaticText(
             self.mainPan,
-            label="",
+            label=self.import_path,
             style=(
                 wx.ALIGN_CENTRE_HORIZONTAL |
                 wx.ST_ELLIPSIZE_END |
@@ -318,13 +319,14 @@ class MainWindow(wx.Frame):
 
         topBox = wx.BoxSizer(wx.HORIZONTAL)
 
-        btn_up = wx.Button(self.mainPan, -1, "^")
-        btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
+        self.btn_up = wx.Button(self.mainPan, -1, "^")
+        self.btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
+        self.btn_up.Disable()
 
-        topBox.Add(btn_up, 0, wx.EXPAND)
+        topBox.Add(self.btn_up, 0, wx.EXPAND)
         topBox.Add(self.current_directory, 1, wx.EXPAND | wx.ALIGN_CENTER)
 
-        print self.mainPan.mainsizer.Insert(0, topBox, 0, wx.EXPAND)
+        self.mainPan.mainsizer.Insert(0, topBox, 0, wx.EXPAND)
         self.mainPan.Layout()
         self.mainPan.Refresh()
 
@@ -337,26 +339,38 @@ class MainWindow(wx.Frame):
                 file_path = os.path.join(root, file)
                 self.temp_file_tags[file_path] = []
 
+            for dir in dirs:
+                dir_path = os.path.join(root, dir)
+                self.temp_file_tags[dir_path] = []
+
     def GetFolderItems(self, path, isRoot=False):
         items = []
         folders = []
         files = []
 
         for item in os.listdir(path):
-            item = os.path.join(path, item).encode('utf-8')
-            if os.path.isfile(item):
+            print item
+            try:
+                item = os.path.join(path, item).encode('utf-8')
+            except:
+                print "Could not decode file name with utf-8"
+                item = os.path.join(path, item)
+
+            if item not in self.temp_file_tags:
+                print item, " is removed from import."
+            elif os.path.isfile(item):
                 files.append(item)
             elif os.path.isdir(item):
                 folders.append(item)
 
         for folder in folders:
-            if not isRoot:
-                item = os.path.join(path, folder)
+            # if not isRoot:
+            #    item = os.path.join(path, folder)
             items.append(folder)
 
         for file in files:
-            if not isRoot:
-                item = os.path.join(path, file)
+            # if not isRoot:
+            #    item = os.path.join(path, file)
             items.append(file)
 
         return items
@@ -399,13 +413,24 @@ class MainWindow(wx.Frame):
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 
-        query_folders = "SELECT pk_id, location, name FROM folder"
-        cursor.execute(query_folders)
-        result = cursor.fetchall()
+        query_gallery_folders = (
+            "SELECT pk_id, location, name FROM gallery_folder"
+        )
+        query_special_folders = "SELECT pk_id, location, name FROM folder"
+
+        cursor.execute(query_gallery_folders)
+        gallery_folder_result = cursor.fetchall()
+
+        cursor.execute(query_special_folders)
+        special_folder_result = cursor.fetchall()
 
         folders = []
 
-        for folder in result:
+        for folder in gallery_folder_result:
+            path = os.path.join(folder[1], folder[2])
+            folders.append(path.encode('utf-8')+"|GALLERYFOLDER")
+
+        for folder in special_folder_result:
             path = os.path.join(folder[1], folder[2])
             folders.append(path.encode('utf-8'))
 
@@ -416,7 +441,6 @@ class MainWindow(wx.Frame):
         self.mainPan.SetItems(folders)
         self.Refresh()
         self.Layout()
-
 
     def on_show_tagged(self, e):
         self.mode = "overview"
@@ -429,9 +453,9 @@ class MainWindow(wx.Frame):
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 
-        query_items = ("SELECT pk_id FROM file " 
-                        "WHERE pk_id IN "
-                        "(select pk_fk_file_id FROM file_has_tag)")
+        query_items = ("SELECT pk_id FROM file "
+                       "WHERE pk_id IN "
+                       "(select pk_fk_file_id FROM file_has_tag)")
         cursor.execute(query_items)
         result = cursor.fetchall()
 
@@ -445,7 +469,7 @@ class MainWindow(wx.Frame):
         # Set items
         self.mainPan.SetItems(items)
         self.Refresh()
-        self.Layout()       
+        self.Layout()
 
     def on_show_untagged(self, e):
         self.mode = "overview"
@@ -458,9 +482,9 @@ class MainWindow(wx.Frame):
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 
-        query_items = ("SELECT pk_id FROM file " 
-                        "WHERE pk_id NOT IN "
-                        "(select pk_fk_file_id FROM file_has_tag)")
+        query_items = ("SELECT pk_id FROM file "
+                       "WHERE pk_id NOT IN "
+                       "(select pk_fk_file_id FROM file_has_tag)")
         cursor.execute(query_items)
         result = cursor.fetchall()
 
@@ -486,15 +510,17 @@ class MainWindow(wx.Frame):
         self.mainPan.Destroy()
 
         if start_file:
-            self.mainPan = taggingview.TaggingView(self, self.items, start_file)
+            self.mainPan = taggingview.TaggingView(
+                self, self.items, start_file)
         elif self.selected_items:
             start_file = self.selected_items[0]
-            self.mainPan = taggingview.TaggingView(self, self.items, start_file)
+            self.mainPan = taggingview.TaggingView(
+                self, self.items, start_file)
         else:
             self.mainPan = taggingview.TaggingView(self, self.items)
 
         self.Bind(
-            taggingview.EVT_EXIT_TAGGING_VIEW, 
+            taggingview.EVT_EXIT_TAGGING_VIEW,
             self.on_resume_overview_mode,
         )
         self.Bind(
@@ -519,7 +545,6 @@ class MainWindow(wx.Frame):
         self.update_tag_list()
 
         self.start_overview()
-
 
     def on_query_text(self, e):
 
@@ -577,7 +602,7 @@ class MainWindow(wx.Frame):
                 tag_id = tagging.create_tag(tag)
 
                 # Append id
-                if not tag_id in self.temp_file_tags[item]:
+                if tag_id not in self.temp_file_tags[item]:
                     self.temp_file_tags[item].append(tag_id)
 
             else:
@@ -588,7 +613,7 @@ class MainWindow(wx.Frame):
         self.select_tags()
         e.GetEventObject().Clear()
 
-    def start_overview(self, e=None, warn_import=True):
+    def start_overview(self, e=None, warn_import=False):
         # Set items to all current database items
         # Get gallery connection
 
@@ -649,13 +674,17 @@ class MainWindow(wx.Frame):
             item_tags = {}
             for item in items:
 
-                tag_ids = self.temp_file_tags[item]
-                tag_names = []
-                for tag_id in tag_ids:
-                    tag_names.append(tagging.tag_id_to_name(tag_id))
+                if item not in self.temp_file_tags:
+                    self.temp_file_tags[item] = []
+                    item_tags[item] = []
 
-                item_tags[item] = tag_names
+                else:
+                    tag_ids = self.temp_file_tags[item]
+                    tag_names = []
+                    for tag_id in tag_ids:
+                        tag_names.append(tagging.tag_id_to_name(tag_id))
 
+                    item_tags[item] = tag_names
         else:
             item_tags = {}
             for item in items:
@@ -700,16 +729,20 @@ class MainWindow(wx.Frame):
         if self.mode == "import":
             items = []
             if path:
-                folder_items = os.listdir(path)
+                folder_items = []
+                children = os.listdir(path)
+                for child in children:
+                    item = os.path.join(path, child)
+                    folder_items.append(item)
             else:
                 folder_items = self.mainPan.GetSelectedItems()
 
             for item in folder_items:
                 if os.path.isdir(item):
-                    print "Folder: ", item
+                    # print "Folder: ", item
                     items = items + self.GetSelectedItems(item)
                 else:
-                    print "File: ", item
+                    # print "File: ", item
                     items.append(os.path.join(path, item))
 
             return items
@@ -721,20 +754,29 @@ class MainWindow(wx.Frame):
             return [self.mainPan.GetCurrentItem()]
 
     def ChangeFolder(self, path):
+        self.current_directory.SetLabelText(path)
+        if path == self.import_path:
+            self.btn_up.Disable()
+        else:
+            self.btn_up.Enable()
+
         items = self.GetFolderItems(path)
-        print items
         self.mainPan.SetItems(items)
         self.Layout()
-        self.Refresh()
 
     def ChangeFolderUp(self, event=None):
-        print self.current_directory.GetLabelText()
+        directory_txt = self.current_directory.GetLabelText()
+        directory = os.path.normpath(directory_txt)
+        if directory == self.import_path:
+            return
+        else:
+            new_dir = os.path.dirname(directory)
+            self.ChangeFolder(new_dir)
 
     def on_tag_selected(self, e):
         if self.mode in ["overview", "import"]:
 
             items = self.GetSelectedItems()
-            print items
             tags = self.lb.GetStrings()
             checked_tags = self.lb.GetCheckedStrings()
             undetermined_tags = self.lb.GetUndeterminedStrings()
@@ -794,7 +836,6 @@ class MainWindow(wx.Frame):
 
                 elif(tag in item_tags and tag not in checked_tags):
                     tagging.untag_file(item, tag)
-
 
     def update_tag_list(self, event=None):
 
@@ -930,7 +971,6 @@ class MainWindow(wx.Frame):
                 print "Export files now"
                 # TODO: Export files!
 
-
             # Delete everything now!
             database.delete_gallery(database.get_current_gallery("id"))
             if self.mode == "tagging":
@@ -965,10 +1005,10 @@ class MainWindow(wx.Frame):
         if self.mode == "folder":
             self.on_start_folder_mode()
 
-    def OnBulkCreate(self, e):
-        dlg = bulk_create_output_folders.BulkCreateOutputFolders(self)
-        dlg.ShowModal()
-        dlg.Destroy()
+    #def OnBulkCreate(self, e):
+    #    dlg = bulk_create_output_folders.BulkCreateOutputFolders(self)
+    #    dlg.ShowModal()
+    #    dlg.Destroy()
 
     def OnSettings(self, e):
         dlg = settings.Settings(self)
@@ -976,9 +1016,7 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnMaximize(self, e):
-        #self.Layout()
-        #self.Refresh()
-
+        # TODO: Is this necessary?
         if self.mode == "tagging":
             self.mainPan.Layout()
             self.mainPan.Refresh()
@@ -1045,7 +1083,7 @@ class MainWindow(wx.Frame):
             if e.item:
                 self.mainPan.OnRightMouseUp(e.item, e.modifiers)
 
-            items = self.mainPan.GetSelectedItems()
+            items = self.GetSelectedItems()
 
             if len(items) == 0:
                 item_add = menu.Append(
@@ -1056,30 +1094,28 @@ class MainWindow(wx.Frame):
                 self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder, item_add)
 
             elif len(items) == 1:
+                if e.item.IsGalleryFolder():
+                    kind = "gallery"
+                else:
+                    kind = "custom"
 
                 item_edit = menu.Append(
                     wx.ID_ANY,
                     "Edit",
-                    "Edit this folder."
+                    ("Edit this " + kind + " folder.")
                 )
                 self.Bind(wx.EVT_MENU, self.EditFolder, item_edit)
-                # OPTIONAL
-                '''
-                item_open = menu.Append(
-                    wx.ID_ANY,
-                    "Open in file explorer",
-                    "Open this folder in your file explorer."
-                )
-                '''
+                # OPTIONAL: Open in file manager option
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Remove",
-                    "Remove this folder from the database (files remain untouched)."
+                    ("Remove this " + kind + " folder from the "
+                     "database (files remain untouched).")
                 )
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
 
             elif len(items) > 1:
-                
+
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Remove",
@@ -1097,24 +1133,24 @@ class MainWindow(wx.Frame):
 
                 if len(items) == 1:
                     item_rename = menu.Append(
-                            wx.ID_ANY,
-                            "Rename",
-                            "Rename this files."
+                        wx.ID_ANY,
+                        "Rename",
+                        "Rename this files."
                     )
 
                 item_remove = menu.Append(
-                        wx.ID_ANY,
-                        "Delete",
-                        "Delete the selected files (this can not be undone)."
+                    wx.ID_ANY,
+                    "Delete",
+                    "Delete the selected files (this can not be undone)."
                 )
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
                 # TODO: Bind to and make function
                 item_restore = menu.Append(
-                        wx.ID_ANY,
-                        "Restore",
-                        "Remove the selected files from the database and move them to the desired location."
+                    wx.ID_ANY,
+                    "Restore",
+                    "Remove the selected files from the database and move them to the desired location."
                 )
-                # TODO: Bind to and make function
+                self.Bind(wx.EVT_MENU, self.RestoreItem, item_restore)
             else:
                 # Clicked into the background
                 return
@@ -1122,21 +1158,23 @@ class MainWindow(wx.Frame):
         elif self.mode == "tagging":
 
             item_rename = menu.Append(
-                    wx.ID_ANY,
-                    "Rename",
-                    "Rename this file."
+                wx.ID_ANY,
+                "Rename",
+                "Rename this file."
             )
+            # TODO: Bind to and make function
             item_remove = menu.Append(
-                    wx.ID_ANY,
-                    "Delete",
-                    "Delete this file (this can not be undone)."
+                wx.ID_ANY,
+                "Delete",
+                "Delete this file (this can not be undone)."
             )
             self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
             # TODO: Bind to and make function
             item_restore = menu.Append(
-                    wx.ID_ANY,
-                    "Restore",
-                    "Remove this file from the database and move it to the desired location."
+                wx.ID_ANY,
+                "Restore",
+                ("Remove this file from the database "
+                 "and move it to the desired location.")
             )
             # TODO: Bind to and make function
 
@@ -1201,12 +1239,78 @@ class MainWindow(wx.Frame):
         if len(items) != 1:
             print "Can not edit more than one folder at once."
 
-        folder = tagging.path_to_id(items[0])
-        dlg = edit_output_folder.EditOutputFolder(self, folder)
+        for child in self.mainPan.GetChildren():
+            if child.GetPath() == items[0]:
+                is_gf = child.IsGalleryFolder()
+
+        if is_gf:
+            folder = tagging.gallery_path_to_id(items[0])
+            dlg = edit_gallery_folder.EditGalleryFolder(self, folder)
+        else:
+            folder = tagging.custom_path_to_id(items[0])
+            dlg = edit_output_folder.EditOutputFolder(self, folder)
+        print folder
         dlg.ShowModal()
         dlg.Destroy()
 
         self.on_start_folder_mode()
+
+    def RestoreFiles(self, files, event=None):
+        if self.mode != "overview":
+            return
+
+        # Ask for target directory
+        dlg_import = wx.DirDialog(
+            self,
+            "Select the location where you want to move "
+            "files to.",
+            style=wx.DD_DEFAULT_STYLE)
+
+        if dlg_import.ShowModal() == wx.ID_CANCEL:
+            # Restoration aborted
+            return "ABORT"
+
+        target_dir = dlg_import.GetPath()
+
+        # Get items to be moved
+        files
+
+        # Restore the files
+        export.file(files, target_dir, move=True)
+
+        self.select_tags()
+        self.start_overview()
+
+        dlg_complete = wx.MessageDialog(
+            self,
+            "Restoration complete.",
+            "Message",
+            wx.OK
+        )
+        dlg_complete.ShowModal()
+        dlg_complete.Destroy()
+
+    def OnRestoreAllFiles(self, event=None):
+
+        # Get all file IDs
+        gallery_conn = database.get_current_gallery("connection")
+        c = gallery_conn.cursor()
+
+        query_ids = "SELECT pk_id FROM file"
+        c.execute(query_ids)
+        result = c.fetchall()
+
+        ids = []
+        for id in result:
+            ids.append(id[0])
+
+        # Restore
+        self.RestoreFiles(ids)
+
+    def RestoreSelected(self, event=None):
+
+        items = self.GetSelectedItems()
+        self.RestoreFiles(items)
 
     def RemoveItem(self, event=None):
         if self.mode == "folder":
@@ -1288,10 +1392,37 @@ class MainWindow(wx.Frame):
 
             self.mainPan.DisplayNext()
 
+        elif self.mode == "import":
+
+            # Get items to be removed
+            sel_items = self.mainPan.GetSelectedItems()
+            for item in sel_items:
+
+                # Delete all children if a folder is removed
+                if os.path.isdir(item):
+                    for root, dirs, files in os.walk(item):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            try:
+                                del self.temp_file_tags[file_path]
+                            except:
+                                print "Item already removed"
+
+                # Remove the item itself
+                try:
+                    del self.temp_file_tags[item]
+                except:
+                    print "Error removing item"
+
+            # Update the import view
+            current_dir = self.current_directory.GetLabelText()
+            items = self.GetFolderItems(current_dir)
+            self.mainPan.SetItems(items)
+            self.select_tags()
+            self.Layout()
+
 app = wx.App(False)
 frame = MainWindow(None, "OctoTagger")
-
-#import wx.lib.inspection
-#wx.lib.inspection.InspectionTool().Show()
-
+# import wx.lib.inspection
+# wx.lib.inspection.InspectionTool().Show()
 app.MainLoop()

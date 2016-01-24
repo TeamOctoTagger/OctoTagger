@@ -68,8 +68,21 @@ class ItemView(wx.ScrolledWindow):
 
         for item in root:
             index = len(self.sizer.GetChildren())
+            if 'is_gf' in item:
+                new_item = Item(self,
+                                item['path'],
+                                item['name'],
+                                item['image'],
+                                item['is_gf'])
+            else:
+                new_item = Item(
+                    self,
+                    item['path'],
+                    item['name'],
+                    item['image'],
+                )
             self.sizer.Add(
-                Item(self, item['path'], item['name'], item['image']),
+                new_item,
                 flag=wx.ALL,
                 border=5,
                 userData=index,
@@ -208,14 +221,23 @@ class ItemView(wx.ScrolledWindow):
                         'image': thumbnail.get_thumbnail(item),
                     })
                 elif type(item) is str:  # item is fs path
+                    splitted_item = item.split("|")
+                    if splitted_item.pop() == "GALLERYFOLDER":
+                        is_gf = True
+                        item = "|".join(splitted_item)
+                    else:
+                        is_gf = False
+
                     name = os.path.basename(item)
                     if os.path.isdir(item):
                         result.append({
                             'name': name,
                             'path': item,
                             'image': thumbnail.GENERIC['folder'],
+                            'is_gf': is_gf,
                         })
                     elif os.path.isfile(item):
+                        print "file"
                         result.append({
                             'name': name,
                             'path': item,
@@ -273,10 +295,11 @@ class ItemView(wx.ScrolledWindow):
 
 class Item(wx.Panel):
 
-    def __init__(self, parent, path, name, image):
+    def __init__(self, parent, path, name, image, is_gf=False):
         super(Item, self).__init__(parent)
 
         self.path = path
+        self.is_gf = is_gf
         self.selected = False
 
         self.UpdateBackground()
@@ -336,6 +359,9 @@ class Item(wx.Panel):
 
     def GetPath(self):
         return self.path
+
+    def IsGalleryFolder(self):
+        return self.is_gf
 
     def PropagateEvent(self, event):
         event.ResumePropagation(1)

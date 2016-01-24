@@ -65,7 +65,6 @@ def tag_file(file_id, tag_name, amount=-1):
 
     # Try to find existing tag
     query_get_tags = "SELECT * FROM tag WHERE name = \'%s\'" % (tag_name)
-    print query_get_tags
     cursor.execute(query_get_tags)
     tags = cursor.fetchall()
     if tags:
@@ -122,7 +121,6 @@ def untag_file(file_id, tag_name):
 
     # Write changes
     gallery.commit()
-    print "UNTAG"
     output.change(file_id, tag_id, False)
 
 
@@ -149,8 +147,8 @@ def remove_file(file_id):
     for tag in tags:
         output.change(file_id, tag[0], False)
 
-    c.execute("DELETE FROM file WHERE pk_id=?", file_id)
-    c.execute("DELETE FROM file_has_tag WHERE pk_fk_file_id=?", file_id)
+    c.execute("DELETE FROM file WHERE pk_id=%s" % str(file_id))
+    c.execute("DELETE FROM file_has_tag WHERE pk_fk_file_id=%s" % str(file_id))
     gallery.commit()
 
 
@@ -227,14 +225,35 @@ def tag_name_to_id(tag_name):
     else:
         return False
 
-def path_to_id(path):
+
+def custom_path_to_id(path):
     # Get gallery connection
     gallery = database.get_current_gallery("connection")
     cursor = gallery.cursor()
 
     location, name = os.path.split(path)
 
-    query_get_folders = "SELECT pk_id FROM folder WHERE location = \'%s\' AND name = \'%s\'" % (location, name)
+    query_get_folders = (
+        "SELECT pk_id FROM folder "
+        "WHERE location = \'%s\' AND name = \'%s\'" % (location, name))
+    cursor.execute(query_get_folders)
+    folder = cursor.fetchone()
+    if folder:
+        return folder[0]
+    else:
+        return False
+
+
+def gallery_path_to_id(path):
+    # Get gallery connection
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+
+    location, name = os.path.split(path)
+
+    query_get_folders = (
+        "SELECT pk_id FROM gallery_folder "
+        "WHERE location = \'%s\' AND name = \'%s\'" % (location, name))
     cursor.execute(query_get_folders)
     folder = cursor.fetchone()
     if folder:

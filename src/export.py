@@ -8,7 +8,18 @@ def file(ids, path, move=False):
     gallery = database.get_current_gallery("directory")
     connection = database.get_current_gallery("connection")
     c = connection.cursor()
-    c.execute("SELECT uuid, file_name FROM file WHERE pk_id IN (?)", ids)
+
+    # Convert IDs to String
+    str_ids = []
+    for id in ids:
+        str_ids.append(str(id))
+
+    query = (
+        "SELECT uuid, file_name, pk_id FROM file WHERE pk_id IN (" +
+        ", ".join(str_ids) + ")"
+    )
+    print query
+    c.execute(query)
     files = c.fetchall()
 
     for file in files:
@@ -16,7 +27,7 @@ def file(ids, path, move=False):
         extern = os.path.join(path, file[1])
         shutil.copy(intern, extern)
         if move:
-            tagging.remove_file(file)
+            tagging.remove_file(int(file[2]))
             os.remove(intern)
 
 
@@ -77,6 +88,3 @@ def output(id, advanced, tag=None, convert=False, path=None):
 
         c.execute(query, id)
         connection.commit()
-
-
-output(1, False, tag=2, path="/home/clemens/Desktop/export")
