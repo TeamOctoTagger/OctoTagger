@@ -183,18 +183,21 @@ def parse(string):
     return query
 
 
-def convert(expression):
-    return re.sub(REG_TAG_NAME, _get_tag_id, expression)
+def convert_tag_name(expression, callback):
+    """Converts all tag names by passing them to the callback function and
+    replacing them with the result"""
+    return re.sub(
+        REG_TAG_NAME,
+        lambda match: str(callback(match.group(0))),
+        expression
+    )
 
 
-def _get_tag_id(match):
-    name = match.group(0)
-    conn = database.get_current_gallery("connection")
-    c = conn.cursor()
-    c.execute("SELECT pk_id FROM tag WHERE name=?", (
-        name,
-    ))
-    id = c.fetchone()
-    if id is None:
-        raise ValueError("Invalid tag name", name)
-    return str(id[0])
+def convert_tag_id(expression, callback):
+    """Converts all tag ids by passing them to the callback function and
+    replacing them with the result"""
+    return re.sub(
+        REG_TAG_ID,
+        lambda match: str(callback(int(match.group(0)))),
+        expression
+    )
