@@ -1,5 +1,7 @@
 import re
 
+import database
+
 
 REG_TAG_NAME = r'[a-zA-Z][a-zA-Z0-9_]+'
 REG_TAG_ID = r'[0-9]+'
@@ -179,3 +181,20 @@ def parse(string):
     query = parse_or(tokens)
 
     return query
+
+
+def convert(expression):
+    return re.sub(REG_TAG_NAME, _get_tag_id, expression)
+
+
+def _get_tag_id(match):
+    name = match.group(0)
+    conn = database.get_current_gallery("connection")
+    c = conn.cursor()
+    c.execute("SELECT pk_id FROM tag WHERE name=?", (
+        name,
+    ))
+    id = c.fetchone()
+    if id is None:
+        raise ValueError("Invalid tag name", name)
+    return str(id[0])
