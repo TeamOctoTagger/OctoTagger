@@ -6,6 +6,8 @@ import database
 import os
 from os.path import expanduser
 import create_folders
+import expression
+import tagging
 
 
 class EditOutputFolder(wx.Dialog):
@@ -152,7 +154,7 @@ class EditOutputFolder(wx.Dialog):
     def init_data(self):
 
         # Define variables
-        name = expression = location = ""
+        name = expr = location = ""
         softlink = True
 
         # Get connection
@@ -160,12 +162,18 @@ class EditOutputFolder(wx.Dialog):
         cursor = gallery_conn.cursor()
 
         # Get data
-        query_folder = "SELECT name, expression, location, use_softlink FROM folder WHERE pk_id = %d" % (self.folder_id)
+        query_folder = (
+            "SELECT name, expression, location, use_softlink "
+            "FROM folder WHERE pk_id = %d" % (self.folder_id)
+        )
         cursor.execute(query_folder)
         result = cursor.fetchall()
         for properties in result:
             name = properties[0]
-            expression = properties[1]
+            expr = expression.convert_tag_id(
+                properties[1],
+                tagging.tag_id_to_name
+            )
             location = os.path.normpath(properties[2])
             if properties[3] == 1:
                 softlink = True
@@ -174,7 +182,7 @@ class EditOutputFolder(wx.Dialog):
 
         # Set data in UI
         self.tc_name.SetValue(name)
-        self.tc_expression.SetValue(expression)
+        self.tc_expression.SetValue(expr)
         self.tc_directory.SetValue(location)
 
         if softlink:
@@ -202,7 +210,10 @@ class EditOutputFolder(wx.Dialog):
         location = self.tc_directory.GetValue()
         dir = os.path.normpath(location)
         name = self.tc_name.GetValue()
-        expression = self.tc_expression.GetValue()
+        expr = expression.convert_tag_id(
+            self.tc_expression.GetValue(),
+            tagging.tag_id_to_name
+        )
 
         if self.rb_softlinks.GetValue():
             softlink = 1
@@ -248,11 +259,15 @@ class EditOutputFolder(wx.Dialog):
 
         # Update database entry
 
-        query_insert_folder = "UPDATE folder SET name = \'%s\', location = \'%s\', expression = \'%s\', use_softlink = %d WHERE pk_id = %d" % (name, dir, expression, softlink, self.folder_id)
+        query_insert_folder = (
+            "UPDATE folder SET name = \'%s\', location = \'%s\', "
+            "expression = \'%s\', use_softlink = %d "
+            "WHERE pk_id = %d" % (name, dir, expr, softlink, self.folder_id)
+        )
         cursor.execute(query_insert_folder)
         gallery_conn.commit()
 
-        # TODO: Delete old folder
+        # TODO: Implement relevent output functions
 
         # Create folders
         create_folders.create_folders()

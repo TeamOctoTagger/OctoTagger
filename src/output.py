@@ -83,21 +83,18 @@ def change(item, tag, create):
     for folder in folders:
         path = os.path.join(folder[0], folder[1])
         link = os.path.join(path, g_file[1])
-        c.execute(
-            (
+        query_file = (
                 "SELECT pk_id "
                 "FROM file "
-                "WHERE :expression AND pk_id=:id"
-            ),
-            {
-                "expression": expression.parse(folder[2]),
-                "id": item
-            }
+                "WHERE %s AND pk_id = %d"
+                % (expression.parse(folder[2]), item)
         )
+        print query_file
+        c.execute(query_file)
         matches = c.fetchone()
-        if matches is None and os.path.islink(link):
+        if matches is None and os.path.exists(link):
             os.remove(link)
-        elif matches is not None and not os.path.islink(link):
+        elif matches is not None and not os.path.exists(link):
             if not os.path.isdir(path):
                 os.makedirs(path)
             create_folders.symlink(target, link, folder[3])

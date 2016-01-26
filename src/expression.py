@@ -1,7 +1,5 @@
 import re
 
-import database
-
 
 REG_TAG_NAME = r'[a-zA-Z][a-zA-Z0-9_]+'
 REG_TAG_ID = r'[0-9]+'

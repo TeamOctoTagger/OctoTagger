@@ -6,6 +6,7 @@ import database
 import os
 from os.path import expanduser
 import create_folders
+import tagging
 
 
 class CreateOutputFolder(wx.Dialog):
@@ -187,7 +188,10 @@ class CreateOutputFolder(wx.Dialog):
         location = self.tc_directory.GetValue()
         dir = os.path.normpath(location)
         name = self.tc_name.GetValue()
-        expression = self.tc_expression.GetValue()
+        expr = expression.convert_tag_id(
+            self.tc_expression.GetValue(),
+            tagging.tag_id_to_name
+        )
 
         if self.rb_softlinks.GetValue():
             softlink = 1
@@ -202,7 +206,7 @@ class CreateOutputFolder(wx.Dialog):
 
             return
 
-        if(expression == ""):
+        if(expr == ""):
             wx.MessageBox(
                 'Please enter an expression!',
                 'Error',
@@ -230,16 +234,13 @@ class CreateOutputFolder(wx.Dialog):
 
         # Create database entry
 
-        # Convert Expression to TagId
-        expression
-
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
 
         query_insert_folder = ("INSERT INTO folder"
                                "(name, location, expression, use_softlink) "
                                "VALUES (\'%s\', \'%s\', \'%s\', %d)" %
-                               (name, dir, expression, softlink))
+                               (name, dir, expr, softlink))
 
         cursor.execute(query_insert_folder)
         gallery_conn.commit()
