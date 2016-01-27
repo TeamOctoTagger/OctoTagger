@@ -194,23 +194,7 @@ class TagList(wx.ScrolledWindow):
     def RemoveTag(self, event):
         tag_id = tagging.tag_name_to_id(self.edit_tag)
 
-        gallery = database.get_current_gallery("connection")
-        cursor = gallery.cursor()
-
-        query_has_tag = (
-            "DELETE FROM file_has_tag "
-            "WHERE pk_fk_tag_id = %d"
-            % tag_id
-        )
-        query_tag = (
-            "DELETE FROM tag "
-            "WHERE pk_id = %d"
-            % tag_id
-        )
-
-        cursor.execute(query_has_tag)
-        cursor.execute(query_tag)
-
-        gallery.commit()
+        output.delete_tag(tag_id)
+        tagging.delete_tag(tag_id)
 
         wx.PostEvent(self, TagListUpdateEvent(self.GetId()))

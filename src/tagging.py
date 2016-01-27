@@ -58,6 +58,23 @@ def create_tag(tag_name, is_numeric=False):
     return tag_id[0]
 
 
+def delete_tag(id):
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+
+    cursor.execute(
+        "DELETE FROM gallery_folder_has_tag WHERE pk_fk_tag_id = ?",
+        (id,),
+    )
+    cursor.execute(
+        "DELETE FROM file_has_tag WHERE pk_fk_tag_id = ?",
+        (id,),
+    )
+    cursor.execute("DELETE FROM tag WHERE pk_id = ?", (id,))
+
+    gallery.commit()
+
+
 def tag_file(file_id, tag_name, amount=-1):
     # Get gallery connection
     gallery = database.get_current_gallery("connection")
