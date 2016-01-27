@@ -587,4 +587,4 @@ def delete_tag(id):
 def rename_file(id, new_name):
     raise NotImplementedError()
 
-# TODO: remove links when file s restored
+# TODO: remove links when files are restored (?)

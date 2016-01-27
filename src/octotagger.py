@@ -857,6 +857,7 @@ class MainWindow(wx.Frame):
         self.Bind(taglist.EVT_TAGLIST_CHECK, self.on_tag_selected, self.lb)
         self.Bind(taglist.EVT_TAGLIST_UPDATE, self.update_tag_list, self.lb)
         self.Layout()
+        self.Refresh()
 
     def get_gallery_menu(self):
         menu = wx.Menu()
@@ -1378,6 +1379,7 @@ class MainWindow(wx.Frame):
             # TODO: Confirmation?
             # Delete files
 
+            self.mainPan.RemoveItem(item)
             output.remove(item)
 
             gallery = database.get_current_gallery("connection")
@@ -1394,8 +1396,6 @@ class MainWindow(wx.Frame):
             cursor.execute(query_files)
             cursor.execute(query_tags)
             gallery.commit()
-
-            self.mainPan.DisplayNext()
 
         elif self.mode == "import":
 

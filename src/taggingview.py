@@ -8,7 +8,7 @@ from PIL import Image
 import itemview
 import thumbnail
 
-# TODO: Context pane
+# TODO: Behaviour when all files get deleted
 # OPTIONAL: Animated gif support,
 # OPTIONAL: open file with application, preload next files
 
@@ -197,7 +197,6 @@ class TaggingView(wx.Panel):
         return self.current_file
 
     def RemoveItem(self, item):
-        print item
         self.DisplayNext()
         self.files.remove(item)
 

@@ -6,11 +6,11 @@ Functionality for assigning tags to imported files.
 '''
 
 import os
-import sqlite3
 import database
 import output
 
 # Methods for assigning tags to files
+
 
 def create_tag(tag_name, is_numeric=False):
     # Get gallery connection
@@ -18,12 +18,11 @@ def create_tag(tag_name, is_numeric=False):
     cursor = gallery.cursor()
 
     # Try to find existing tag
-    query_get_tags = "SELECT * FROM tag WHERE name = \'%s\'" % (tag_name)
+    query_get_tags = "SELECT pk_id FROM tag WHERE name = \'%s\'" % (tag_name)
     cursor.execute(query_get_tags)
     tag = cursor.fetchone()
     if tag:
-        # Tag already exists
-        pass
+        return tag[0]
 
     else:
         # Tag needs to be created
@@ -37,23 +36,17 @@ def create_tag(tag_name, is_numeric=False):
     cursor.execute(query_get_tags)
     tag_id = cursor.fetchone()
 
-    if tag:
-        cursor.execute("SELECT pk_id, add_new_tag FROM gallery_folder")
-        gallery_folders = cursor.fetchall()
-        for gallery_folder in gallery_folders:
-            if not gallery_folder[1]:
-                continue
+    cursor.execute("SELECT pk_id, add_new_tag FROM gallery_folder")
+    gallery_folders = cursor.fetchall()
+    for gallery_folder in gallery_folders:
+        print gallery_folder
+        if gallery_folder[1] == 1:
             cursor.execute(
-                (
-                    "INSERT INTO gallery_folder_has_tag "
-                    "VALUES(:gallery, :tag)"
-                ),
-                {
-                    "gallery": gallery_folder[0],
-                    "tag": tag_id[0]
-                }
+                "INSERT INTO gallery_folder_has_tag "
+                "VALUES(%d, %d)"
+                % (gallery_folder[0], tag_id[0])
             )
-        gallery.commit()
+    gallery.commit()
 
     return tag_id[0]
 
@@ -80,39 +73,18 @@ def tag_file(file_id, tag_name, amount=-1):
     gallery = database.get_current_gallery("connection")
     cursor = gallery.cursor()
 
-    # Try to find existing tag
-    query_get_tags = "SELECT * FROM tag WHERE name = \'%s\'" % (tag_name)
-    cursor.execute(query_get_tags)
-    tags = cursor.fetchall()
-    if tags:
-        # Tag has been found
-        for tag in tags:
-            tag_id = tag[0]
-            query_link = "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) VALUES (%d, %d, %d)" % (
-                file_id, tag_id, amount)
-            cursor.execute(query_link)
-    else:
-        # Tag has not been found, create it
+    # Get tag or create it
+    if amount > -1:
+        tag_id = create_tag(tag_name, True)
+    elif amount == -1:
+        tag_id = create_tag(tag_name)
 
-        # If an amount has been specified, make tag numeric
-        if amount > -1:
-            is_numeric = 1
-        else:
-            is_numeric = 0
-
-        query_insert_tag = "INSERT INTO tag(name, is_numeric) VALUES (\'%s\', %d)" % (
-            tag_name, is_numeric)
-        cursor.execute(query_insert_tag)
-
-        # Get ID of newly created tag and create link between it and the file
-        query_get_tags = "SELECT * FROM tag WHERE name = \'%s\'" % (tag_name)
-        cursor.execute(query_get_tags)
-        tags = cursor.fetchall()
-        for tag in tags:
-            tag_id = tag[0]
-            query_link = "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) VALUES (%d, %d, %d)" % (
-                file_id, tag_id, amount)
-            cursor.execute(query_link)
+    query_link = (
+        "INSERT INTO file_has_tag(pk_fk_file_id, pk_fk_tag_id, amount) "
+        "VALUES (%d, %d, %d)" %
+        (file_id, tag_id, amount)
+    )
+    cursor.execute(query_link)
 
     # Write changes
     gallery.commit()

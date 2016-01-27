@@ -194,7 +194,12 @@ class TagList(wx.ScrolledWindow):
     def RemoveTag(self, event):
         tag_id = tagging.tag_name_to_id(self.edit_tag)
 
+        event = TagListUpdateEvent(
+            self.GetId(),
+            checked=self.GetCheckedStrings()
+        )
+
         output.delete_tag(tag_id)
         tagging.delete_tag(tag_id)
 
-        wx.PostEvent(self, TagListUpdateEvent(self.GetId()))
+        wx.PostEvent(self, event)

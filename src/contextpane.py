@@ -131,7 +131,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().RestoreItem,
+            self.GetParent().RestoreSelected,
             item_restore,
         )
         buttons["item_restore"] = item_restore
