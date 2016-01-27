@@ -13,6 +13,7 @@ import wx
 import database
 import tagging
 
+
 def import_files(files):
 
     # Get gallery connection
@@ -36,8 +37,9 @@ def import_files(files):
                 dest = os.path.join(dest_dir, new_name)
                 shutil.copy(file, dest)
 
-                query_insert_file = "INSERT INTO file (file_name, uuid) VALUES (\'%s\', \'%s\')"%(original_name, new_name)
+                query_insert_file = "INSERT INTO file (file_name, uuid) VALUES (\'%s\', \'%s\')" % (original_name, new_name)
                 cursor.execute(query_insert_file)
+                gallery_conn.commit()
 
             else:
                 dlg_error = wx.MessageBox(

@@ -7,12 +7,11 @@ import database
 from PIL import Image
 # TODO: Move rightclick event somewhere other than taggingview
 import itemview
+import thumbnail
 
 # TODO: Context pane
-# TODO: Switch from PIL to Pillow
-# TODO: Generic icons for generic files
 # OPTIONAL: Animated gif support,
-# open file with application, preload next files
+# OPTIONAL: open file with application, preload next files
 
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
@@ -99,9 +98,6 @@ class TaggingView(wx.Panel):
         else:
             self.current_file = self.files[index + 1]
 
-        result = self.GetImage(self.current_file)
-        image_name = result[1]
-
         wx.PostEvent(self, ItemChangeEvent(self.GetId()))
 
         self.UpdateLabel()
@@ -114,9 +110,6 @@ class TaggingView(wx.Panel):
             self.current_file = self.files[len(self.files) - 1]
         else:
             self.current_file = self.files[index - 1]
-
-        result = self.GetImage(self.current_file)
-        image_name = result[1]
 
         wx.PostEvent(self, ItemChangeEvent(self.GetId()))
 
@@ -134,7 +127,16 @@ class TaggingView(wx.Panel):
             "files",
             result[0])
 
-        return [wx.Image(path), result[1], path]
+        thumb_path = thumbnail.get_thumbnail(file, path_only=True)
+        if thumb_path is None:
+            print "AHA"
+            image = wx.Image(path)
+        else:
+            image = wx.Image(thumb_path)
+            path = thumb_path
+
+        print image
+        return [image, result[1], path]
 
     def UpdateLabel(self):
         label = (
@@ -149,11 +151,12 @@ class TaggingView(wx.Panel):
     def ReSize(self, event=None):
 
         # TODO: When window is resized quickly, doesn't resize image correctly.
-        # Maybe use Double Buffering? http://wiki.wxpython.org/DoubleBufferedDrawing
+        # Maybe use Double Buffering?
+        # http://wiki.wxpython.org/DoubleBufferedDrawing
 
         size = self.imgPan.GetSize()
 
-        image = Image.open(self.GetImage(self.current_file)[2])
+        image = Image.open(self.GetImage(self.current_file)[2]).convert()
 
         image.thumbnail(size, Image.ANTIALIAS)
         new_image = self.ConvertPILToWX(image)
@@ -165,25 +168,28 @@ class TaggingView(wx.Panel):
 
         self.Layout()
 
-    def ConvertPILToWX(self, myPilImage, copyAlpha=True ) :
+    def ConvertPILToWX(self, myPilImage, copyAlpha=True):
 
-        hasAlpha = myPilImage.mode[ -1 ] == 'A'
-        if copyAlpha and hasAlpha :  # Make sure there is an alpha layer copy.
+        hasAlpha = myPilImage.mode[-1] == 'A'
+        if copyAlpha and hasAlpha:  # Make sure there is an alpha layer copy.
 
-            myWxImage = wx.EmptyImage( *myPilImage.size )
+            myWxImage = wx.EmptyImage(*myPilImage.size)
             myPilImageCopyRGBA = myPilImage.copy()
-            myPilImageCopyRGB = myPilImageCopyRGBA.convert( 'RGB' )    # RGBA --> RGB
-            myPilImageRgbData =myPilImageCopyRGB.tobytes()
-            myWxImage.SetData( myPilImageRgbData )
-            myWxImage.SetAlphaData( myPilImageCopyRGBA.tobytes()[3::4] )  # Create layer and insert alpha values.
+            myPilImageCopyRGB = myPilImageCopyRGBA.convert(
+                'RGB')    # RGBA --> RGB
+            myPilImageRgbData = myPilImageCopyRGB.tobytes()
+            myWxImage.SetData(myPilImageRgbData)
+            # Create layer and insert alpha values.
+            myWxImage.SetAlphaData(myPilImageCopyRGBA.tobytes()[3::4])
 
-        else :    # The resulting image will not have alpha.
+        else:    # The resulting image will not have alpha.
 
-            myWxImage = wx.EmptyImage( *myPilImage.size )
+            myWxImage = wx.EmptyImage(*myPilImage.size)
             myPilImageCopy = myPilImage.copy()
-            myPilImageCopyRGB = myPilImageCopy.convert( 'RGB' )    # Discard any alpha from the PIL image.
-            myPilImageRgbData =myPilImageCopyRGB.tobytes()
-            myWxImage.SetData( myPilImageRgbData )
+            # Discard any alpha from the PIL image.
+            myPilImageCopyRGB = myPilImageCopy.convert('RGB')
+            myPilImageRgbData = myPilImageCopyRGB.tobytes()
+            myWxImage.SetData(myPilImageRgbData)
 
         return myWxImage
 

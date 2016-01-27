@@ -33,7 +33,7 @@ def register(mime_type, handler):
     _map[mime_type] = handler
 
 
-def get_thumbnail(item):
+def get_thumbnail(item, path_only=False):
 
     is_db_item = True
 
@@ -93,7 +93,10 @@ def get_thumbnail(item):
                     handler(path, thumbnail_path)
                 except:
                     return DEFAULT_ICON
-            return thumbnail_path
+            if not path_only:
+                return thumbnail_path
+            else:
+                return None
         else:
             # Generate unique name
             md5 = hashlib.md5()

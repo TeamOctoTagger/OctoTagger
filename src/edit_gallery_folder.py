@@ -5,6 +5,7 @@ import wx
 import tagging
 from os.path import expanduser
 import database
+import output
 
 
 class EditGalleryFolder(wx.Dialog):
@@ -166,6 +167,7 @@ class EditGalleryFolder(wx.Dialog):
             tag_names.append(tagging.tag_id_to_name(tag_id))
 
         self.lb.SetCheckedStrings(tag_names)
+        self.checked_tags = tag_names
 
     def OnSelectAll(self, e):
         for cb in range(self.lb.GetCount()):
@@ -211,6 +213,22 @@ class EditGalleryFolder(wx.Dialog):
         else:
             use_softlink = 0
 
+        new_checked_tags = self.lb.GetCheckedStrings()
+        for tag in new_checked_tags:
+            if tag not in self.checked_tags:
+                tag_id = tagging.tag_name_to_id(tag)
+                print "Add", tag
+                output.change_gallery(self.folder_id, tag_id, True)
+
+        for tag in self.checked_tags:
+            if tag not in new_checked_tags:
+                tag_id = tagging.tag_name_to_id(tag)
+                print "Remove", tag
+                output.change_gallery(self.folder_id, tag_id, False)
+
+        output.rename(self.folder_id, False, name)
+
+        '''
         query_save = (
             "UPDATE gallery_folder SET "
             "location = \'%s\', "
@@ -223,3 +241,4 @@ class EditGalleryFolder(wx.Dialog):
         )
         cursor.execute(query_save)
         gallery_conn.commit()
+        '''

@@ -7,6 +7,7 @@ import os
 from os.path import expanduser
 import create_folders
 import tagging
+import expression
 
 
 class CreateOutputFolder(wx.Dialog):
@@ -14,6 +15,10 @@ class CreateOutputFolder(wx.Dialog):
     """Extending Dialog"""
 
     def __init__(self, *args, **kw):
+        if "expr" in kw:
+            self.expr = kw.pop("expr")
+        else:
+            self.expr = ""
         super(CreateOutputFolder, self).__init__(*args, **kw)
 
         self.SetSize((450, 350))
@@ -62,7 +67,7 @@ class CreateOutputFolder(wx.Dialog):
             border=5
         )
 
-        self.tc_expression = wx.TextCtrl(panel)
+        self.tc_expression = wx.TextCtrl(panel, value=self.expr)
         sizer.Add(
             self.tc_expression,
             pos=(1, 1),
@@ -188,9 +193,9 @@ class CreateOutputFolder(wx.Dialog):
         location = self.tc_directory.GetValue()
         dir = os.path.normpath(location)
         name = self.tc_name.GetValue()
-        expr = expression.convert_tag_id(
+        expr = expression.convert_tag_name(
             self.tc_expression.GetValue(),
-            tagging.tag_id_to_name
+            tagging.tag_name_to_id
         )
 
         if self.rb_softlinks.GetValue():

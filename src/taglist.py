@@ -46,7 +46,6 @@ class TagList(wx.ScrolledWindow):
 
     def OnCheck(self, e):
         cb = e.GetEventObject()
-        self.checked.append(cb.GetLabelText())
         wx.PostEvent(self, TagListCheckEvent(self.GetId()))
 
     def GetChecked(self):
@@ -145,9 +144,7 @@ class TagList(wx.ScrolledWindow):
 
     def RenameTag(self, event):
 
-        # TODO: Change tag in all expressions!
-        # Possible Solution: Save expressions with IDs instead of names?
-
+        self.checked = self.GetCheckedStrings()
         self.EnableAll(False)
 
         for child in self.GetChildren():
@@ -199,7 +196,13 @@ class TagList(wx.ScrolledWindow):
         cursor.execute(query_tag)
         gallery.commit()
 
-        wx.PostEvent(self, TagListUpdateEvent(self.GetId()))
+        self.checked.append(new_name)
+
+        event = TagListUpdateEvent(
+            self.GetId(),
+            checked=self.checked
+        )
+        wx.PostEvent(self, event)
 
     def RemoveTag(self, event):
         tag_id = tagging.tag_name_to_id(self.edit_tag)
