@@ -840,6 +840,7 @@ class MainWindow(wx.Frame):
     def update_tag_list(self, event=None):
 
         # Remove previous list
+
         self.lb_pan.DestroyChildren()
 
         tags = tagging.get_all_tags()
@@ -858,7 +859,8 @@ class MainWindow(wx.Frame):
             wx.EXPAND | wx.ALL,
             20,
         )
-
+        if event:
+            self.lb.SetCheckedStrings(event.checked)
         self.Bind(taglist.EVT_TAGLIST_CHECK, self.on_tag_selected, self.lb)
         self.Bind(taglist.EVT_TAGLIST_UPDATE, self.update_tag_list, self.lb)
         self.Layout()
@@ -1144,16 +1146,21 @@ class MainWindow(wx.Frame):
                     "Delete the selected files (this can not be undone)."
                 )
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
-                # TODO: Bind to and make function
                 item_restore = menu.Append(
                     wx.ID_ANY,
                     "Restore",
                     "Remove the selected files from the database and move them to the desired location."
                 )
-                self.Bind(wx.EVT_MENU, self.RestoreItem, item_restore)
+                self.Bind(wx.EVT_MENU, self.RestoreSelected, item_restore)
             else:
-                # Clicked into the background
-                return
+                query = self.query_field.GetValue()
+                if query != "":
+                    item_create_folder = menu.Append(
+                        wx.ID_ANY,
+                        "Create folder from current expression",
+                        "Create a special output folder from the current expression."
+                    )
+                    self.Bind(wx.EVT_MENU, self.CreateFolderFromExpression, item_create_folder)
 
         elif self.mode == "tagging":
 
@@ -1215,7 +1222,15 @@ class MainWindow(wx.Frame):
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
 
         if menu.GetMenuItemCount() > 0:
+            print "ya"
             self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
+
+    def CreateFolderFromExpression(self, event):
+        query = self.query_field.GetValue()
+
+        dlg = create_output_folder.CreateOutputFolder(self, expr=query)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def ImportAll(self, event):
         import_files.import_files(self.temp_file_tags)

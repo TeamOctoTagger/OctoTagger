@@ -8,6 +8,7 @@ from os.path import expanduser
 import create_folders
 import expression
 import tagging
+import output
 
 
 class EditOutputFolder(wx.Dialog):
@@ -210,9 +211,9 @@ class EditOutputFolder(wx.Dialog):
         location = self.tc_directory.GetValue()
         dir = os.path.normpath(location)
         name = self.tc_name.GetValue()
-        expr = expression.convert_tag_id(
+        expr = expression.convert_tag_name(
             self.tc_expression.GetValue(),
-            tagging.tag_id_to_name
+            tagging.tag_name_to_id
         )
 
         if self.rb_softlinks.GetValue():
@@ -252,25 +253,9 @@ class EditOutputFolder(wx.Dialog):
 
             return
 
-        # Get connection
-
-        gallery_conn = database.get_current_gallery("connection")
-        cursor = gallery_conn.cursor()
-
-        # Update database entry
-
-        query_insert_folder = (
-            "UPDATE folder SET name = \'%s\', location = \'%s\', "
-            "expression = \'%s\', use_softlink = %d "
-            "WHERE pk_id = %d" % (name, dir, expr, softlink, self.folder_id)
-        )
-        cursor.execute(query_insert_folder)
-        gallery_conn.commit()
-
         # TODO: Implement relevent output functions
-
-        # Create folders
-        create_folders.create_folders()
+        output.move(self.folder_id, True, dir)
+        output.rename(self.folder_id, True, name)
 
         # Exit
         self.Destroy()

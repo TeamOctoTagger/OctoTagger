@@ -155,10 +155,13 @@ def move(id, advanced, target):
     c = connection.cursor()
 
     # get folder information
-    c.execute("SELECT location, name FROM ? WHERE pk_id=?", (
-        (advanced and "folder" or "gallery_folder"),
-        id,
-    ))
+    if advanced:
+        query_select = "SELECT location, name FROM folder WHERE pk_id = ?"
+    else:
+        query_select = (
+            "SELECT location, name FROM gallery_folder WHERE pk_id = ?"
+        )
+    c.execute(query_select, (id,))
     folder = c.fetchone()
     if folder is None:
         raise ValueError("No output folder with this id", id)
@@ -166,9 +169,12 @@ def move(id, advanced, target):
 
     # verify
     if source == target:
-        raise ValueError("Source and target are the same")
+        print "Source and target are the same"
+        return
     if os.path.exists(os.path.join(target, name)):
-        raise IOError("Target path already exists")
+        print "Target path already exists"
+        return
+        # TODO: handle this better
 
     # move
     shutil.move(
@@ -177,18 +183,11 @@ def move(id, advanced, target):
     )
 
     # update db
-    c.execute(
-        (
-            "UPDATE ? "
-            "SET location=? "
-            "WHERE pk_id=?"
-        ),
-        (
-            (advanced and "folder" or "gallery_folder"),
-            target,
-            id,
-        )
-    )
+    if advanced:
+        query_update = "UPDATE folder SET location = ? WHERE pk_id = ?"
+    else:
+        query_update = "UPDATE gallery_folder SET location = ? WHERE pk_id = ?"
+    c.execute(query_update, (target, id))
     connection.commit()
 
 
@@ -197,10 +196,11 @@ def rename(id, advanced, new):
     c = connection.cursor()
 
     # get folder information
-    c.execute("SELECT location, name FROM ? WHERE pk_id=?", (
-        (advanced and "folder" or "gallery_folder"),
-        id,
-    ))
+    if advanced:
+        query = "SELECT location, name FROM folder WHERE pk_id = ?"
+    else:
+        query = "SELECT location, name FROM gallery_folder WHERE pk_id = ?"
+    c.execute(query, (id,))
     folder = c.fetchone()
     if folder is None:
         raise ValueError("No output folder with this id", id)
@@ -208,9 +208,12 @@ def rename(id, advanced, new):
 
     # verify
     if old == new:
-        raise ValueError("New name must be different")
+        print "New name must be different"
+        return
     if os.path.exists(os.path.join(location, new)):
-        raise ValueError("New name already exists")
+        print "New name already exists"
+        return
+        # TODO: Handle this better
 
     # move
     shutil.move(
@@ -219,18 +222,11 @@ def rename(id, advanced, new):
     )
 
     # update db
-    c.execute(
-        (
-            "UPDATE ? "
-            "SET name=? "
-            "WHERE pk_id=?"
-        ),
-        (
-            (advanced and "folder" or "gallery_folder"),
-            new,
-            id,
-        )
-    )
+    if advanced:
+        query = "UPDATE folder SET name = ? WHERE pk_id = ?"
+    else:
+        query = "UPDATE gallery_folder SET name = ? WHERE pk_id = ?"
+    c.execute(query, (new, id))
     connection.commit()
 
 
@@ -255,7 +251,7 @@ def change_gallery(id, tag, add):
         (
             "SELECT name FROM gallery_folder_has_tag "
             "JOIN tag ON pk_fk_tag_id = pk_id "
-            "WHERE pk_fk_gallery_id=? AND pk_id=?"
+            "WHERE pk_fk_gallery_folder_id=? AND pk_id=?"
         ),
         (id, tag),
     )
@@ -264,10 +260,13 @@ def change_gallery(id, tag, add):
         raise ValueError("Tag already added")
     elif tag_name is None and not add:
         raise ValueError("Tag already removed")
-    else:
-        tag_name = tag_name[0]
 
     if add:
+        # Get tag name
+        c.execute("SELECT name FROM tag WHERE pk_id = ?", (tag,))
+        result = c.fetchone()
+        tag_name = result[0]
+
         # get files
         os.mkdir(os.path.join(folder[0], folder[1], tag_name))
         c.execute(
@@ -300,13 +299,20 @@ def change_gallery(id, tag, add):
         connection.commit()
     else:
         # delete files
+
+        # Get tag name
+        c.execute("SELECT name FROM tag WHERE pk_id = ?", (tag,))
+        result = c.fetchone()
+        tag_name = result[0]
+
+        print folder[0], folder[1], tag_name
         shutil.rmtree(os.path.join(folder[0], folder[1], tag_name))
 
         # update db
         c.execute(
             (
-                "DELETE FROM gallery_folder "
-                "WHERE pk_fk_gallery_id=? AND "
+                "DELETE FROM gallery_folder_has_tag "
+                "WHERE pk_fk_gallery_folder_id=? AND "
                 "pk_fk_tag_id=?"
             ),
             (id, tag),
@@ -436,3 +442,23 @@ def change_expression(id, expression):
     # TODO delete old files
     # TODO link new files
     raise NotImplementedError()
+
+
+def raname_tag(id, new_name):
+    # TODO rename existing folders in gallery folders
+    # TODO change tag name in database
+    raise NotImplementedError()
+
+def tag_id_to_name(tag_id):
+    # Get gallery connection
+    gallery = database.get_current_gallery("connection")
+    cursor = gallery.cursor()
+
+    query_get_tags = "SELECT name FROM tag WHERE pk_id = %d" % (tag_id)
+    cursor.execute(query_get_tags)
+    tags = cursor.fetchall()
+    if tags:
+        for tag in tags:
+            return tag[0]
+    else:
+        return False
