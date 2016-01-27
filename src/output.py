@@ -315,7 +315,120 @@ def change_gallery(id, tag, add):
 
 
 def change_link_type(id, advanced, type):
-    raise NotImplementedError()
+    """Changes the link type of an output folder. Softlinks if type is True and
+    hardlinks if type is False, like the use_softlink field"""
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get output folder information
+    if advanced:
+        query = (
+            "SELECT location, name, use_softlink, expression "
+            "FROM folder WHERE "
+            "pk_id = ?"
+        )
+    else:
+        query = (
+            "SELECT location, name, use_softlink "
+            "FROM gallery_folder "
+            "WHERE pk_id = ?"
+        )
+    c.execute(query, (id,))
+    output = c.fetchone()
+    if output is None:
+        raise ValueError("Invalid folder id", id)
+    if output[2] == type:
+        # nothing to do
+        return
+
+    gallery = database.get_current_gallery("directory")
+
+    if advanced:
+        # remake folders
+        folder = os.path.join(output[0], output[1])
+        shutil.rmtree(folder)
+        os.mkdir(folder)
+
+        # relink files
+        expression = output[3]
+        c.execute(
+            (
+                "SELECT uuid, file_name "
+                "FROM file "
+                "WHERE ?"
+            ),
+            (expression,),
+        )
+        files = c.fetchall()
+        if files is None:
+            # no files, nothing to do
+            return
+        for file in files:
+            source = os.path.join(gallery, "files", file[0])
+            target = os.path.join(folder, file[1])
+            create_folders.symlink(source, target, type)
+
+        # update db
+        c.execute(
+            (
+                "UPDATE folder "
+                "SET use_softlink = ? "
+                "WHERE pk_id = ?"
+            ),
+            (type, id),
+        )
+        connection.commit()
+    else:
+        # get tags
+        c.execute(
+            (
+                "SELECT pk_id, name "
+                "FROM gallery_folder_has_tag "
+                "JOIN tag ON pk_fk_tag_id = pk_id "
+                "WHERE pk_fk_gallery_folder_id = ?"
+            ),
+            (id,),
+        )
+        tags = c.fetchall()
+        if tags is None:
+            # no folders, nothing to do
+            return
+        for tag in tags:
+            # remake folder
+            folder = os.path.join(output[0], output[1], tag[1])
+            shutil.rmtree(folder)
+            os.mkdir(folder)
+
+            # relink files
+            c.execute(
+                (
+                    "SELECT uuid, file_name "
+                    "FROM file f "
+                    "JOIN file_has_tag ft ON f.pk_id = ft.pk_fk_file_id "
+                    "JOIN tag t ON ft.pk_fk_tag_id = t.pk_id "
+                    "WHERE t.pk_id = ?"
+                ),
+                (tag[0],),
+            )
+            files = c.fetchall()
+            if files is None:
+                # no files, nothing to do
+                continue
+            for file in files:
+                source = os.path.join(gallery, "files", file[0])
+                target = os.path.join(folder, file[1])
+                create_folders.symlink(source, target, type)
+
+            # update dn
+            c.execute(
+                (
+                    "UPDATE gallery_folder "
+                    "SET use_softlink = ? "
+                    "WHERE pk_id = ?"
+                ),
+                (type, id),
+            )
+            connection.commit()
 
 
 def change_expression(id, expression):
