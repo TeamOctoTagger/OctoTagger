@@ -492,10 +492,96 @@ def change_expression(id, new_expression):
     connection.commit()
 
 
-def raname_tag(id, new_name):
-    # TODO rename existing folders in gallery folders
-    # TODO change tag name in database
-    raise NotImplementedError()
+def rename_tag(id, new_name):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # check if new names is taken
+    c.execute("SELECT pk_id FROM tag WHERE name = ?", (new_name,))
+    test = c.fetchone()
+    if test is not None:
+        raise ValueError("New tag name is already in use")
+
+    # get old name
+    c.execute("SELECT name FROM tag WHERE pk_id = ?", (id,))
+    old_name = c.fetchone()
+    if old_name is None:
+        raise ValueError("Unknown tag id", id)
+    old_name = old_name[0]
+
+    # get all gallery folders with this tag
+    c.execute(
+        (
+            "SELECT location, name "
+            "FROM gallery_folder "
+            "JOIN gallery_folder_has_tag "
+            "WHERE pk_fk_tag_id = ?"
+        ),
+        (id,),
+    )
+    outputs = c.fetchall()
+
+    # rename folders
+    if outputs is not None:
+        for output in outputs:
+            folder = os.path.join(output[0], output[1])
+            shutil.move(
+                os.path.join(folder, old_name),
+                os.path.join(folder, new_name),
+            )
+
+    # update db
+    c.execute(
+        "UPDATE tag SET name = ? WHERE pk_id = ?",
+        (new_name, id),
+    )
+    connection.commit()
+
+
+def delete_tag(id):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get tag information
+    c.execute("SELECT name FROM tag WHERE pk_id = ?", (id,))
+    name = c.fetchone()
+    if name is None:
+        raise ValueError("Invalid tag id", id)
+    name = name[0]
+
+    # get galleries
+    c.execute(
+        (
+            "SELECT pk_id "
+            "FROM gallery_folder "
+            "JOIN gallery_folder_has_tag ON pk_id = pk_fk_gallery_folder_id "
+            "WHERE pk_fk_tag_id = ?"
+        ),
+        (id,),
+    )
+    galleries = c.fetchall()
+
+    # untag galleries
+    if galleries is not None:
+        for gallery in galleries:
+            change_gallery(gallery[0], id, False)
+
+    # get files
+    c.execute(
+        (
+            "SELECT pk_id "
+            "FROM file "
+            "JOIN file_has_tag ON pk_id = pk_fk_file_id "
+            "WHERE pk_fk_tag_id = ?"
+        ),
+        (id,),
+    )
+    files = c.fetchall()
+
+    # untag files
+    if files is not None:
+        for file in files:
+            change(file[0], id, False)
 
 
 def rename_file(id, new_name):

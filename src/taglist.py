@@ -4,6 +4,7 @@
 import wx
 import tagging
 import database
+import output
 
 TagListCheckEvent, EVT_TAGLIST_CHECK = wx.lib.newevent.NewCommandEvent()
 TagListUpdateEvent, EVT_TAGLIST_UPDATE = wx.lib.newevent.NewCommandEvent()
@@ -177,24 +178,10 @@ class TagList(wx.ScrolledWindow):
     def OnNewName(self, event):
 
         tag_id = tagging.tag_name_to_id(self.edit_tag)
-
-        gallery = database.get_current_gallery("connection")
-        cursor = gallery.cursor()
-
         text = event.GetEventObject()
         new_name = text.GetValue()
 
-        # TODO: Check if tag name is valid
-
-        query_tag = (
-            "UPDATE tag "
-            "SET name = \'%s\' "
-            "WHERE pk_id = %d"
-            % (new_name, tag_id)
-        )
-
-        cursor.execute(query_tag)
-        gallery.commit()
+        output.rename_tag(tag_id, new_name)
 
         self.checked.append(new_name)
 
@@ -207,23 +194,7 @@ class TagList(wx.ScrolledWindow):
     def RemoveTag(self, event):
         tag_id = tagging.tag_name_to_id(self.edit_tag)
 
-        gallery = database.get_current_gallery("connection")
-        cursor = gallery.cursor()
-
-        query_has_tag = (
-            "DELETE FROM file_has_tag "
-            "WHERE pk_fk_tag_id = %d"
-            % tag_id
-        )
-        query_tag = (
-            "DELETE FROM tag "
-            "WHERE pk_id = %d"
-            % tag_id
-        )
-
-        cursor.execute(query_has_tag)
-        cursor.execute(query_tag)
-
-        gallery.commit()
+        output.delete_tag(tag_id)
+        tagging.delete_tag(tag_id)
 
         wx.PostEvent(self, TagListUpdateEvent(self.GetId()))
