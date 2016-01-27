@@ -197,6 +197,17 @@ class ItemView(wx.ScrolledWindow):
 
         connection = database.get_current_gallery('connection').cursor()
 
+        ids = map(str, filter(lambda x: type(x) == int, items))
+        paths = filter(lambda x: type(x) == str, items)
+        connection.execute(
+            "SELECT pk_id FROM file WHERE pk_id IN ({}) ORDER BY file_name"
+            .format(','.join(ids))
+        )
+        ids = map(lambda x: x[0], connection.fetchall())
+
+        items = paths
+        items.extend(ids)
+
         def parse_items(items):
             result = []
             for item in items:
