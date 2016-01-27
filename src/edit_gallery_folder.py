@@ -209,9 +209,10 @@ class EditGalleryFolder(wx.Dialog):
             add_new_tag = 0
 
         if self.rb_softlinks.GetValue():
-            use_softlink = 1
+            use_softlink = True
         else:
-            use_softlink = 0
+            use_softlink = False
+        output.change_link_type(self.folder_id, False, use_softlink)
 
         new_checked_tags = self.lb.GetCheckedStrings()
         for tag in new_checked_tags:

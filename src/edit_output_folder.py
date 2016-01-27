@@ -217,9 +217,10 @@ class EditOutputFolder(wx.Dialog):
         )
 
         if self.rb_softlinks.GetValue():
-            softlink = 1
+            softlink = True
         else:
-            softlink = 0
+            softlink = False
+        output.change_link_type(self.folder_id, True, softlink)
 
         if(name == ""):
             wx.MessageBox(
