@@ -230,7 +230,7 @@ class EditOutputFolder(wx.Dialog):
 
             return
 
-        if(expression == ""):
+        if(expr == ""):
             wx.MessageBox(
                 'Please enter an expression!',
                 'Error',
@@ -257,6 +257,7 @@ class EditOutputFolder(wx.Dialog):
         # TODO: Implement relevent output functions
         output.move(self.folder_id, True, dir)
         output.rename(self.folder_id, True, name)
+        output.change_expression(self.folder_id, expr)
 
         # Exit
         self.Destroy()

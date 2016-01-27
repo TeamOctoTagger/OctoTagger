@@ -437,11 +437,57 @@ def change_link_type(id, advanced, type):
             connection.commit()
 
 
-def change_expression(id, expression):
-    # TODO get folder
-    # TODO delete old files
-    # TODO link new files
-    raise NotImplementedError()
+def change_expression(id, new_expression):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get folder
+    c.execute(
+        (
+            "SELECT location, name, use_softlink "
+            "FROM folder "
+            "WHERE pk_id = ?"
+        ),
+        (id,)
+    )
+    output = c.fetchone()
+    if output is None:
+        raise ValueError("Invalid folder id", id)
+
+    # parse expression
+    where = expression.parse(new_expression)
+
+    # remake folder
+    folder = os.path.join(output[0], output[1])
+    shutil.rmtree(folder)
+    os.mkdir(folder)
+
+    # relink files
+    c.execute(
+        (
+            "SELECT uuid, file_name "
+            "FROM file "
+            "WHERE {}"
+        ).format(where)
+    )
+    files = c.fetchall()
+    if files is not None:
+        gallery = database.get_current_gallery("directory")
+        for file in files:
+            source = os.path.join(gallery, "files", file[0])
+            target = os.path.join(folder, file[1])
+            create_folders.symlink(source, target, output[2])
+
+    # update db
+    c.execute(
+        (
+            "UPDATE folder "
+            "SET expression = ? "
+            "WHERE pk_id = ?"
+        ),
+        (new_expression, id),
+    )
+    connection.commit()
 
 
 def raname_tag(id, new_name):
@@ -449,16 +495,6 @@ def raname_tag(id, new_name):
     # TODO change tag name in database
     raise NotImplementedError()
 
-def tag_id_to_name(tag_id):
-    # Get gallery connection
-    gallery = database.get_current_gallery("connection")
-    cursor = gallery.cursor()
 
-    query_get_tags = "SELECT name FROM tag WHERE pk_id = %d" % (tag_id)
-    cursor.execute(query_get_tags)
-    tags = cursor.fetchall()
-    if tags:
-        for tag in tags:
-            return tag[0]
-    else:
-        return False
+def rename_file(id, new_name):
+    raise NotImplementedError()
