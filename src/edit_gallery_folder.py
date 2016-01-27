@@ -166,6 +166,7 @@ class EditGalleryFolder(wx.Dialog):
         for tag_id in tag_ids:
             tag_names.append(tagging.tag_id_to_name(tag_id))
 
+        print tag_names
         self.lb.SetCheckedStrings(tag_names)
         self.checked_tags = tag_names
 
@@ -229,17 +230,11 @@ class EditGalleryFolder(wx.Dialog):
 
         output.rename(self.folder_id, False, name)
 
-        '''
         query_save = (
             "UPDATE gallery_folder SET "
-            "location = \'%s\', "
-            "name = \'%s\', "
-            "add_new_tag = %d, "
-            "use_softlink = %d "
+            "add_new_tag = %d "
             "WHERE pk_id = %d" %
-            (location, name, add_new_tag,
-             use_softlink, self.folder_id)
+            (add_new_tag, self.folder_id)
         )
         cursor.execute(query_save)
         gallery_conn.commit()
-        '''

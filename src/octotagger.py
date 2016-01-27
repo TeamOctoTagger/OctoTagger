@@ -9,6 +9,7 @@ import output
 import settings
 import about
 import itemview
+import contextpane
 import database
 import tagging
 import new_database
@@ -23,7 +24,6 @@ import os
 
 # TODO: Scale images in taggingview when maximized
 # TODO: Optimize switching between ItemView and TaggingView
-# TODO: Make folders functionsl in Import Mode
 # TODO: Many things don't work at all in Windows right now for some reason...
 
 
@@ -47,6 +47,7 @@ class MainWindow(wx.Frame):
         self.CreateStatusBar()
 
         # Setting icon
+        # TODO: Reduce icon file size
         self.SetIcon(wx.Icon("icons/logo.ico", wx.BITMAP_TYPE_ICO))
 
         # Setting up the menus.
@@ -78,6 +79,7 @@ class MainWindow(wx.Frame):
             "&Direct file import",
             "Import files directly, without going through the process"
         )
+        # TODO: implement create gallery folder
         item_create_bulk_output_folders = self.filemenu.Append(
             wx.ID_ANY,
             "&Create output folders",
@@ -102,12 +104,6 @@ class MainWindow(wx.Frame):
             wx.ID_ANY,
             "&Start tagging mode",
             "Enter the tagging mode"
-        )
-        toolmenu.AppendSeparator()
-        toolIntegrityCheck = toolmenu.Append(
-            wx.ID_ANY,
-            "&Integrity check",
-            "Execute an Integrity check"
         )
         toolmenu.AppendSeparator()
         toolResetCurrentDatabase = toolmenu.Append(
@@ -183,8 +179,6 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExit, fileExit)
         self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder,
                   item_create_output_folder)
-        #self.Bind(wx.EVT_MENU, self.OnBulkCreate,
-        #          item_create_bulk_output_folders)
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
         self.Bind(
@@ -260,10 +254,10 @@ class MainWindow(wx.Frame):
             wx.LEFT | wx.RIGHT | wx.UP,
             20)
 
-        context_panel = wx.Panel(self, size=(-1, 150))
+        self.cpane = contextpane.ContextPane(self, size=(-1, 200))
 
         left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
-        left_panel_sz.Add(context_panel, 0, wx.EXPAND)
+        left_panel_sz.Add(self.cpane, 0, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=15)
 
         self.main_box.Add(left_panel, 0, wx.EXPAND)
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
@@ -330,6 +324,7 @@ class MainWindow(wx.Frame):
         self.mainPan.Layout()
         self.mainPan.Refresh()
 
+        self.cpane.SetMode("import")
         self.update_tag_list()
         self.Layout()
 
@@ -436,6 +431,7 @@ class MainWindow(wx.Frame):
 
         self.update_gallery_menu()
         self.lb.EnableAll(False)
+        self.cpane.SetMode("folder")
 
         # Set items
         self.mainPan.SetItems(folders)
@@ -530,6 +526,8 @@ class MainWindow(wx.Frame):
 
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
 
+        self.cpane.SetMode("tagging")
+
         self.Layout()
         self.Refresh()
         self.mainPan.ReSize()
@@ -548,7 +546,7 @@ class MainWindow(wx.Frame):
 
     def on_query_text(self, e):
 
-        # TODO: Add functionality for import mode
+        # OPTIONAL: Add functionality for import mode
 
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems():
@@ -559,8 +557,10 @@ class MainWindow(wx.Frame):
 
             if query_input == "":
                 self.start_overview()
+                self.cpane.Remove("create_folder_from_expr")
 
             else:
+                self.cpane.Insert("create_folder_from_expr")
                 try:
                     query_files = ("SELECT pk_id FROM file WHERE %s" %
                                    (expression.parse(query_input)))
@@ -637,30 +637,22 @@ class MainWindow(wx.Frame):
             items.append(item[0])
 
         self.update_gallery_menu()
+        self.cpane.SetMode("overview")
 
         # Set items
         self.mainPan.SetItems(items)
         self.Refresh()
         self.Layout()
 
-    def on_selection_change(self, e):
+    def on_selection_change(self, event=None):
 
+        selection = len(self.GetSelectedItems())
+        if selection > 2:
+            selection = 2
+        self.cpane.SetMode(selection=selection)
         self.Refresh()
         self.Layout()
         self.select_tags()
-
-    def Fix(self, widget):
-        # TODO: Remove
-
-        try:
-            widget.Layout()
-            widget.Refresh()
-            widget.Update()
-        except:
-            print "Nope"
-
-        for child in widget.GetChildren():
-            self.Fix(child)
 
     def select_tags(self):
 
@@ -762,6 +754,7 @@ class MainWindow(wx.Frame):
 
         items = self.GetFolderItems(path)
         self.mainPan.SetItems(items)
+        self.on_selection_change()
         self.Layout()
 
     def ChangeFolderUp(self, event=None):
@@ -971,7 +964,7 @@ class MainWindow(wx.Frame):
             )
             if dlg_export == 2:
                 print "Export files now"
-                # TODO: Export files!
+                self.OnRestoreAllFiles()
 
             # Delete everything now!
             database.delete_gallery(database.get_current_gallery("id"))
@@ -986,7 +979,7 @@ class MainWindow(wx.Frame):
     def OnManual(self, e):
         dlg = wx.MessageDialog(
             self,
-            "Octotagger is the best program and doesn't need any explanation!",
+            "OctoTagger is the best program and doesn't need any explanation!",
             "User Manual",
             wx.OK
         )
@@ -999,18 +992,13 @@ class MainWindow(wx.Frame):
         if self.CancelImportWarning():
             self.Close(True)
 
-    def OnCreateOutputFolder(self, e):
+    def OnCreateOutputFolder(self, event=None):
         dlg = create_output_folder.CreateOutputFolder(self)
         dlg.ShowModal()
         dlg.Destroy()
 
         if self.mode == "folder":
             self.on_start_folder_mode()
-
-    #def OnBulkCreate(self, e):
-    #    dlg = bulk_create_output_folders.BulkCreateOutputFolders(self)
-    #    dlg.ShowModal()
-    #    dlg.Destroy()
 
     def OnSettings(self, e):
         dlg = settings.Settings(self)
@@ -1039,7 +1027,7 @@ class MainWindow(wx.Frame):
                 self.mainPan.OnExit()
             elif e.GetKeyCode() == wx.WXK_DELETE:
                 self.RemoveItem()
-        elif self.mode == "overview":
+        elif self.mode in ["overview", "import", "folder"]:
             try:
                 char = chr(e.GetKeyCode())
             except:
@@ -1176,14 +1164,14 @@ class MainWindow(wx.Frame):
                 "Delete this file (this can not be undone)."
             )
             self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
-            # TODO: Bind to and make function
+
             item_restore = menu.Append(
                 wx.ID_ANY,
                 "Restore",
                 ("Remove this file from the database "
                  "and move it to the desired location.")
             )
-            # TODO: Bind to and make function
+            self.Bind(wx.EVT_MENU, self.RestoreSelected, item_restore)
 
         elif self.mode == "import":
 
@@ -1222,7 +1210,6 @@ class MainWindow(wx.Frame):
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
 
         if menu.GetMenuItemCount() > 0:
-            print "ya"
             self.PopupMenu(menu, self.ScreenToClient(wx.GetMousePosition()))
 
     def CreateFolderFromExpression(self, event):
@@ -1264,15 +1251,16 @@ class MainWindow(wx.Frame):
         else:
             folder = tagging.custom_path_to_id(items[0])
             dlg = edit_output_folder.EditOutputFolder(self, folder)
-        print folder
         dlg.ShowModal()
         dlg.Destroy()
 
         self.on_start_folder_mode()
 
+    def RenameItem(self, event):
+        # TODO: Implement
+        print "Rename!"
+
     def RestoreFiles(self, files, event=None):
-        if self.mode != "overview":
-            return
 
         # Ask for target directory
         dlg_import = wx.DirDialog(
@@ -1287,14 +1275,13 @@ class MainWindow(wx.Frame):
 
         target_dir = dlg_import.GetPath()
 
-        # Get items to be moved
-        files
-
         # Restore the files
         export.file(files, target_dir, move=True)
 
         self.select_tags()
-        self.start_overview()
+
+        if self.mode == "overview":
+            self.start_overview()
 
         dlg_complete = wx.MessageDialog(
             self,
@@ -1324,8 +1311,11 @@ class MainWindow(wx.Frame):
 
     def RestoreSelected(self, event=None):
 
-        items = self.GetSelectedItems()
-        self.RestoreFiles(items)
+        item = self.GetSelectedItems()
+        self.RestoreFiles(item)
+
+        if self.mode == "tagging":
+            self.mainPan.RemoveItem(item[0])
 
     def RemoveItem(self, event=None):
         if self.mode == "folder":

@@ -5,7 +5,6 @@ import wx
 import database
 import os
 from os.path import expanduser
-import create_folders
 import expression
 import tagging
 import output

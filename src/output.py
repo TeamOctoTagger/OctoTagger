@@ -3,6 +3,7 @@ import create_folders
 import expression
 import os
 import shutil
+import tagging
 
 
 def change(item, tag, create):
@@ -89,7 +90,6 @@ def change(item, tag, create):
                 "WHERE %s AND pk_id = %d"
                 % (expression.parse(folder[2]), item)
         )
-        print query_file
         c.execute(query_file)
         matches = c.fetchone()
         if matches is None and os.path.exists(link):
@@ -121,14 +121,14 @@ def remove(item):
             "ON g.pk_id = gt.pk_fk_gallery_folder_id "
             "LEFT JOIN file_has_tag AS ft "
             "ON gt.pk_fk_tag_id = ft.pk_fk_tag_id "
-            "WHERE ft.pk_fk_file_id=:file"
+            "WHERE ft.pk_fk_file_id=:file "
+            "GROUP BY g.pk_id"
         ),
         {
             "file": item
         }
     )
     folders = c.fetchall()
-
     for folder in c.execute("SELECT location, name, expression FROM folder"):
         c.execute(
             (
@@ -145,9 +145,12 @@ def remove(item):
 
         folders.append(folder[0:2])
 
+    # Get tag name
+    tags = tagging.get_tag_names(item)
     for folder in folders:
-        path = os.path.join(folder[0], folder[1], filename)
-        os.remove(path)
+        for tag in tags:
+            path = os.path.join(folder[0], folder[1], tag, filename[0])
+            os.remove(path)
 
 
 def move(id, advanced, target):
@@ -305,7 +308,6 @@ def change_gallery(id, tag, add):
         result = c.fetchone()
         tag_name = result[0]
 
-        print folder[0], folder[1], tag_name
         shutil.rmtree(os.path.join(folder[0], folder[1], tag_name))
 
         # update db
@@ -498,3 +500,5 @@ def raname_tag(id, new_name):
 
 def rename_file(id, new_name):
     raise NotImplementedError()
+
+# TODO: remove links when file s restored

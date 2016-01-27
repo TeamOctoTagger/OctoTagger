@@ -13,6 +13,8 @@ SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
 DoubleClickItemEvent, EVT_ITEM_DOUBLE_CLICK = wx.lib.newevent.NewCommandEvent()
 RightClickItemEvent, EVT_ITEM_RIGHT_CLICK = wx.lib.newevent.NewCommandEvent()
 
+# TODO: Load thumbnails in background
+
 
 class ItemView(wx.ScrolledWindow):
 

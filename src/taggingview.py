@@ -5,7 +5,6 @@ import wx
 import os
 import database
 from PIL import Image
-# TODO: Move rightclick event somewhere other than taggingview
 import itemview
 import thumbnail
 
@@ -91,6 +90,7 @@ class TaggingView(wx.Panel):
         self.Image.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
     def DisplayNext(self, event=None):
+        # FIXME: first key-down not recognized for next and prev
 
         index = self.files.index(self.current_file)
         if index == len(self.files) - 1:
@@ -129,13 +129,10 @@ class TaggingView(wx.Panel):
 
         thumb_path = thumbnail.get_thumbnail(file, path_only=True)
         if thumb_path is None:
-            print "AHA"
             image = wx.Image(path)
         else:
             image = wx.Image(thumb_path)
             path = thumb_path
-
-        print image
         return [image, result[1], path]
 
     def UpdateLabel(self):
@@ -199,54 +196,13 @@ class TaggingView(wx.Panel):
     def GetCurrentItem(self):
         return self.current_file
 
+    def RemoveItem(self, item):
+        print item
+        self.DisplayNext()
+        self.files.remove(item)
+
     def OnMouseRight(self, event):
         wx.PostEvent(self, itemview.RightClickItemEvent(self.GetId()))
 
     def OnExit(self, event=None):
         wx.PostEvent(self, TaggingViewExitEvent(self.GetId()))
-
-
-'''
-    def get_exif(fn):
-        ret = {}
-        i = Image.open(fn)
-        info = i._getexif()
-        for tag, value in info.items():
-            decoded = TAGS.get(tag, tag)
-            ret[decoded] = value
-        return ret
-'''
-
-'''
-
-# print self.box.GetSize()
-
-'''
-
-'''
-        factor = float(image.GetWidth()) / float(image.GetHeight())
-
-        if width > height:
-            if height > width * float(image.GetHeight()) / float(image.GetWidth()):
-                new_width = width
-                new_height = width * float(image.GetHeight()) / float(image.GetWidth())
-            else:
-                new_width = height * factor
-                new_height = height
-        else:
-            if width > height * float(image.GetWidth()) / float(image.GetHeight()):
-                new_width = height * float(image.GetWidth()) / float(image.GetHeight())
-                new_height = height
-            else:
-                new_width = width
-                new_height = width / factor
-        try:
-            pil_im = self.ConvertWXToPIL(image)
-            pil_im = pil_im.resize((new_width, new_height), Image.ANTIALIAS)
-            image = self.ConvertPILToWX(pil_im)
-            
-            print "Yay!"
-        except Exception as e:
-            print e
-
-'''
