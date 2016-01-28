@@ -1004,7 +1004,10 @@ class MainWindow(wx.Frame):
 
     def OnExit(self, e):
 
-        if self.mode == "import" and self.CancelImportWarning():
+        if self.mode == "import":
+            if self.CancelImportWarning():
+                self.Close(True)
+        else:
             self.Close(True)
 
     def OnCreateOutputFolder(self, event=None):
@@ -1279,7 +1282,7 @@ class MainWindow(wx.Frame):
         else:
             item = self.GetSelectedItems()[0]
             for child in self.mainPan.GetChildren():
-                if child.GetPath() == item:
+                if child is not self.topbar and child.GetPath() == item:
                     old_name = child.GetText()
 
         if not old_name:
