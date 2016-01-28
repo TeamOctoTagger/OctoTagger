@@ -373,6 +373,9 @@ class Item(wx.Panel):
     def GetPath(self):
         return self.path
 
+    def GetText(self):
+        return self.text.GetLabelText()
+
     def IsGalleryFolder(self):
         return self.is_gf
 

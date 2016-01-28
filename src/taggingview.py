@@ -196,6 +196,9 @@ class TaggingView(wx.Panel):
     def GetCurrentItem(self):
         return self.current_file
 
+    def GetName(self):
+        return self.GetImage(self.current_file)[1]
+
     def RemoveItem(self, item):
         self.DisplayNext()
         self.files.remove(item)

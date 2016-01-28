@@ -1128,6 +1128,7 @@ class MainWindow(wx.Frame):
                         "Rename",
                         "Rename this files."
                     )
+                    self.Bind(wx.EVT_MENU, self.RenameItem, item_rename)
 
                 item_remove = menu.Append(
                     wx.ID_ANY,
@@ -1158,7 +1159,7 @@ class MainWindow(wx.Frame):
                 "Rename",
                 "Rename this file."
             )
-            # TODO: Bind to and make function
+            self.Bind(wx.EVT_MENU, self.RenameItem, item_rename)
             item_remove = menu.Append(
                 wx.ID_ANY,
                 "Delete",
@@ -1258,8 +1259,25 @@ class MainWindow(wx.Frame):
         self.on_start_folder_mode()
 
     def RenameItem(self, event):
-        # TODO: Implement
-        print "Rename!"
+
+        if self.mode == "tagging":
+            old_name = self.mainPan.GetName()
+        else:
+            item = self.GetSelectedItems()[0]
+            for child in self.mainPan.GetChildren():
+                if child.GetPath() == item:
+                    old_name = child.GetText()
+
+        if not old_name:
+            return
+        dlg = wx.TextEntryDialog(
+            self,
+            "Enter a new name:",
+            defaultValue=old_name,
+        )
+        dlg.ShowModal()
+        new_name = dlg.GetValue()
+        print new_name
 
     def RestoreFiles(self, files, event=None):
 
