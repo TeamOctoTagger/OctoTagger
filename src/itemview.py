@@ -104,6 +104,8 @@ class ItemView(wx.ScrolledWindow):
         target = event.GetEventObject()
         if target is self:
             # clicked outside of any item
+            self.SetSelectedAll(False)
+            wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
             return
 
         if not target.GetClientRect().Contains(event.GetPosition()):
@@ -201,6 +203,8 @@ class ItemView(wx.ScrolledWindow):
 
         ids = map(str, filter(lambda x: type(x) == int, items))
         paths = filter(lambda x: type(x) == str, items)
+        files = filter(os.path.isfile, paths)
+        folders = filter(os.path.isdir, paths)
 
         connection.execute(
             "SELECT pk_id FROM file WHERE pk_id IN ({}) ORDER BY file_name"
@@ -208,9 +212,11 @@ class ItemView(wx.ScrolledWindow):
         )
         ids = map(lambda x: x[0], connection.fetchall())
 
-        paths.sort(key=os.path.basename)
+        files.sort(key=os.path.basename)
+        folders.sort(key=os.path.basename)
 
-        items = paths
+        items = folders
+        items.extend(files)
         items.extend(ids)
 
         def parse_items(items):
