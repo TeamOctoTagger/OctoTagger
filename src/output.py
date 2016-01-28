@@ -593,16 +593,13 @@ def rename_file(id, new_name):
     old_name = c.fetchone()
     if old_name is None:
         raise ValueError("Invalid file id", id)
-    old_name = file[0]
+    old_name = old_name[0]
 
     # get folders
     outputs = []
 
     # get gallery folders
-    c.execute(
-        "SELECT location, name, pk_id FROM gallery_folder",
-        (id,),
-    )
+    c.execute("SELECT location, name, pk_id FROM gallery_folder")
     folders = c.fetchall()
     if folders is not None:
         for folder in folders:
@@ -647,12 +644,13 @@ def rename_file(id, new_name):
                 (folder[0],),
             )
             folder = c.fetchone()
-            outputs.append(folder[0], folder[1])
+            outputs.append(os.path.join(folder[0], folder[1]))
 
     # rename links
     for output in outputs:
         source = os.path.join(output, old_name)
         target = os.path.join(output, new_name)
+        print(source, target)
         os.rename(source, target)
 
     # update db
@@ -660,5 +658,6 @@ def rename_file(id, new_name):
         "UPDATE file SET file_name = ? WHERE pk_id = ?",
         (new_name, id),
     )
+    connection.commit()
 
 # TODO: remove links when files are restored (?)
