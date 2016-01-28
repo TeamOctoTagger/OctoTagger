@@ -201,11 +201,14 @@ class ItemView(wx.ScrolledWindow):
 
         ids = map(str, filter(lambda x: type(x) == int, items))
         paths = filter(lambda x: type(x) == str, items)
+
         connection.execute(
             "SELECT pk_id FROM file WHERE pk_id IN ({}) ORDER BY file_name"
             .format(','.join(ids))
         )
         ids = map(lambda x: x[0], connection.fetchall())
+
+        paths.sort(key=os.path.basename)
 
         items = paths
         items.extend(ids)
