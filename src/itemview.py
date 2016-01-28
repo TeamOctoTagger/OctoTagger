@@ -104,6 +104,8 @@ class ItemView(wx.ScrolledWindow):
         target = event.GetEventObject()
         if target is self:
             # clicked outside of any item
+            self.SetSelectedAll(False)
+            wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
             return
 
         if not target.GetClientRect().Contains(event.GetPosition()):
