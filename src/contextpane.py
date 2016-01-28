@@ -192,6 +192,8 @@ class ContextPane(wx.Panel):
             self.Insert("item_restore")
 
         elif mode == "folder":
+            self.Insert("select_all")
+            self.Insert("deselect_all")
             self.Insert("create_folder")
 
             if selection == 1:
@@ -201,6 +203,8 @@ class ContextPane(wx.Panel):
                 self.Insert("item_remove")
 
         elif mode == "import":
+            self.Insert("select_all")
+            self.Insert("deselect_all")
             self.Insert("abort_import")
             self.Insert("import_all")
             self.Insert("import_tagged")
