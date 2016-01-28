@@ -585,6 +585,80 @@ def delete_tag(id):
 
 
 def rename_file(id, new_name):
-    raise NotImplementedError()
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get file information
+    c.execute("SELECT file_name FROM file WHERE pk_id = ?", (id,))
+    old_name = c.fetchone()
+    if old_name is None:
+        raise ValueError("Invalid file id", id)
+    old_name = file[0]
+
+    # get folders
+    outputs = []
+
+    # get gallery folders
+    c.execute(
+        "SELECT location, name, pk_id FROM gallery_folder",
+        (id,),
+    )
+    folders = c.fetchall()
+    if folders is not None:
+        for folder in folders:
+            # get all matching tags
+            c.execute(
+                (
+                    "SELECT name "
+                    "FROM tag "
+                    "JOIN gallery_folder_has_tag g ON g.pk_fk_tag_id = pk_id "
+                    "JOIN file_has_tag t ON t.pk_fk_tag_id = pk_id "
+                    "WHERE g.pk_fk_gallery_folder_id = ? "
+                    "AND t.pk_fk_file_id = ?"
+                ),
+                (
+                    folder[2],
+                    id,
+                ),
+            )
+            tags = c.fetchall()
+            if tags is not None:
+                for tag in tags:
+                    outputs.append(os.path.join(folder[0], folder[1], tag[0]))
+
+    # get advanced folders
+    c.execute("SELECT pk_id, expression FROM folder")
+    folders = c.fetchall()
+    if folders is not None:
+        for folder in folders:
+            # test expression
+            where = expression.parse(folder[1])
+            c.execute(
+                "SELECT pk_id FROM file WHERE pk_id = ? AND {}".format(where),
+                (id,),
+            )
+            test = c.fetchone()
+            if test is None:
+                continue
+
+            # expression matches file
+            c.execute(
+                "SELECT location, name FROM folder WHERE pk_id = ?",
+                (folder[0],),
+            )
+            folder = c.fetchone()
+            outputs.append(folder[0], folder[1])
+
+    # rename links
+    for output in outputs:
+        source = os.path.join(output, old_name)
+        target = os.path.join(output, new_name)
+        os.rename(source, target)
+
+    # update db
+    c.execute(
+        "UPDATE file SET file_name = ? WHERE pk_id = ?",
+        (new_name, id),
+    )
 
 # TODO: remove links when files are restored (?)

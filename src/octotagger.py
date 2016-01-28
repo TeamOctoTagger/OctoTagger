@@ -1291,7 +1291,7 @@ class MainWindow(wx.Frame):
         )
         dlg.ShowModal()
         new_name = dlg.GetValue()
-        print new_name
+        output.rename_file(self.GetSelectedItems()[0], new_name)
 
     def RestoreFiles(self, files, event=None):
 
