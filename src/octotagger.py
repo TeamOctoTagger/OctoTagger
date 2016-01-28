@@ -1282,7 +1282,7 @@ class MainWindow(wx.Frame):
         else:
             item = self.GetSelectedItems()[0]
             for child in self.mainPan.GetChildren():
-                if child.GetPath() == item:
+                if child is not self.topbar and child.GetPath() == item:
                     old_name = child.GetText()
 
         if not old_name:
