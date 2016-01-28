@@ -660,4 +660,20 @@ def rename_file(id, new_name):
     )
     connection.commit()
 
+
+def create_gallery(id):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get folder information
+    c.execute(
+        "SELECT location, name FROM gallery_folder WHERE pk_id = ?",
+        (id,),
+    )
+    folder = c.fetchone()
+    if folder is None:
+        raise ValueError("Invalid gallery folder id", id)
+
+    shutil.makedirs(os.path.join(folder[0], folder[1]))
+
 # TODO: remove links when files are restored (?)
