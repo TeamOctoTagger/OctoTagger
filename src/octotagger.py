@@ -254,10 +254,41 @@ class MainWindow(wx.Frame):
             wx.LEFT | wx.RIGHT | wx.UP,
             20)
 
+        # Add Topbar
+        topbar_sz = wx.BoxSizer(wx.HORIZONTAL)
+        self.topbar = wx.Panel(self.mainPan)
+        self.topbar.SetSizer(topbar_sz)
+
+        self.current_directory = wx.StaticText(
+            self.topbar,
+            label="",
+            style=(
+                wx.ALIGN_CENTRE_HORIZONTAL |
+                wx.ST_ELLIPSIZE_END |
+                wx.ST_NO_AUTORESIZE |
+                wx.SIMPLE_BORDER
+            )
+        )
+
+        self.btn_up = wx.Button(self.topbar, -1, "^")
+        self.btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
+        self.btn_up.Disable()
+
+        topbar_sz.Add(self.btn_up, 0, wx.EXPAND)
+        topbar_sz.Add(self.current_directory, 1, wx.EXPAND | wx.ALIGN_CENTER)
+
+        self.mainPan.mainsizer.Insert(0, self.topbar, 0, wx.EXPAND)
+        self.topbar.Show(False)
+
         self.cpane = contextpane.ContextPane(self, size=(-1, 200))
 
         left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
-        left_panel_sz.Add(self.cpane, 0, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=15)
+        left_panel_sz.Add(
+            self.cpane,
+            0,
+            flag=wx.EXPAND | wx.LEFT | wx.RIGHT,
+            border=15,
+        )
 
         self.main_box.Add(left_panel, 0, wx.EXPAND)
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
@@ -299,28 +330,9 @@ class MainWindow(wx.Frame):
         self.InitImportFiles(self.import_path)
         self.mainPan.SetItems(items)
 
-        # Add Topbar
-        self.current_directory = wx.StaticText(
-            self.mainPan,
-            label=self.import_path,
-            style=(
-                wx.ALIGN_CENTRE_HORIZONTAL |
-                wx.ST_ELLIPSIZE_END |
-                wx.ST_NO_AUTORESIZE |
-                wx.SIMPLE_BORDER
-            )
-        )
+        self.current_directory.SetLabelText(self.import_path)
+        self.topbar.Show(True)
 
-        topBox = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.btn_up = wx.Button(self.mainPan, -1, "^")
-        self.btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
-        self.btn_up.Disable()
-
-        topBox.Add(self.btn_up, 0, wx.EXPAND)
-        topBox.Add(self.current_directory, 1, wx.EXPAND | wx.ALIGN_CENTER)
-
-        self.mainPan.mainsizer.Insert(0, topBox, 0, wx.EXPAND)
         self.mainPan.Layout()
         self.mainPan.Refresh()
 
@@ -344,7 +356,6 @@ class MainWindow(wx.Frame):
         files = []
 
         for item in os.listdir(path):
-            print item
             try:
                 item = os.path.join(path, item).encode('utf-8')
             except:
@@ -385,6 +396,10 @@ class MainWindow(wx.Frame):
         return dlg_cancel == wx.OK
 
     def on_direct_import(self, e):
+        if self.mode == "import":
+            if not self.CancelImportWarning():
+                return
+
         dlg_import = wx.FileDialog(self, "Import files", "", "",
                                    "All files (*.*)|*.*",
                                    wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST)
@@ -393,7 +408,7 @@ class MainWindow(wx.Frame):
             print "Import aborted."
         else:
             import_files.import_files(dlg_import.GetPaths())
-            self.start_overview()
+            self.start_overview(False)
 
     def on_start_folder_mode(self, e=None):
         if self.mode == "import":
@@ -546,8 +561,6 @@ class MainWindow(wx.Frame):
 
     def on_query_text(self, e):
 
-        # OPTIONAL: Add functionality for import mode
-
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems():
                 return
@@ -613,13 +626,15 @@ class MainWindow(wx.Frame):
         self.select_tags()
         e.GetEventObject().Clear()
 
-    def start_overview(self, e=None, warn_import=False):
+    def start_overview(self, e=None, warn_import=True):
         # Set items to all current database items
         # Get gallery connection
 
-        if self.mode == "import" and warn_import:
-            if not self.CancelImportWarning():
-                return
+        if self.mode == "import":
+            if warn_import:
+                if not self.CancelImportWarning():
+                    return
+            self.topbar.Show(False)
 
         self.lb.EnableAll(True)
         self.mode = "overview"
@@ -988,9 +1003,8 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnExit(self, e):
-        # TODO: Bind to X clicking of the frame
 
-        if self.CancelImportWarning():
+        if self.mode == "import" and self.CancelImportWarning():
             self.Close(True)
 
     def OnCreateOutputFolder(self, event=None):
