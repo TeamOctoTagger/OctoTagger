@@ -1004,7 +1004,10 @@ class MainWindow(wx.Frame):
 
     def OnExit(self, e):
 
-        if self.mode == "import" and self.CancelImportWarning():
+        if self.mode == "import":
+            if self.CancelImportWarning():
+                self.Close(True)
+        else:
             self.Close(True)
 
     def OnCreateOutputFolder(self, event=None):
