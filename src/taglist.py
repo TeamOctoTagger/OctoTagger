@@ -3,7 +3,6 @@
 
 import wx
 import tagging
-import database
 import output
 
 TagListCheckEvent, EVT_TAGLIST_CHECK = wx.lib.newevent.NewCommandEvent()
@@ -38,7 +37,7 @@ class TagList(wx.ScrolledWindow):
     def Insert(self, tag):
         checkbox = wx.CheckBox(
             self,
-            label=tag,
+            label=tag.replace("_", " "),
             style=wx.CHK_3STATE,
         )
         self.sizer.Add(checkbox, 0, flag=wx.ALL, border=2)
@@ -47,7 +46,7 @@ class TagList(wx.ScrolledWindow):
 
     def OnCheck(self, e):
         cb = e.GetEventObject()
-        wx.PostEvent(self, TagListCheckEvent(self.GetId()))
+        wx.PostEvent(self, TagListCheckEvent(cb.GetId()))
 
     def GetChecked(self):
         checked_cb = []
@@ -69,7 +68,7 @@ class TagList(wx.ScrolledWindow):
         checked_strings = []
 
         for cb in self.GetChecked():
-            checked_strings.append(cb.GetLabelText())
+            checked_strings.append(cb.GetLabelText().replace(" ", "_"))
 
         return checked_strings
 
@@ -81,7 +80,7 @@ class TagList(wx.ScrolledWindow):
         item_strings = []
 
         for item in items:
-            item_strings.append(item.GetLabelText())
+            item_strings.append(item.GetLabelText().replace(" ", "_"))
 
         return item_strings
 
@@ -89,14 +88,14 @@ class TagList(wx.ScrolledWindow):
         items = self.GetItems()
 
         for item in items:
-            if item.GetLabelText() in strings:
+            if item.GetLabelText().replace(" ", "_") in strings:
                 item.Set3StateValue(wx.CHK_CHECKED)
 
     def GetUndeterminedStrings(self):
         undetermined_strings = []
 
         for cb in self.GetUndetermined():
-            undetermined_strings.append(cb.GetLabelText())
+            undetermined_strings.append(cb.GetLabelText().replace(" ", "_"))
 
         return undetermined_strings
 
@@ -104,7 +103,7 @@ class TagList(wx.ScrolledWindow):
         items = self.GetItems()
 
         for item in items:
-            if item.GetLabelText() in strings:
+            if item.GetLabelText().replace(" ", "_") in strings:
                 item.Set3StateValue(wx.CHK_UNDETERMINED)
 
     def EnableAll(self, enable):
@@ -124,7 +123,7 @@ class TagList(wx.ScrolledWindow):
         if not event.GetEventObject().IsEnabled():
             return
 
-        item = event.GetEventObject().GetLabelText()
+        item = event.GetEventObject().GetLabelText().replace(" ", "_")
         self.edit_tag = item
 
         menu = wx.Menu()
@@ -149,7 +148,7 @@ class TagList(wx.ScrolledWindow):
         self.EnableAll(False)
 
         for child in self.GetChildren():
-            if child.GetLabelText() == self.edit_tag:
+            if child.GetLabelText().replace(" ", "_") == self.edit_tag:
                 cb = child
                 break
 

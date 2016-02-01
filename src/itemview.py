@@ -198,13 +198,16 @@ class ItemView(wx.ScrolledWindow):
         Sets which items are to be displayed. Pass ids from database as int or
         paths from filesystem as str.
         '''
-
         connection = database.get_current_gallery('connection').cursor()
 
         ids = map(str, filter(lambda x: type(x) == int, items))
         paths = filter(lambda x: type(x) == str, items)
         files = filter(os.path.isfile, paths)
         folders = filter(os.path.isdir, paths)
+        gf = filter(
+            lambda x: os.path.isdir("|".join(x.split("|")[0:-1])),
+            paths,
+        )
 
         connection.execute(
             "SELECT pk_id FROM file WHERE pk_id IN ({}) ORDER BY file_name"
@@ -214,8 +217,10 @@ class ItemView(wx.ScrolledWindow):
 
         files.sort(key=os.path.basename)
         folders.sort(key=os.path.basename)
+        gf.sort(key=os.path.basename)
 
-        items = folders
+        items = gf
+        items.extend(folders)
         items.extend(files)
         items.extend(ids)
 
