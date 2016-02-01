@@ -61,16 +61,15 @@ def change(item, tag, create):
         if not os.path.isdir(path):
             os.makedirs(path)
 
+        link_path = os.path.join(path, g_file[1])
+
         if create:
             # create
-            create_folders.symlink(
-                target,
-                os.path.join(path, g_file[1]),
-                folder[3]
-            )
+            if os.path.exists(link_path):
+                os.remove(link_path)
+            create_folders.symlink(target, link_path, folder[3])
         else:
             # delete
-            link_path = os.path.join(path, g_file[1])
             if os.path.lexists(link_path):
                 os.remove(link_path)
 
@@ -94,7 +93,9 @@ def change(item, tag, create):
         matches = c.fetchone()
         if matches is None and os.path.exists(link):
             os.remove(link)
-        elif matches is not None and not os.path.exists(link):
+        elif matches is not None:
+            if os.path.exists(link):
+                os.remove(link)
             if not os.path.isdir(path):
                 os.makedirs(path)
             create_folders.symlink(target, link, folder[3])
@@ -150,7 +151,8 @@ def remove(item):
     for folder in folders:
         for tag in tags:
             path = os.path.join(folder[0], folder[1], tag, filename[0])
-            os.remove(path)
+            if os.path.exists(path):
+                os.remove(path)
 
 
 def move(id, advanced, target):
@@ -172,18 +174,19 @@ def move(id, advanced, target):
 
     # verify
     if source == target:
-        print "Source and target are the same"
+        # Source and target are the same
         return
     if os.path.exists(os.path.join(target, name)):
-        print "Target path already exists"
-        return
         # TODO: handle this better
+        # Target path already exists
+        return
 
     # move
-    shutil.move(
-        os.path.join(source, name),
-        os.path.join(target, name),
-    )
+    if os.path.isdir(os.path.join(source, name)):
+        shutil.move(
+            os.path.join(source, name),
+            os.path.join(target, name),
+        )
 
     # update db
     if advanced:
@@ -211,18 +214,19 @@ def rename(id, advanced, new):
 
     # verify
     if old == new:
-        print "New name must be different"
+        # New name must be different
         return
     if os.path.exists(os.path.join(location, new)):
-        print "New name already exists"
-        return
         # TODO: Handle this better
+        # New name already exists
+        return
 
     # move
-    shutil.move(
-        os.path.join(location, old),
-        os.path.join(location, new),
-    )
+    if os.path.isdir(os.path.join(location, old)):
+        shutil.move(
+            os.path.join(location, old),
+            os.path.join(location, new),
+        )
 
     # update db
     if advanced:
@@ -264,14 +268,12 @@ def change_gallery(id, tag, add):
     elif tag_name is None and not add:
         raise ValueError("Tag already removed")
 
-    if add:
-        # Get tag name
+    if add:  # Get tag name
         c.execute("SELECT name FROM tag WHERE pk_id = ?", (tag,))
         result = c.fetchone()
         tag_name = result[0]
 
         # get files
-        os.mkdir(os.path.join(folder[0], folder[1], tag_name))
         c.execute(
             (
                 "SELECT uuid, file_name "
@@ -285,6 +287,7 @@ def change_gallery(id, tag, add):
         gallery = database.get_current_gallery("directory")
 
         # link files
+        os.makedirs(os.path.join(folder[0], folder[1], tag_name))
         if files is not None:
             for file in files:
                 source = os.path.join(gallery, "files", file[0])
@@ -300,15 +303,16 @@ def change_gallery(id, tag, add):
             (id, tag),
         )
         connection.commit()
-    else:
-        # delete files
-
+    else:  # delete files
         # Get tag name
         c.execute("SELECT name FROM tag WHERE pk_id = ?", (tag,))
         result = c.fetchone()
         tag_name = result[0]
 
-        shutil.rmtree(os.path.join(folder[0], folder[1], tag_name))
+        # delete files
+        path = os.path.join(folder[0], folder[0], tag_name)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
 
         # update db
         c.execute(
@@ -354,8 +358,9 @@ def change_link_type(id, advanced, type):
     if advanced:
         # remake folders
         folder = os.path.join(output[0], output[1])
-        shutil.rmtree(folder)
-        os.mkdir(folder)
+        if os.path.isdir(folder):
+            shutil.rmtree(folder)
+        os.makedirs(folder)
 
         # relink files
         expression = output[3]
@@ -404,8 +409,9 @@ def change_link_type(id, advanced, type):
         for tag in tags:
             # remake folder
             folder = os.path.join(output[0], output[1], tag[1])
-            shutil.rmtree(folder)
-            os.mkdir(folder)
+            if os.path.isdir(folder):
+                shutil.rmtree(folder)
+            os.makedirs(folder)
 
             # relink files
             c.execute(
@@ -461,8 +467,9 @@ def change_expression(id, new_expression):
 
     # remake folder
     folder = os.path.join(output[0], output[1])
-    shutil.rmtree(folder)
-    os.mkdir(folder)
+    if os.pat.isdir(folder):
+        shutil.rmtree(folder)
+    os.makedirs(folder)
 
     # relink files
     c.execute(
@@ -525,10 +532,13 @@ def rename_tag(id, new_name):
     if outputs is not None:
         for output in outputs:
             folder = os.path.join(output[0], output[1])
-            shutil.move(
-                os.path.join(folder, old_name),
-                os.path.join(folder, new_name),
-            )
+            if os.path.isdir(os.path.join(folder, old_name)):
+                shutil.move(
+                    os.path.join(folder, old_name),
+                    os.path.join(folder, new_name),
+                )
+            else:
+                os.makedirs(os.path.join(folder, new_name))
 
     # update db
     c.execute(
@@ -650,8 +660,8 @@ def rename_file(id, new_name):
     for output in outputs:
         source = os.path.join(output, old_name)
         target = os.path.join(output, new_name)
-        print(source, target)
-        os.rename(source, target)
+        if os.path.exists(source):
+            os.rename(source, target)
 
     # update db
     c.execute(
@@ -674,6 +684,8 @@ def create_gallery(id):
     if folder is None:
         raise ValueError("Invalid gallery folder id", id)
 
-    shutil.makedirs(os.path.join(folder[0], folder[1]))
+    folder = os.path.join(folder[0], folder[1])
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
 
 # TODO: remove links when files are restored (?)
