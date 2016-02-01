@@ -26,6 +26,7 @@ class TaggingView(wx.Panel):
             self.current_file = start_file
         else:
             self.current_file = files[0]
+        self.current_file_buffer = -1
         self.first = True
 
         self.init_ui()
@@ -153,9 +154,13 @@ class TaggingView(wx.Panel):
 
         size = self.imgPan.GetSize()
 
-        image = Image.open(self.GetImage(self.current_file)[2]).convert()
+        if self.current_file_buffer != self.current_file:
+            self.pil_image = Image.open(self.GetImage(self.current_file)[2]).convert()
+            # self.image_buffer = wx.Image(self.GetImage(self.current_file)[2])
+            self.current_file_buffer = self.current_file
 
-        image.thumbnail(size, Image.ANTIALIAS)
+        image = self.pil_image.copy()
+        image.thumbnail(size, Image.NEAREST)
         new_image = self.ConvertPILToWX(image)
 
         try:
