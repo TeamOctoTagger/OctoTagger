@@ -7,6 +7,7 @@ import database
 from PIL import Image
 import itemview
 import thumbnail
+import threading
 
 # TODO: Behaviour when all files get deleted
 # OPTIONAL: Animated gif support,
@@ -22,11 +23,15 @@ class TaggingView(wx.Panel):
         wx.Panel.__init__(self, parent)
 
         self.files = files
-        if start_file and start_file in files:
-            self.current_file = start_file
+        if start_file and start_file in self.files:
+            self.current_file = self.files.index(start_file)
         else:
-            self.current_file = files[0]
-        self.current_file_buffer = -1
+            self.current_file = 0
+
+        self.image_buffer = [None] * 3
+        self.image_thread = [threading.Thread()] * 3
+        self.file_buffer = [None] * len(self.files)
+        self.current_buffer = 0
         self.first = True
 
         self.init_ui()
@@ -90,57 +95,105 @@ class TaggingView(wx.Panel):
         self.imgPan.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
         self.Image.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
+    def load_images(self):
+        for i in [-1, 0, 1]:
+            buffer = (self.current_buffer + i) % 3
+            file = (self.current_file + i) % len(self.files)
+
+            if self.image_buffer[buffer] is not None:
+                # image loaded
+                continue
+
+            if self.image_thread[buffer].is_alive():
+                # image loading
+                continue
+
+            # begin loading image
+            self.image_thread[buffer] = threading.Thread(
+                target=self._load_image,
+                args=(buffer, file),
+            )
+            self.image_thread[buffer].start()
+
+    def _load_image(self, buffer, file):
+        self.image_buffer[buffer] = Image.open(
+            self.get_file(file)[1]
+        ).convert()
+
+    def get_image(self, position):
+        """Position can be 0 for current, 1 for next or -1 for previous
+        image"""
+        if position < -1 or position > 1:
+            raise ValueError("Position must be in [-1;1]", position)
+
+        buffer = (self.current_buffer + position) % 3
+        self.image_thread[buffer].join()  # wait for image to be loaded
+        return self.image_buffer[buffer].copy()
+
+    def get_file(self, index):
+        if self.file_buffer[index] is not None:
+            return self.file_buffer[index]
+
+        connection = database.get_current_gallery("connection")
+        c = connection.cursor()
+        c.execute(
+            "SELECT uuid, file_name FROM file WHERE pk_id = ?",
+            (self.files[index],),
+        )
+
+        result = c.fetchone()
+        path = os.path.join(
+            database.get_current_gallery("directory"),
+            "files",
+            result[0],
+        )
+
+        thumb_path = thumbnail.get_thumbnail(self.files[index], path_only=True)
+        if thumb_path is not None:
+            path = thumb_path
+
+        self.file_buffer[index] = (result[1], path)
+        return self.file_buffer[index]
+
     def DisplayNext(self, event=None):
         # FIXME: first key-down not recognized for next and prev
 
-        index = self.files.index(self.current_file)
-        if index == len(self.files) - 1:
-            self.current_file = self.files[0]
-        else:
-            self.current_file = self.files[index + 1]
+        # move pointers forward
+        self.current_buffer = (self.current_buffer + 1) % 3
+        self.current_file = (self.current_file + 1) % len(self.files)
+
+        # invalidate next image
+        next = (self.current_buffer + 1) % 3
+        self.image_thread[next].join()  # prevent race
+        self.image_buffer[next] = None  # clear image
 
         wx.PostEvent(self, ItemChangeEvent(self.GetId()))
 
+        self.load_images()
         self.UpdateLabel()
         self.ReSize()
 
     def DisplayPrev(self, event=None):
+        # move pointer backward
+        self.current_buffer = (self.current_buffer - 1) % 3
+        self.current_file = (self.current_file - 1) % len(self.files)
 
-        index = self.files.index(self.current_file)
-        if index == 0:
-            self.current_file = self.files[len(self.files) - 1]
-        else:
-            self.current_file = self.files[index - 1]
+        # invalidate previous image
+        prev = (self.current_buffer - 1) % 3
+        self.image_thread[prev].join()  # prevent race
+        self.image_buffer[prev] = None  # clear image
 
         wx.PostEvent(self, ItemChangeEvent(self.GetId()))
 
+        self.load_images()
         self.UpdateLabel()
         self.ReSize()
-
-    def GetImage(self, file):
-
-        cursor = database.get_current_gallery("connection").cursor()
-        query = "SELECT uuid, file_name FROM file WHERE pk_id = %s" % (file)
-        cursor.execute(query)
-        result = cursor.fetchone()
-        path = os.path.join(
-            database.get_current_gallery("directory"),
-            "files",
-            result[0])
-
-        thumb_path = thumbnail.get_thumbnail(file, path_only=True)
-        if thumb_path is None:
-            image = wx.Image(path)
-        else:
-            image = wx.Image(thumb_path)
-            path = thumb_path
-        return [image, result[1], path]
 
     def UpdateLabel(self):
         label = (
             "%s  (%d/%d)" % (
-                os.path.basename(self.GetImage(self.current_file)[1]),
-                self.files.index(self.current_file) + 1,
+                os.path.basename(self.get_file(self.current_file)[0]),
+                self.current_file + 1,
                 len(self.files),
             )
         )
@@ -152,15 +205,11 @@ class TaggingView(wx.Panel):
         # Maybe use Double Buffering?
         # http://wiki.wxpython.org/DoubleBufferedDrawing
 
+        self.load_images()
         size = self.imgPan.GetSize()
 
-        if self.current_file_buffer != self.current_file:
-            self.pil_image = Image.open(self.GetImage(self.current_file)[2]).convert()
-            # self.image_buffer = wx.Image(self.GetImage(self.current_file)[2])
-            self.current_file_buffer = self.current_file
-
-        image = self.pil_image.copy()
-        image.thumbnail(size, Image.NEAREST)
+        image = self.get_image(0)
+        image.thumbnail(size, Image.BILINEAR)
         new_image = self.ConvertPILToWX(image)
 
         try:
@@ -199,10 +248,10 @@ class TaggingView(wx.Panel):
         return self.files
 
     def GetCurrentItem(self):
-        return self.current_file
+        return self.files[self.current_file]
 
     def GetName(self):
-        return self.GetImage(self.current_file)[1]
+        return self.get_file(self.current_file)[0]
 
     def RemoveItem(self, item):
         self.DisplayNext()
