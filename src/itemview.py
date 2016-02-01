@@ -306,6 +306,14 @@ class ItemView(wx.ScrolledWindow):
 
         return result
 
+    def GetItemFromPath(self, path):
+        # TODO: Diffrent result than similarly named function
+        items = self.sizer.GetChildren()
+
+        for item in items:
+            if item.GetWindow().GetPath() == path:
+                return item.GetWindow()
+
     def IsSelectedAll(self):
         items = self.sizer.GetChildren()
         for item in items:

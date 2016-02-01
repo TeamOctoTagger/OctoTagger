@@ -8,17 +8,15 @@ import output
 import os
 
 
-class EditGalleryFolder(wx.Dialog):
+class CreateGalleryFolder(wx.Dialog):
 
     """Extending Dialog"""
 
     def __init__(self, *args, **kw):
-        super(EditGalleryFolder, self).__init__(*args, **kw)
-
-        self.folder_id = args[-1]
+        super(CreateGalleryFolder, self).__init__(*args, **kw)
 
         self.SetSize((550, 600))
-        self.SetTitle("Edit gallery folder")
+        self.SetTitle("Create gallery folder")
         self.InitUI()
 
     def InitUI(self):
@@ -132,46 +130,6 @@ class EditGalleryFolder(wx.Dialog):
 
         panel.SetSizerAndFit(sizer)
         self.Layout()
-        self.InitData()
-
-    def InitData(self):
-
-        # Get and set values
-        # Location, name, automatic, symlink
-        gallery = database.get_current_gallery("connection")
-        c = gallery.cursor()
-        query_location = (
-            "SELECT location, name, add_new_tag, use_softlink "
-            "FROM gallery_folder "
-            "WHERE pk_id = %d" % self.folder_id
-        )
-        c.execute(query_location)
-        result = c.fetchone()
-        self.name = result[1]
-        self.location = result[0]
-
-        self.tc_directory.SetValue(result[0])
-        self.tc_name.SetValue(result[1])
-        self.cb_automatic.SetValue(result[2] == 1)
-
-        softlink = (result[3] == 1)
-        self.rb_softlinks.SetValue(softlink)
-        self.rb_hardlinks.SetValue(not softlink)
-
-        # Tags
-        query_tags = (
-            "SELECT pk_fk_tag_id FROM gallery_folder_has_tag "
-            "WHERE pk_fk_gallery_folder_id = %d"
-            % self.folder_id
-        )
-        c.execute(query_tags)
-        tag_ids = c.fetchall()
-        tag_names = []
-        for tag_id in tag_ids:
-            tag_names.append(tagging.tag_id_to_name(tag_id).replace("_", " "))
-
-        self.lb.SetCheckedStrings(tag_names)
-        self.checked_tags = tag_names
 
     def OnSelectAll(self, e):
         for cb in range(self.lb.GetCount()):
@@ -214,9 +172,9 @@ class EditGalleryFolder(wx.Dialog):
             add_new_tag = 0
 
         if self.rb_softlinks.GetValue():
-            use_softlink = True
+            use_softlink = 1
         else:
-            use_softlink = False
+            use_softlink = 0
 
         if not os.path.isdir(location):
             wx.MessageBox("Location does not exist!", "Error")
@@ -226,41 +184,49 @@ class EditGalleryFolder(wx.Dialog):
             wx.MessageBox("Must define a name.", "Error")
             return
 
-        output.change_link_type(self.folder_id, False, use_softlink)
-
-        new_checked_tags = self.lb.GetCheckedStrings()
-        for tag in new_checked_tags:
-            if tag not in self.checked_tags:
-                tag_id = tagging.tag_name_to_id(tag.replace(" ", "_"))
-                output.change_gallery(self.folder_id, tag_id, True)
-
-        for tag in self.checked_tags:
-            if tag not in new_checked_tags:
-                tag_id = tagging.tag_name_to_id(tag.replace(" ", "_"))
-                output.change_gallery(self.folder_id, tag_id, False)
-
-        if name != self.name or location != self.location:
-            if os.path.isdir(os.path.join(location, name)):
-                wx.MessageBox(
-                    ("Location or target folder already exists, "
-                     "remove it first."),
-                    "Error",
-                )
+        if os.path.isdir(os.path.join(location, name)):
+            wx.MessageBox(
+                ("Target folder already exists, "
+                 "remove it first."),
+                "Error",
+            )
             return
 
-        if name != self.name:
-            output.rename(self.folder_id, False, name)
+        checked_tags = self.lb.GetCheckedStrings()
+        tags = []
+        for tag in checked_tags:
+            tags.append(tagging.tag_name_to_id(tag.replace(" ", "_")))
 
-        if location != self.location:
-            output.move(self.folder_id, False, location)
-
-        query_save = (
-            "UPDATE gallery_folder SET "
-            "add_new_tag = %d "
-            "WHERE pk_id = %d" %
-            (add_new_tag, self.folder_id)
+        cursor.execute(
+            (
+                "INSERT INTO gallery_folder "
+                "(name, location, add_new_tag, use_softlink) "
+                "VALUES (:name, :location, :add_new_tag, :use_softlink)"
+            ),
+            {
+                "name": name,
+                "location": location,
+                "add_new_tag": add_new_tag,
+                "use_softlink": use_softlink
+            }
         )
-        cursor.execute(query_save)
         gallery_conn.commit()
+
+        cursor.execute(
+            (
+                "SELECT pk_id FROM gallery_folder "
+                "WHERE name = :name "
+                "AND location = :location "
+            ),
+            {
+                "name": name,
+                "location": location,
+            }
+        )
+        folder_id = cursor.fetchone()[0]
+
+        output.create_gallery(folder_id)
+        for tag in tags:
+            output.change_gallery(folder_id, tag, True)
 
         self.Destroy()

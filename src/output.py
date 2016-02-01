@@ -57,7 +57,7 @@ def change(item, tag, create):
         else:
             tag_name = tag_name[0]
 
-        path = os.path.join(folder[1], folder[2], tag_name)
+        path = os.path.join(folder[1], folder[2], tag_name.replace("_", " "))
         if not os.path.isdir(path):
             os.makedirs(path)
 
@@ -150,7 +150,12 @@ def remove(item):
     tags = tagging.get_tag_names(item)
     for folder in folders:
         for tag in tags:
-            path = os.path.join(folder[0], folder[1], tag, filename[0])
+            path = os.path.join(
+                folder[0],
+                folder[1],
+                tag.replace("_", " "),
+                filename[0]
+            )
             if os.path.exists(path):
                 os.remove(path)
 
@@ -287,11 +292,18 @@ def change_gallery(id, tag, add):
         gallery = database.get_current_gallery("directory")
 
         # link files
-        os.makedirs(os.path.join(folder[0], folder[1], tag_name))
+        os.makedirs(
+            os.path.join(folder[0], folder[1], tag_name.replace("_", " "))
+        )
         if files is not None:
             for file in files:
                 source = os.path.join(gallery, "files", file[0])
-                target = os.path.join(folder[0], folder[1], tag_name, file[1])
+                target = os.path.join(
+                    folder[0],
+                    folder[1],
+                    tag_name.replace("_", " "),
+                    file[1],
+                )
                 create_folders.symlink(source, target, folder[2])
 
         # update db
@@ -310,7 +322,7 @@ def change_gallery(id, tag, add):
         tag_name = result[0]
 
         # delete files
-        path = os.path.join(folder[0], folder[0], tag_name)
+        path = os.path.join(folder[0], folder[1], tag_name.replace("_", " "))
         if os.path.isdir(path):
             shutil.rmtree(path)
 
@@ -408,7 +420,11 @@ def change_link_type(id, advanced, type):
             return
         for tag in tags:
             # remake folder
-            folder = os.path.join(output[0], output[1], tag[1])
+            folder = os.path.join(
+                output[0],
+                output[1],
+                tag[1].replace("_", " "),
+            )
             if os.path.isdir(folder):
                 shutil.rmtree(folder)
             os.makedirs(folder)
@@ -467,7 +483,7 @@ def change_expression(id, new_expression):
 
     # remake folder
     folder = os.path.join(output[0], output[1])
-    if os.pat.isdir(folder):
+    if os.path.isdir(folder):
         shutil.rmtree(folder)
     os.makedirs(folder)
 
@@ -503,18 +519,21 @@ def rename_tag(id, new_name):
     connection = database.get_current_gallery("connection")
     c = connection.cursor()
 
-    # check if new names is taken
-    c.execute("SELECT pk_id FROM tag WHERE name = ?", (new_name,))
-    test = c.fetchone()
-    if test is not None:
-        raise ValueError("New tag name is already in use")
-
     # get old name
     c.execute("SELECT name FROM tag WHERE pk_id = ?", (id,))
     old_name = c.fetchone()
     if old_name is None:
         raise ValueError("Unknown tag id", id)
     old_name = old_name[0]
+
+    if old_name == new_name:
+        return
+
+    # check if new names is taken
+    c.execute("SELECT pk_id FROM tag WHERE name = ?", (new_name,))
+    test = c.fetchone()
+    if test is not None:
+        raise ValueError("New tag name is already in use")
 
     # get all gallery folders with this tag
     c.execute(
@@ -532,13 +551,13 @@ def rename_tag(id, new_name):
     if outputs is not None:
         for output in outputs:
             folder = os.path.join(output[0], output[1])
-            if os.path.isdir(os.path.join(folder, old_name)):
+            if os.path.isdir(os.path.join(folder, old_name.replace("_", " "))):
                 shutil.move(
-                    os.path.join(folder, old_name),
-                    os.path.join(folder, new_name),
+                    os.path.join(folder, old_name.replace("_", " ")),
+                    os.path.join(folder, new_name.replace("_", " ")),
                 )
             else:
-                os.makedirs(os.path.join(folder, new_name))
+                os.makedirs(os.path.join(folder, new_name.replace("_", " ")))
 
     # update db
     c.execute(
@@ -562,7 +581,7 @@ def delete_tag(id):
     # get galleries
     c.execute(
         (
-            "SELECT pk_id "
+            "SELECT pk_id, location, name "
             "FROM gallery_folder "
             "JOIN gallery_folder_has_tag ON pk_id = pk_fk_gallery_folder_id "
             "WHERE pk_fk_tag_id = ?"
@@ -684,8 +703,75 @@ def create_gallery(id):
     if folder is None:
         raise ValueError("Invalid gallery folder id", id)
 
+    # create folder
     folder = os.path.join(folder[0], folder[1])
     if not os.path.isdir(folder):
         os.makedirs(folder)
 
-# TODO: remove links when files are restored (?)
+    # get tags
+    c.execute(
+        ("SELECT pk_fk_tag_id FROM gallery_folder_has_tag "
+         "WHERE pk_fk_gallery_folder_id = ?"),
+        (id,)
+    )
+    tags = c.fetchall()
+
+    for tag in tags:
+        change_gallery(id, tag[0], True)
+
+
+def delete_gallery(id):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get folder information
+    c.execute(
+        "SELECT location, name FROM gallery_folder WHERE pk_id = ?",
+        (id,),
+    )
+    folder = c.fetchone()
+    if folder is None:
+        raise ValueError("Invalid gallery folder id", id)
+
+    # delete folder
+    folder = os.path.join(folder[0], folder[1])
+    if os.path.isdir(folder):
+        shutil.rmtree(folder)
+
+    # remove from database
+    c.execute(
+        ("DELETE FROM gallery_folder_has_tag "
+         "WHERE pk_fk_gallery_folder_id = ?"),
+        (id,)
+    )
+    c.execute(
+        "DELETE FROM gallery_folder WHERE pk_id = ?",
+        (id,)
+    )
+    connection.commit()
+
+
+def delete_folder(id):
+    connection = database.get_current_gallery("connection")
+    c = connection.cursor()
+
+    # get folder information
+    c.execute(
+        "SELECT location, name FROM folder WHERE pk_id = ?",
+        (id,),
+    )
+    folder = c.fetchone()
+    if folder is None:
+        raise ValueError("Invalid folder id", id)
+
+    # delete folder
+    folder = os.path.join(folder[0], folder[1])
+    if os.path.isdir(folder):
+        shutil.rmtree(folder)
+
+    # remove from database
+    c.execute(
+        "DELETE FROM folder WHERE pk_id = ?",
+        (id,)
+    )
+    connection.commit()

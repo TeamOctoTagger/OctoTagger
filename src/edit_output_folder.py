@@ -170,7 +170,7 @@ class EditOutputFolder(wx.Dialog):
         result = cursor.fetchall()
         for properties in result:
             name = properties[0]
-            expr = expression.convert_tag_id(
+            expr = expression.map_tag_id(
                 properties[1],
                 tagging.tag_id_to_name
             )
@@ -184,6 +184,14 @@ class EditOutputFolder(wx.Dialog):
         self.tc_name.SetValue(name)
         self.tc_expression.SetValue(expr)
         self.tc_directory.SetValue(location)
+
+        if "False" in expr:
+            wx.MessageBox(
+                ("Your expression might contain "
+                 "tags that have been deleted.\n"
+                 "Please update it accordingly."),
+                "Warning",
+            )
 
         if softlink:
             self.rb_softlinks.SetValue(True)
@@ -210,7 +218,7 @@ class EditOutputFolder(wx.Dialog):
         location = self.tc_directory.GetValue()
         dir = os.path.normpath(location)
         name = self.tc_name.GetValue()
-        expr = expression.convert_tag_name(
+        expr = expression.map_tag_name(
             self.tc_expression.GetValue(),
             tagging.tag_name_to_id
         )

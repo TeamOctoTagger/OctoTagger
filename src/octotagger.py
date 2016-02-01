@@ -5,6 +5,7 @@ import wx
 import edit_output_folder
 import create_output_folder
 import edit_gallery_folder
+import create_gallery_folder
 import output
 import settings
 import about
@@ -617,11 +618,13 @@ class MainWindow(wx.Frame):
         if not (items and tag):
             return
 
-        if not re.match('^' + expression.REG_TAG_NAME + '$', tag):
+        if (not re.match('^' + expression.REG_TAG_NAME + '$', tag) or
+                tag == "False"):
             wx.MessageBox(
                 ("Invalid input! Tag names can only contain letters, "
                  "numbers and underscores (which will be displayed "
-                 "as a sapce). They must start with a letter."),
+                 "as a sapce). They must start with a letter.\n"
+                 "For further information, consult the user manual."),
                 "Error",
                 wx.OK,
             )
@@ -1029,7 +1032,12 @@ class MainWindow(wx.Frame):
             self.Close(True)
 
     def OnCreateGalleryFolder(self, event=None):
-        print "yo"
+        dlg = create_gallery_folder.CreateGalleryFolder(self)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+        if self.mode == "folder":
+            self.on_start_folder_mode()
 
     def OnCreateOutputFolder(self, event=None):
         dlg = create_output_folder.CreateOutputFolder(self)
@@ -1102,6 +1110,9 @@ class MainWindow(wx.Frame):
             else:
                 # TODO (Optional): Implement tagging view?
                 print "Not a folder"
+
+        elif self.mode == "folder":
+            self.EditFolder()
 
     def on_right_click_item(self, e):
 
@@ -1274,13 +1285,14 @@ class MainWindow(wx.Frame):
 
         self.start_overview(warn_import=False)
 
-    def EditFolder(self, event):
+    def EditFolder(self, event=None):
         if not self.mode == "folder":
             return
 
         items = self.mainPan.GetSelectedItems()
         if len(items) != 1:
             print "Can not edit more than one folder at once."
+            return
 
         for child in self.mainPan.GetChildren():
             if child is not self.topbar and child.GetPath() == items[0]:
@@ -1292,6 +1304,7 @@ class MainWindow(wx.Frame):
         else:
             folder = tagging.custom_path_to_id(items[0])
             dlg = edit_output_folder.EditOutputFolder(self, folder)
+
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1378,22 +1391,26 @@ class MainWindow(wx.Frame):
     def RemoveItem(self, event=None):
         if self.mode == "folder":
             items = self.mainPan.GetSelectedItems()
-            ids = []
+            advanced_ids = []
+            gallery_ids = []
 
             for item in items:
-                ids.append(str(tagging.path_to_id(item)))
+                obj = self.mainPan.GetItemFromPath(item)
+                if obj.IsGalleryFolder():
+                    gallery_ids.append(str(tagging.gallery_path_to_id(item)))
+                else:
+                    advanced_ids.append(str(tagging.advanced_path_to_id(item)))
 
             # Delete folders
 
             gallery = database.get_current_gallery("connection")
             cursor = gallery.cursor()
 
-            query_folders = (
-                "DELETE FROM folder WHERE pk_id IN (%s)"
-                % ", ".join(ids)
-            )
-            cursor.execute(query_folders)
-            gallery.commit()
+            for gallery_id in gallery_ids:
+                output.delete_gallery(gallery_id)
+
+            for advanced_id in advanced_ids:
+                output.delete_folder(advanced_id)
 
             self.on_start_folder_mode()
 

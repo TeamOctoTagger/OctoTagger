@@ -4,6 +4,8 @@
 import wx
 import tagging
 import output
+import expression
+import re
 
 TagListCheckEvent, EVT_TAGLIST_CHECK = wx.lib.newevent.NewCommandEvent()
 TagListUpdateEvent, EVT_TAGLIST_UPDATE = wx.lib.newevent.NewCommandEvent()
@@ -45,8 +47,7 @@ class TagList(wx.ScrolledWindow):
         checkbox.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
     def OnCheck(self, e):
-        cb = e.GetEventObject()
-        wx.PostEvent(self, TagListCheckEvent(cb.GetId()))
+        wx.PostEvent(self, TagListCheckEvent(self.GetId()))
 
     def GetChecked(self):
         checked_cb = []
@@ -180,9 +181,20 @@ class TagList(wx.ScrolledWindow):
         text = event.GetEventObject()
         new_name = text.GetValue()
 
+        if not re.match('^' + expression.REG_TAG_NAME + '$', new_name):
+            wx.MessageBox(
+                ("Invalid input! Tag names can only contain letters, "
+                 "numbers and underscores (which will be displayed "
+                 "as a sapce). They must start with a letter."),
+                "Error",
+                wx.OK,
+            )
+            return
+
         output.rename_tag(tag_id, new_name)
 
-        self.checked.append(new_name)
+        if self.edit_tag in self.checked:
+            self.checked.append(new_name)
 
         event = TagListUpdateEvent(
             self.GetId(),

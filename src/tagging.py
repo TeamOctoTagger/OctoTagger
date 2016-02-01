@@ -215,7 +215,7 @@ def tag_name_to_id(tag_name):
         return False
 
 
-def custom_path_to_id(path):
+def advanced_path_to_id(path):
     # Get gallery connection
     gallery = database.get_current_gallery("connection")
     cursor = gallery.cursor()
