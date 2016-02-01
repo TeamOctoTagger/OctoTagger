@@ -19,6 +19,7 @@ import taglist
 import taggingview
 import export
 import os
+import re
 
 # import create_folders
 
@@ -80,10 +81,10 @@ class MainWindow(wx.Frame):
             "Import files directly, without going through the process"
         )
         # TODO: implement create gallery folder
-        item_create_bulk_output_folders = self.filemenu.Append(
+        item_create_gallery_folder = self.filemenu.Append(
             wx.ID_ANY,
-            "&Create output folders",
-            "Automatically create an output folder for each tag"
+            "&Create gallery folder",
+            "Create another gallery folder"
         )
         item_create_output_folder = self.filemenu.Append(
             wx.ID_ANY,
@@ -177,10 +178,21 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_direct_import, fileDirectImportFiles)
         self.Bind(wx.EVT_MENU, self.OnManual, helpManual)
         self.Bind(wx.EVT_MENU, self.OnExit, fileExit)
-        self.Bind(wx.EVT_MENU, self.OnCreateOutputFolder,
-                  item_create_output_folder)
+
+        self.Bind(
+            wx.EVT_MENU,
+            self.OnCreateGalleryFolder,
+            item_create_gallery_folder,
+        )
+        self.Bind(
+            wx.EVT_MENU,
+            self.OnCreateOutputFolder,
+            item_create_output_folder,
+        )
+
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
+
         self.Bind(
             wx.EVT_MENU,
             self.start_tagging_mode,
@@ -438,7 +450,7 @@ class MainWindow(wx.Frame):
 
         for folder in gallery_folder_result:
             path = os.path.join(folder[1], folder[2])
-            folders.append(path.encode('utf-8')+"|GALLERYFOLDER")
+            folders.append(path.encode('utf-8') + "|GALLERYFOLDER")
 
         for folder in special_folder_result:
             path = os.path.join(folder[1], folder[2])
@@ -565,7 +577,6 @@ class MainWindow(wx.Frame):
             if self.mainPan.GetSelectedItems():
                 return
 
-            # TODO: Check if input is a valid expression!
             query_input = e.GetEventObject().GetValue()
 
             if query_input == "":
@@ -595,17 +606,25 @@ class MainWindow(wx.Frame):
                     self.Layout()
 
                 except:
+                    # TODO: Print in statusbar
                     print "Invalid expression!"
 
     def on_query_text_enter(self, e):
 
         items = self.GetSelectedItems()
-        query = e.GetEventObject().GetValue()
-
-        # TODO: Check if input is a valid tag name!
-        tag = query
+        tag = e.GetEventObject().GetValue()
 
         if not (items and tag):
+            return
+
+        if not re.match('^' + expression.REG_TAG_NAME + '$', tag):
+            wx.MessageBox(
+                ("Invalid input! Tag names can only contain letters, "
+                 "numbers and underscores (which will be displayed "
+                 "as a sapce). They must start with a letter."),
+                "Error",
+                wx.OK,
+            )
             return
 
         for item in items:
@@ -1003,12 +1022,14 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnExit(self, e):
-
         if self.mode == "import":
             if self.CancelImportWarning():
                 self.Close(True)
         else:
             self.Close(True)
+
+    def OnCreateGalleryFolder(self, event=None):
+        print "yo"
 
     def OnCreateOutputFolder(self, event=None):
         dlg = create_output_folder.CreateOutputFolder(self)
@@ -1167,7 +1188,8 @@ class MainWindow(wx.Frame):
                         "Create folder from current expression",
                         "Create a special output folder from the current expression."
                     )
-                    self.Bind(wx.EVT_MENU, self.CreateFolderFromExpression, item_create_folder)
+                    self.Bind(
+                        wx.EVT_MENU, self.CreateFolderFromExpression, item_create_folder)
 
         elif self.mode == "tagging":
 
@@ -1250,7 +1272,7 @@ class MainWindow(wx.Frame):
 
         import_files.import_files(tagged_files)
 
-        self.start_overview(False)
+        self.start_overview(warn_import=False)
 
     def EditFolder(self, event):
         if not self.mode == "folder":
@@ -1261,7 +1283,7 @@ class MainWindow(wx.Frame):
             print "Can not edit more than one folder at once."
 
         for child in self.mainPan.GetChildren():
-            if child.GetPath() == items[0]:
+            if child is not self.topbar and child.GetPath() == items[0]:
                 is_gf = child.IsGalleryFolder()
 
         if is_gf:

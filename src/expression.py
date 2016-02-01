@@ -181,7 +181,7 @@ def parse(string):
     return query
 
 
-def convert_tag_name(expression, callback):
+def map_tag_name(expression, callback):
     """Converts all tag names by passing them to the callback function and
     replacing them with the result"""
     return re.sub(
@@ -191,7 +191,7 @@ def convert_tag_name(expression, callback):
     )
 
 
-def convert_tag_id(expression, callback):
+def map_tag_id(expression, callback):
     """Converts all tag ids by passing them to the callback function and
     replacing them with the result"""
     return re.sub(
