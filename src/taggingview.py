@@ -203,10 +203,6 @@ class TaggingView(wx.Panel):
 
     def ReSize(self, event=None):
 
-        # TODO: When window is resized quickly, doesn't resize image correctly.
-        # Maybe use Double Buffering?
-        # http://wiki.wxpython.org/DoubleBufferedDrawing
-
         self.load_images()
         self.Layout()
         self.Refresh()

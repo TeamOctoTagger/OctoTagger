@@ -124,3 +124,4 @@ def _handler_pil(source, destination):
 
 register("image/jpeg", _handler_pil)
 register("image/png", _handler_pil)
+register("image/gif", _handler_pil)
