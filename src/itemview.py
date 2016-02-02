@@ -15,8 +15,6 @@ DoubleClickItemEvent, EVT_ITEM_DOUBLE_CLICK = wx.lib.newevent.NewCommandEvent()
 RightClickItemEvent, EVT_ITEM_RIGHT_CLICK = wx.lib.newevent.NewCommandEvent()
 ThumbnailLoadEvent, EVT_THUMBNAIL_LOAD = wx.lib.newevent.NewEvent()
 
-# TODO: Load thumbnails in background
-
 
 class ItemView(wx.ScrolledWindow):
 
@@ -79,21 +77,8 @@ class ItemView(wx.ScrolledWindow):
 
         for item in root:
             index = len(self.sizer.GetChildren())
-            if 'is_gf' in item:
-                new_item = Item(self,
-                                item['path'],
-                                item['name'],
-                                item['image'],
-                                item['is_gf'])
-            else:
-                new_item = Item(
-                    self,
-                    item['path'],
-                    item['name'],
-                    item['image'],
-                )
             self.sizer.Add(
-                new_item,
+                Item(self, **item),
                 flag=wx.ALL,
                 border=5,
                 userData=index,
@@ -254,7 +239,6 @@ class ItemView(wx.ScrolledWindow):
                     result.append({
                         'name': row[0],
                         'path': item,
-                        'image': thumbnail.get_thumbnail(item),
                     })
                 elif type(item) is str:  # item is fs path
                     splitted_item = item.split("|")
@@ -269,7 +253,7 @@ class ItemView(wx.ScrolledWindow):
                         result.append({
                             'name': name,
                             'path': item,
-                            'image': thumbnail.GENERIC['folder'],
+                            'thumb': thumbnail.GENERIC['folder'],
                             'is_gf': is_gf,
                         })
                     elif os.path.isfile(item):
@@ -277,7 +261,6 @@ class ItemView(wx.ScrolledWindow):
                         result.append({
                             'name': name,
                             'path': item,
-                            'image': thumbnail.get_thumbnail(item),
                         })
                     else:
                         print ('Encountered unsupported path', item)
@@ -338,13 +321,16 @@ class ItemView(wx.ScrolledWindow):
 
 
 class _ThumbnailThread(threading.Thread):
-    def __init__(self, notify_window, image):
+    def __init__(self, notify_window, path, thumb):
         super(_ThumbnailThread, self).__init__()
         self._notify_window = notify_window
-        self._image = image
+        self._path = path
+        self._thumb = thumb
 
     def run(self):
-        image = wx.Image(self._image)
+        if self._thumb is None:
+            self._thumb = thumbnail.get_thumbnail(self._path)
+        image = wx.Image(self._thumb)
         image.Resize(THUMBNAIL_SIZE, (
             (THUMBNAIL_SIZE[0] - image.GetWidth()) / 2,
             (THUMBNAIL_SIZE[1] - image.GetHeight()) / 2,
@@ -354,7 +340,7 @@ class _ThumbnailThread(threading.Thread):
 
 class Item(wx.Panel):
 
-    def __init__(self, parent, path, name, thumb, is_gf=False):
+    def __init__(self, parent, path, name, thumb=None, is_gf=False):
         super(Item, self).__init__(parent)
 
         self.path = path
@@ -380,7 +366,7 @@ class Item(wx.Panel):
         )
 
         self.Bind(EVT_THUMBNAIL_LOAD, self.OnThumbnailLoad)
-        self.thumb_thread = _ThumbnailThread(self, thumb)
+        self.thumb_thread = _ThumbnailThread(self, path, thumb)
         self.thumb_thread.start()
 
         self.sizer.Add(
