@@ -49,7 +49,6 @@ class MainWindow(wx.Frame):
         self.CreateStatusBar()
 
         # Setting icon
-        # TODO: Reduce icon file size
         self.SetIcon(wx.Icon("icons/logo.ico", wx.BITMAP_TYPE_ICO))
 
         # Setting up the menus.
@@ -1053,8 +1052,10 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def OnMaximize(self, e):
-        # TODO: Is this necessary?
+
         if self.mode == "tagging":
+            self.Layout()
+            self.mainPan.imgPan.Layout()
             self.mainPan.Layout()
             self.mainPan.Refresh()
             self.mainPan.ReSize()
@@ -1074,6 +1075,8 @@ class MainWindow(wx.Frame):
                 self.mainPan.OnExit()
             elif e.GetKeyCode() == wx.WXK_DELETE:
                 self.RemoveItem()
+            elif e.GetKeyCode() == wx.WXK_F2:
+                self.RenameItem()
         elif self.mode in ["overview", "import", "folder"]:
             try:
                 char = chr(e.GetKeyCode())
@@ -1091,6 +1094,8 @@ class MainWindow(wx.Frame):
 
             if e.GetKeyCode() == wx.WXK_DELETE:
                 self.RemoveItem()
+            elif e.GetKeyCode() == wx.WXK_F2:
+                self.RenameItem()
 
         elif self.mode == "folder":
             if e.GetKeyCode() == wx.WXK_DELETE:
@@ -1310,7 +1315,7 @@ class MainWindow(wx.Frame):
 
         self.on_start_folder_mode()
 
-    def RenameItem(self, event):
+    def RenameItem(self, event=None):
 
         if self.mode == "tagging":
             old_name = self.mainPan.GetName()
@@ -1330,6 +1335,9 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         new_name = dlg.GetValue()
         output.rename_file(self.GetSelectedItems()[0], new_name)
+
+        if self.mode == "overview":
+            self.start_overview()
 
     def RestoreFiles(self, files, event=None):
 
