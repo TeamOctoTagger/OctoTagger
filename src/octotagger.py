@@ -24,8 +24,6 @@ import re
 
 # import create_folders
 
-# TODO: Scale images in taggingview when maximized
-# TODO: Optimize switching between ItemView and TaggingView
 # TODO: Many things don't work at all in Windows right now for some reason...
 
 
@@ -83,7 +81,6 @@ class MainWindow(wx.Frame):
             "&Direct file import",
             "Import files directly, without going through the process"
         )
-        # TODO: implement create gallery folder
         item_create_gallery_folder = self.filemenu.Append(
             wx.ID_ANY,
             "&Create gallery folder",
