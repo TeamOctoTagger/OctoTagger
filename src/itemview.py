@@ -299,7 +299,6 @@ class ItemView(wx.ScrolledWindow):
         return result
 
     def GetItemFromPath(self, path):
-        # TODO: Diffrent result than similarly named function
         items = self.sizer.GetChildren()
 
         for item in items:

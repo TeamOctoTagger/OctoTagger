@@ -159,7 +159,6 @@ class TaggingView(wx.Panel):
         return self.file_buffer[index]
 
     def DisplayNext(self, event=None):
-        # FIXME: first key-down not recognized for next and prev
 
         # move pointers forward
         self.current_buffer = (self.current_buffer + 1) % 3

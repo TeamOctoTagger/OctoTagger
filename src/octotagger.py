@@ -555,6 +555,7 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.Refresh()
         self.mainPan.ReSize()
+        self.mainPan.SetFocus()
 
     def on_resume_overview_mode(self, event=None):
 
@@ -1048,6 +1049,11 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
+    def OnFocus(self, event):
+        print "foxus"
+        print event.GetWindow()
+        print event.GetEventObject()
+
     def OnMaximize(self, e):
 
         if self.mode == "tagging":
@@ -1063,6 +1069,7 @@ class MainWindow(wx.Frame):
     # Key events
 
     def OnKey(self, e):
+        # print e.GetKeyCode()
         if self.mode == "tagging":
             if e.GetKeyCode() == wx.WXK_RIGHT:
                 self.mainPan.DisplayNext()
@@ -1313,11 +1320,15 @@ class MainWindow(wx.Frame):
         self.on_start_folder_mode()
 
     def RenameItem(self, event=None):
-
+        print "hallo"
         if self.mode == "tagging":
             old_name = self.mainPan.GetName()
         else:
-            item = self.GetSelectedItems()[0]
+            items = self.GetSelectedItems()
+            if items:
+                item = items[0]
+            else:
+                return
             for child in self.mainPan.GetChildren():
                 if child is not self.topbar and child.GetPath() == item:
                     old_name = child.GetText()
