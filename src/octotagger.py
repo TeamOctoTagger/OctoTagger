@@ -719,7 +719,7 @@ class MainWindow(wx.Frame):
                         tag_names.append(tagging.tag_id_to_name(tag_id))
 
                     item_tags[item] = tag_names
-        else:
+        elif self.mode == "overview":
             item_tags = {}
             for item in items:
                 tag_ids = tagging.get_tags(item)
@@ -735,10 +735,9 @@ class MainWindow(wx.Frame):
         undetermined = []
 
         for item in items:
-
             tags = item_tags[item]
 
-            if not checked:
+            if not (checked or undetermined):
                 for tag in tags:
                     checked.append(tag)
 
