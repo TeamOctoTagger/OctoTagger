@@ -5,6 +5,7 @@ import database
 import os
 import wx
 import wx.lib.newevent
+import threading
 
 
 THUMBNAIL_SIZE = (128, 128)
@@ -12,6 +13,7 @@ THUMBNAIL_SIZE = (128, 128)
 SelectionChangeEvent, EVT_SELECTION_CHANGE = wx.lib.newevent.NewCommandEvent()
 DoubleClickItemEvent, EVT_ITEM_DOUBLE_CLICK = wx.lib.newevent.NewCommandEvent()
 RightClickItemEvent, EVT_ITEM_RIGHT_CLICK = wx.lib.newevent.NewCommandEvent()
+ThumbnailLoadEvent, EVT_THUMBNAIL_LOAD = wx.lib.newevent.NewEvent()
 
 # TODO: Load thumbnails in background
 
@@ -328,9 +330,24 @@ class ItemView(wx.ScrolledWindow):
             item.GetWindow().SetSelected(selected)
 
 
+class _ThumbnailThread(threading.Thread):
+    def __init__(self, notify_window, image):
+        super(_ThumbnailThread, self).__init__()
+        self._notify_window = notify_window
+        self._image = image
+
+    def run(self):
+        image = wx.Image(self._image)
+        image.Resize(THUMBNAIL_SIZE, (
+            (THUMBNAIL_SIZE[0] - image.GetWidth()) / 2,
+            (THUMBNAIL_SIZE[1] - image.GetHeight()) / 2,
+        ))
+        wx.PostEvent(self._notify_window, ThumbnailLoadEvent(data=image))
+
+
 class Item(wx.Panel):
 
-    def __init__(self, parent, path, name, image, is_gf=False):
+    def __init__(self, parent, path, name, thumb, is_gf=False):
         super(Item, self).__init__(parent)
 
         self.path = path
@@ -344,7 +361,8 @@ class Item(wx.Panel):
 
         # controls
 
-        image = wx.Image(image)
+        # image = wx.Image(image)
+        image = wx.Image(thumbnail.DEFAULT_ICON)
         image.Resize(THUMBNAIL_SIZE, (
             (THUMBNAIL_SIZE[0] - image.GetWidth()) / 2,
             (THUMBNAIL_SIZE[1] - image.GetHeight()) / 2,
@@ -353,6 +371,10 @@ class Item(wx.Panel):
             self,
             bitmap=image.ConvertToBitmap()
         )
+
+        self.Bind(EVT_THUMBNAIL_LOAD, self.OnThumbnailLoad)
+        self.thumb_thread = _ThumbnailThread(self, thumb)
+        self.thumb_thread.start()
 
         self.sizer.Add(
             self.bitmap,
@@ -391,6 +413,10 @@ class Item(wx.Panel):
         self.text.Bind(wx.EVT_LEFT_UP, self.PropagateEvent)
         self.text.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
         self.text.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDouble)
+
+    def OnThumbnailLoad(self, event):
+        self.bitmap.SetBitmap(event.data.ConvertToBitmap())
+        self.thumb_thread = None
 
     def GetPath(self):
         return self.path
