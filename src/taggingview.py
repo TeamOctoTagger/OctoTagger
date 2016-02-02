@@ -209,6 +209,9 @@ class TaggingView(wx.Panel):
         # http://wiki.wxpython.org/DoubleBufferedDrawing
 
         self.load_images()
+
+        self.Layout()
+        self.Refresh()
         size = self.imgPan.GetSize()
 
         image = self.get_image(0)
