@@ -196,7 +196,8 @@ def tag_id_to_name(tag_id):
         for tag in tags:
             return tag[0]
     else:
-        return False
+        return "?"
+        # raise ValueError("Tag does not exist", tag_id)
 
 
 def tag_name_to_id(tag_name):
@@ -212,7 +213,8 @@ def tag_name_to_id(tag_name):
         for tag in tags:
             return tag[0]
     else:
-        return False
+        return "?"
+        # raise ValueError("Tag does not exist", tag_name)
 
 
 def advanced_path_to_id(path):

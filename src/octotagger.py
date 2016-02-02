@@ -1307,7 +1307,7 @@ class MainWindow(wx.Frame):
             folder = tagging.gallery_path_to_id(items[0])
             dlg = edit_gallery_folder.EditGalleryFolder(self, folder)
         else:
-            folder = tagging.custom_path_to_id(items[0])
+            folder = tagging.advanced_path_to_id(items[0])
             dlg = edit_output_folder.EditOutputFolder(self, folder)
 
         dlg.ShowModal()
