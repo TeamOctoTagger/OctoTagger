@@ -10,6 +10,7 @@ import os
 import shutil
 
 sys_db_file = './system.db'
+DEFAULT_GALLERY_PATH = os.path.expanduser("~/OctoTagger")
 
 
 def get_sys_db():
@@ -24,7 +25,8 @@ def get_gallery(gallery_id, property):
     # Get gallery's data.
     sys_db = get_sys_db()
     cursor = sys_db.cursor()
-    query_gallery_location = "SELECT location, name FROM gallery WHERE pk_id = %d" % (gallery_id)
+    query_gallery_location = "SELECT location, name FROM gallery WHERE pk_id = %d" % (
+        gallery_id)
 
     cursor.execute(query_gallery_location)
     result = cursor.fetchall()
@@ -98,19 +100,47 @@ def create_gallery(name, location):
     cursor = sys_db.cursor()
 
     # Insert new gallery into sys connection
-    query_insert_gallery = "INSERT INTO gallery(name, location) VALUES (\'%s\', \'%s\')" % (
-        name, location)
+    query_insert_gallery = (
+        "INSERT INTO gallery(name, location) VALUES (\'%s\', \'%s\')"
+        % (name, location)
+    )
     print query_insert_gallery
     cursor.execute(query_insert_gallery)
     sys_db.commit()
 
     # Return new gallery's ID
-    query_id = "SELECT pk_id FROM gallery WHERE name = \'%s\' AND location=\'%s\'" % (
-        name, location)
+    query_id = (
+        ("SELECT pk_id FROM gallery "
+         "WHERE name = \'%s\' AND location=\'%s\'")
+        % (name, location)
+    )
     cursor.execute(query_id)
-    result = cursor.fetchall()
-    for gallery in result:
-        return gallery[0]
+    gallery_id = cursor.fetchone()[0]
+
+    cursor.execute("SELECT use_softlink FROM settings WHERE pk_id = 1")
+    use_softlink = cursor.fetchone()[0]
+
+    # Insert default gallery output folder
+    gallery_db = sqlite3.connect(file_new_gallery)
+    gallery_db.execute(
+        (
+            "INSERT INTO gallery_folder "
+            "(name, location, add_new_tag, use_softlink) "
+            "VALUES (:name, :location, :add_new_tag, :use_softlink)"
+        ),
+        {
+            "name": name,
+            "location": DEFAULT_GALLERY_PATH,
+            "add_new_tag": True,
+            "use_softlink": use_softlink
+        }
+    )
+    gallery_db.commit()
+    path = os.path.join(DEFAULT_GALLERY_PATH, name)
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    return gallery_id
 
 
 def switch_gallery(id):

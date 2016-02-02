@@ -45,6 +45,9 @@ class MainWindow(wx.Frame):
         # Map of temporary files and tags, for import mode
         self.temp_file_tags = {}
 
+        # Needed for preventing bug
+        self.renaming = False
+
         # A StatusBar in the bottom of the window
         self.CreateStatusBar()
 
@@ -101,7 +104,7 @@ class MainWindow(wx.Frame):
             wx.ID_EXIT, "&Exit", " Terminate the program")
 
         # TOOLMENU
-        toolStartTaggingMode = toolmenu.Append(
+        self.toolStartTaggingMode = toolmenu.Append(
             wx.ID_ANY,
             "&Start tagging mode",
             "Enter the tagging mode"
@@ -196,7 +199,7 @@ class MainWindow(wx.Frame):
         self.Bind(
             wx.EVT_MENU,
             self.start_tagging_mode,
-            toolStartTaggingMode,
+            self.toolStartTaggingMode,
         )
 
         self.Bind(wx.EVT_CHAR_HOOK, self.OnKey)
@@ -427,6 +430,8 @@ class MainWindow(wx.Frame):
             if not self.CancelImportWarning():
                 return
 
+        self.toolStartTaggingMode.Enable(enable=False)
+
         self.mode = "folder"
 
         # Set items to all current database items
@@ -472,6 +477,7 @@ class MainWindow(wx.Frame):
         # Get gallery connection
 
         self.lb.EnableAll(True)
+        self.toolStartTaggingMode.Enable(enable=True)
 
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
@@ -501,6 +507,7 @@ class MainWindow(wx.Frame):
         # Get gallery connection
 
         self.lb.EnableAll(True)
+        self.toolStartTaggingMode.Enable(enable=True)
 
         gallery_conn = database.get_current_gallery("connection")
         cursor = gallery_conn.cursor()
@@ -659,6 +666,7 @@ class MainWindow(wx.Frame):
             self.topbar.Show(False)
 
         self.lb.EnableAll(True)
+        self.toolStartTaggingMode.Enable(enable=True)
         self.mode = "overview"
 
         gallery_conn = database.get_current_gallery("connection")
@@ -1072,7 +1080,10 @@ class MainWindow(wx.Frame):
     # Key events
 
     def OnKey(self, e):
-        # print e.GetKeyCode()
+        if self.renaming:
+            e.Skip()
+            return
+
         if self.mode == "tagging":
             if e.GetKeyCode() == wx.WXK_RIGHT:
                 self.mainPan.DisplayNext()
@@ -1323,7 +1334,7 @@ class MainWindow(wx.Frame):
         self.on_start_folder_mode()
 
     def RenameItem(self, event=None):
-        print "hallo"
+        self.renaming = True
         if self.mode == "tagging":
             old_name = self.mainPan.GetName()
         else:
@@ -1349,6 +1360,8 @@ class MainWindow(wx.Frame):
 
         if self.mode == "overview":
             self.start_overview()
+
+        self.renaming = False
 
     def RestoreFiles(self, files, event=None):
 

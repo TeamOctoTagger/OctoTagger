@@ -18,12 +18,12 @@ def update_system():
 
 
 def update_gallery():
-    os.makedirs("default/files")
-    os.makedirs("default/thumbnails/temp")
-    if not os.path.isdir(DEFAULT_GALLERY_PATH + "/default"):
-        os.makedirs(DEFAULT_GALLERY_PATH + "/default")
+    os.makedirs(os.path.join("default", "files"))
+    os.makedirs(os.path.join("default", "thumbnails", "temp"))
+    if not os.path.isdir(os.path.join(DEFAULT_GALLERY_PATH, "default")):
+        os.makedirs(os.path.join(DEFAULT_GALLERY_PATH, "default"))
 
-    conn = sqlite3.connect("default/default.db")
+    conn = sqlite3.connect(os.path.join("default", "default.db"))
     query_path = os.path.join(SQL_PATH, "gallery.sql")
     with open(query_path, "r") as f:
         query = f.read()
@@ -33,7 +33,7 @@ def update_gallery():
     conn.close()
 
     # Copy db file to db folder
-    source = os.path.normpath("default/default.db")
+    source = os.path.join("default", "default.db")
     dest = os.path.join(SQL_PATH, "default.db")
     shutil.copy(source, dest)
 
