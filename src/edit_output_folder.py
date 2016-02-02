@@ -185,11 +185,12 @@ class EditOutputFolder(wx.Dialog):
         self.tc_expression.SetValue(expr)
         self.tc_directory.SetValue(location)
 
-        if "False" in expr:
+        if "?" in expr:
             wx.MessageBox(
-                ("Your expression might contain "
-                 "tags that have been deleted.\n"
-                 "Please update it accordingly."),
+                ("Your expression contains "
+                 "tags that have been deleted, marked as question marks.\n"
+                 "Please update it accordingly, "
+                 "or the folder contents will not update."),
                 "Warning",
             )
 
@@ -222,6 +223,15 @@ class EditOutputFolder(wx.Dialog):
             self.tc_expression.GetValue(),
             tagging.tag_name_to_id
         )
+
+        if "?" in expr:
+            wx.MessageBox(
+                ("One or more of the tags in the specified expression "
+                 "does not exist. Please create them first, "
+                 "or change the expression."),
+                "Error"
+            )
+            return
 
         if self.rb_softlinks.GetValue():
             softlink = True

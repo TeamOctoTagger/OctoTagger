@@ -193,10 +193,19 @@ class CreateOutputFolder(wx.Dialog):
         location = self.tc_directory.GetValue()
         dir = os.path.normpath(location)
         name = self.tc_name.GetValue()
-        expr = expression.convert_tag_name(
+        expr = expression.map_tag_name(
             self.tc_expression.GetValue(),
             tagging.tag_name_to_id
         )
+
+        if "?" in expr:
+            wx.MessageBox(
+                ("One or more of the tags in the specified expression "
+                 "does not exist. Please create them first, "
+                 "or change the expression."),
+                "Error"
+            )
+            return
 
         if self.rb_softlinks.GetValue():
             softlink = 1

@@ -49,11 +49,14 @@ class TaggingView(wx.Panel):
                 wx.SIMPLE_BORDER
             )
         )
+        self.text.SetForegroundColour("#FFFFFF")
 
         self.Image = wx.StaticBitmap(self.imgPan)
 
-        self.SetBackgroundColour("#c1c8c5")
-        self.imgPan.SetBackgroundColour("#c1c8c5")
+        # self.SetBackgroundColour("#c1c8c5")
+        # self.imgPan.SetBackgroundColour("#c1c8c5")
+        self.SetBackgroundColour("#444444")
+        self.imgPan.SetBackgroundColour("#444444")
 
         topBox = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -206,7 +209,6 @@ class TaggingView(wx.Panel):
         # http://wiki.wxpython.org/DoubleBufferedDrawing
 
         self.load_images()
-
         self.Layout()
         self.Refresh()
         size = self.imgPan.GetSize()

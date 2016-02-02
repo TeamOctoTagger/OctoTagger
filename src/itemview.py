@@ -25,12 +25,19 @@ class ItemView(wx.ScrolledWindow):
             parent,
             style=wx.VSCROLL,
         )
-        self.SetBackgroundColour("#c1c8c5")
+        # Bright vs Dark theme
+        # self.SetBackgroundColour("#c1c8c5")
+        self.SetBackgroundColour("#444444")
 
         self.mainsizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
 
-        self.mainsizer.Add(self.sizer, 0, wx.EXPAND)
+        self.mainsizer.Add(
+            self.sizer,
+            0,
+            wx.EXPAND | wx.LEFT | wx.TOP,
+            border=10)
+
         self.SetSizer(self.mainsizer)
 
         # scrollbars
@@ -64,7 +71,7 @@ class ItemView(wx.ScrolledWindow):
             self.sizer.Add(
                 Item(self, root['path'], "..", root['image']),
                 flag=wx.ALL,
-                border=5,
+                border=10,
                 userData=-1,
             )
         if type(root) is dict:
@@ -391,6 +398,9 @@ class Item(wx.Panel):
                 wx.ST_NO_AUTORESIZE
             )
         )
+        # For dark theme
+        self.text.SetForegroundColour("#FFFFFF")
+
         self.sizer.Add(
             self.text,
             flag=wx.ALL | wx.EXPAND | wx.ALIGN_CENTER,
