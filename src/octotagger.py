@@ -344,6 +344,7 @@ class MainWindow(wx.Frame):
             (wx.ACCEL_NORMAL, wx.WXK_ESCAPE, escape_id),
             (wx.ACCEL_NORMAL, wx.WXK_LEFT, left_id),
             (wx.ACCEL_NORMAL, wx.WXK_RIGHT, right_id),
+            (wx.ACCEL_NORMAL, wx.WXK_F5, toolRefreshThumbnails.GetId()),
         ])
         self.SetAcceleratorTable(self.accel_tbl)
 
@@ -1057,14 +1058,8 @@ class MainWindow(wx.Frame):
             print "Aborted clearing of files"
 
     def OnManual(self, e):
-        dlg = wx.MessageDialog(
-            self,
-            "OctoTagger is the best program and doesn't need any explanation!",
-            "User Manual",
-            wx.OK
-        )
-        dlg.ShowModal()
-        dlg.Destroy()
+        path = os.path.join("doc", "documentation.pdf")
+        self.OpenItem(file=path)
 
     def OnExit(self, e):
         if self.mode == "import":
@@ -1382,40 +1377,43 @@ class MainWindow(wx.Frame):
 
         self.on_start_folder_mode()
 
-    def OpenItem(self, event=None):
-        items = self.GetSelectedItems()
-        if len(items) != 1:
-            if self.mode == "import":
-                paths = self.mainPan.GetSelectedItems()
-                if len(paths) == 1 and os.path.isdir(paths[0]):
-                    # FIXME: Not always correct?
-                    item = paths[0]
+    def OpenItem(self, event=None, file=None):
+        if file:
+            path = file
+        else:
+            items = self.GetSelectedItems()
+            if len(items) != 1:
+                if self.mode == "import":
+                    paths = self.mainPan.GetSelectedItems()
+                    if len(paths) == 1 and os.path.isdir(paths[0]):
+                        # FIXME: Not always correct?
+                        item = paths[0]
+                    else:
+                        return
                 else:
                     return
             else:
+                item = items[0]
+
+            if self.mode in ["overview", "tagging"]:
+
+                cursor = database.get_current_gallery("connection").cursor()
+                cursor.execute(
+                    ("SELECT uuid FROM file WHERE pk_id = ?"),
+                    (item,)
+                )
+                uuid = cursor.fetchone()[0]
+
+                path = os.path.join(
+                    database.get_current_gallery("directory"),
+                    "files",
+                    uuid
+                )
+
+            elif self.mode in ["folder", "import"]:
+                path = item
+            else:
                 return
-        else:
-            item = items[0]
-
-        if self.mode in ["overview", "tagging"]:
-
-            cursor = database.get_current_gallery("connection").cursor()
-            cursor.execute(
-                ("SELECT uuid FROM file WHERE pk_id = ?"),
-                (item,)
-            )
-            uuid = cursor.fetchone()[0]
-
-            path = os.path.join(
-                database.get_current_gallery("directory"),
-                "files",
-                uuid
-            )
-
-        elif self.mode in ["folder", "import"]:
-            path = item
-        else:
-            return
 
         # TODO: Test on Windows and OSX
         if sys.platform.startswith('darwin'):
