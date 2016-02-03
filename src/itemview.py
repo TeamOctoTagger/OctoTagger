@@ -41,7 +41,7 @@ class ItemView(wx.ScrolledWindow):
         # scrollbars
 
         # TODO include text and border
-        self.SetScrollRate(THUMBNAIL_SIZE[0], THUMBNAIL_SIZE[1])
+        self.SetScrollRate(THUMBNAIL_SIZE[0] / 2, THUMBNAIL_SIZE[1] / 2)
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
 
@@ -398,10 +398,12 @@ class Item(wx.Panel):
             label=name,
             style=(
                 wx.ALIGN_CENTRE_HORIZONTAL |
-                wx.ST_ELLIPSIZE_END |
-                wx.ST_NO_AUTORESIZE
+                wx.ST_NO_AUTORESIZE |
+                wx.ST_ELLIPSIZE_END
             )
         )
+        self.text.SetMaxSize((THUMBNAIL_SIZE[0], -1))
+
         # For dark theme
         self.text.SetForegroundColour("#FFFFFF")
 

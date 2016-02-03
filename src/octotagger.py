@@ -56,6 +56,9 @@ class MainWindow(wx.Frame):
         # Setting icon
         self.SetIcon(wx.Icon("icons/logo.ico", wx.BITMAP_TYPE_ICO))
 
+        # Disable warnings
+        wx.Log.SetLogLevel(0)
+
         # Setting up the menus.
         self.filemenu = wx.Menu()
         toolmenu = wx.Menu()
@@ -302,7 +305,7 @@ class MainWindow(wx.Frame):
         self.mainPan.mainsizer.Insert(0, self.topbar, 0, wx.EXPAND)
         self.topbar.Show(False)
 
-        self.cpane = contextpane.ContextPane(self, size=(-1, 200))
+        self.cpane = contextpane.ContextPane(left_panel, size=(-1, 200), octotagger=self)
 
         left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
         left_panel_sz.Add(
@@ -814,8 +817,7 @@ class MainWindow(wx.Frame):
                     # print "Folder: ", item
                     items = items + self.GetSelectedItems(item)
                 else:
-                    # print "File: ", item
-                    items.append(os.path.join(path, item))
+                    items.append(os.path.join(item))
 
             return items
 
@@ -827,6 +829,7 @@ class MainWindow(wx.Frame):
 
     def ChangeFolder(self, path):
         self.current_directory.SetLabelText(path)
+        print path, self.import_path
         if path == self.import_path:
             self.btn_up.Disable()
         else:
@@ -1415,10 +1418,10 @@ class MainWindow(wx.Frame):
             else:
                 return
 
-        # TODO: Test on Windows and OSX
         if sys.platform.startswith('darwin'):
             subprocess.call(('open', path))
         elif os.name == 'nt':
+            # FIXME: Needs to have file extension
             os.startfile(path)
         elif os.name == 'posix':
             subprocess.call(('xdg-open', path))

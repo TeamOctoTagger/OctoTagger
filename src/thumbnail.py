@@ -117,9 +117,12 @@ def _handler_pil(source, destination):
     from PIL import Image
     # FIXME: "struct.error: unpack requires a string argument of length 4"
     # with some images.
+
     image = Image.open(source).convert()
     image.thumbnail(itemview.THUMBNAIL_SIZE)
     image.save(destination, "PNG")
+
+
 
 
 register("image/jpeg", _handler_pil)
