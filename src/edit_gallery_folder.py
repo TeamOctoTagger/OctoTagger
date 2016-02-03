@@ -170,6 +170,7 @@ class EditGalleryFolder(wx.Dialog):
         for tag_id in tag_ids:
             tag_names.append(tagging.tag_id_to_name(tag_id).replace("_", " "))
 
+        print tag_names
         self.lb.SetCheckedStrings(tag_names)
         self.checked_tags = tag_names
 

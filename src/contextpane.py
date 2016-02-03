@@ -221,3 +221,7 @@ class ContextPane(wx.Panel):
     def DeselectAll(self, event):
         self.GetParent().mainPan.SetSelectedAll(False)
         self.GetParent().on_selection_change()
+
+    def EnableAll(self, enable):
+        for child in self.GetChildren():
+            child.Enable(enable)

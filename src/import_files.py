@@ -27,7 +27,7 @@ def import_files(files):
             file = os.path.normpath(file)
             # Defensive programming
             if os.path.isfile(file) and os.path.isdir(dest_dir):
-                print "Importing " + file
+                # print "Importing " + file
                 original_name = os.path.basename(file)  # for the database
                 new_name = str(uuid.uuid4())
 
@@ -42,11 +42,11 @@ def import_files(files):
                 gallery_conn.commit()
 
             else:
-                dlg_error = wx.MessageBox(
+                wx.MessageBox(
                     'An error has occured while importing.',
                     'Error',
                     wx.OK | wx.ICON_EXCLAMATION
-                ).ShowModal()
+                )
 
     elif type(files) is dict:
         for file, tags in files.iteritems():
@@ -54,8 +54,14 @@ def import_files(files):
             file = os.path.normpath(file)
 
             # Defensive programming
+            if not os.path.isfile(file):
+                continue
+
+            if not os.path.isdir(dest_dir):
+                print "Not a dir:", file, dest_dir
+
             if os.path.isfile(file) and os.path.isdir(dest_dir):
-                print "Importing " + file
+                # print "Importing " + file
                 original_name = os.path.basename(file)  # for the database
                 new_name = str(uuid.uuid4())
 
@@ -92,8 +98,8 @@ def import_files(files):
                     tagging.tag_file(file_id, tag_name)
 
             else:
-                dlg_error = wx.MessageBox(
+                wx.MessageBox(
                     'An error has occured while importing.',
                     'Error',
                     wx.OK | wx.ICON_EXCLAMATION
-                ).ShowModal()
+                )

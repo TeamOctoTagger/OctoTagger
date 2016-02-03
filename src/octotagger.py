@@ -20,11 +20,15 @@ import taglist
 import taggingview
 import export
 import os
+import sys
 import re
+import subprocess
+import shutil
 
 # import create_folders
 
 # TODO: Many things don't work at all in Windows right now for some reason...
+# TODO: Smoother transition betwenn tagging mode and overview
 
 
 class MainWindow(wx.Frame):
@@ -106,6 +110,11 @@ class MainWindow(wx.Frame):
             "&Start tagging mode",
             "Enter the tagging mode"
         )
+        toolRefreshThumbnails = toolmenu.Append(
+            wx.ID_ANY,
+            "&Refresh thumbnails",
+            "Regenerate all existing thumbnail. Could take a while."
+        )
         toolmenu.AppendSeparator()
         toolResetCurrentDatabase = toolmenu.Append(
             wx.ID_ANY,
@@ -174,6 +183,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_reset, toolResetCurrentDatabase)
         self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
         self.Bind(wx.EVT_MENU, self.on_delete, tool_delete_database)
+        self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, toolRefreshThumbnails)
         self.Bind(wx.EVT_MENU, self.on_start_import, fileImportFiles)
         self.Bind(wx.EVT_MENU, self.on_direct_import, fileDirectImportFiles)
         self.Bind(wx.EVT_MENU, self.OnManual, helpManual)
@@ -199,7 +209,7 @@ class MainWindow(wx.Frame):
             self.toolStartTaggingMode,
         )
 
-        self.Bind(wx.EVT_CHAR_HOOK, self.OnKey)
+        # self.Bind(wx.EVT_CHAR_HOOK, self.OnKey)
 
         self.Bind(
             itemview.EVT_SELECTION_CHANGE,
@@ -310,6 +320,32 @@ class MainWindow(wx.Frame):
         self.lb_pan = tag_list_panel
         self.lb_sz = tag_list_panel_sz
         self.update_tag_list()
+
+        # Key bindings
+        # TODO: Are the manual IDs really a good idea?
+        f2_id = 5050
+        ctrl_a_id = 5051
+        delete_id = 5052
+        escape_id = 5053
+        left_id = 5054
+        right_id = 5055
+        self.Bind(wx.EVT_MENU, self.RenameItem, id=f2_id)
+        self.Bind(wx.EVT_MENU, self.OnCtrlA, id=ctrl_a_id)
+        self.Bind(wx.EVT_MENU, self.RemoveItem, id=delete_id)
+        self.Bind(wx.EVT_MENU, self.OnEscape, id=escape_id)
+        self.Bind(wx.EVT_MENU, self.OnLeft, id=left_id)
+        self.Bind(wx.EVT_MENU, self.OnRight, id=right_id)
+
+        self.accel_tbl = wx.AcceleratorTable([
+            (wx.ACCEL_NORMAL, wx.WXK_F2, f2_id),
+            (wx.ACCEL_NORMAL, wx.WXK_F1, helpManual.GetId()),
+            (wx.ACCEL_CTRL, ord('A'), ctrl_a_id),
+            (wx.ACCEL_NORMAL, wx.WXK_DELETE, delete_id),
+            (wx.ACCEL_NORMAL, wx.WXK_ESCAPE, escape_id),
+            (wx.ACCEL_NORMAL, wx.WXK_LEFT, left_id),
+            (wx.ACCEL_NORMAL, wx.WXK_RIGHT, right_id),
+        ])
+        self.SetAcceleratorTable(self.accel_tbl)
 
         self.SetSizer(self.main_box)
         self.Layout()
@@ -466,6 +502,7 @@ class MainWindow(wx.Frame):
         self.mainPan.SetItems(folders)
         self.Refresh()
         self.Layout()
+        self.mainPan.SetFocus()
 
     def on_show_tagged(self, e):
         self.mode = "overview"
@@ -577,6 +614,7 @@ class MainWindow(wx.Frame):
         self.start_overview()
 
     def on_query_text(self, e):
+        # FIXME: Some weird behaviour
 
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems():
@@ -645,7 +683,6 @@ class MainWindow(wx.Frame):
                     self.temp_file_tags[item].append(tag_id)
 
             else:
-                # FIXME tag not created if necessary?
                 tagging.tag_file(item, tag)
 
         self.update_tag_list()
@@ -685,6 +722,7 @@ class MainWindow(wx.Frame):
         self.mainPan.SetItems(items)
         self.Refresh()
         self.Layout()
+        self.mainPan.SetFocus()
 
     def on_selection_change(self, event=None):
 
@@ -728,6 +766,9 @@ class MainWindow(wx.Frame):
                     tag_names.append(tagging.tag_id_to_name(tag_id))
 
                 item_tags[item] = tag_names
+
+        else:
+            return
 
         self.lb.CheckAll(wx.CHK_UNCHECKED)
 
@@ -1056,11 +1097,6 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
-    def OnFocus(self, event):
-        print "foxus"
-        print event.GetWindow()
-        print event.GetEventObject()
-
     def OnMaximize(self, e):
 
         if self.mode == "tagging":
@@ -1073,49 +1109,39 @@ class MainWindow(wx.Frame):
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
 
+    def OnRefreshThumbnails(self, e):
+        gallery_dir = database.get_current_gallery("directory")
+        thumbnails = os.path.join(gallery_dir, "thumbnails")
+        temp = os.path.join(thumbnails, "temp")
+
+        shutil.rmtree(thumbnails)
+        os.makedirs(temp)
+
     # Key events
 
-    def OnKey(self, e):
-        if self.renaming:
-            e.Skip()
+    def OnEscape(self, event):
+        if self.mode == "tagging":
+            self.mainPan.OnExit()
+
+    def OnRight(self, event):
+        if self.mode == "tagging":
+            self.mainPan.DisplayNext()
+
+    def OnLeft(self, event):
+        if self.mode == "tagging":
+            self.mainPan.DisplayPrev()
+
+    def OnCtrlA(self, event):
+        if self.mode not in ["overview", "import", "folder"]:
             return
 
-        if self.mode == "tagging":
-            if e.GetKeyCode() == wx.WXK_RIGHT:
-                self.mainPan.DisplayNext()
-            elif e.GetKeyCode() == wx.WXK_LEFT:
-                self.mainPan.DisplayPrev()
-            elif e.GetKeyCode() == wx.WXK_ESCAPE:
-                self.mainPan.OnExit()
-            elif e.GetKeyCode() == wx.WXK_DELETE:
-                self.RemoveItem()
-            elif e.GetKeyCode() == wx.WXK_F2:
-                self.RenameItem()
-        elif self.mode in ["overview", "import", "folder"]:
-            try:
-                char = chr(e.GetKeyCode())
-            except:
-                char = None
+        if not self.mainPan.IsSelectedAll():
+            self.mainPan.SetSelectedAll(True)
+        else:
+            self.mainPan.SetSelectedAll(False)
 
-            if char:
-                if char == "A" and e.ControlDown():
-                    if not self.mainPan.IsSelectedAll():
-                        self.mainPan.SetSelectedAll(True)
-                    else:
-                        self.mainPan.SetSelectedAll(False)
-
-                    self.select_tags()
-
-            if e.GetKeyCode() == wx.WXK_DELETE:
-                self.RemoveItem()
-            elif e.GetKeyCode() == wx.WXK_F2:
-                self.RenameItem()
-
-        elif self.mode == "folder":
-            if e.GetKeyCode() == wx.WXK_DELETE:
-                self.RemoveItem()
-
-        e.Skip()
+        self.select_tags()
+        event.Skip()
 
     def on_double_click_item(self, e):
         if self.mode == "overview":
@@ -1164,6 +1190,12 @@ class MainWindow(wx.Frame):
                     ("Edit this " + kind + " folder.")
                 )
                 self.Bind(wx.EVT_MENU, self.EditFolder, item_edit)
+                item_open = menu.Append(
+                    wx.ID_ANY,
+                    "Open",
+                    "Open file in with its default application."
+                )
+                self.Bind(wx.EVT_MENU, self.OpenItem, item_open)
                 # OPTIONAL: Open in file manager option
                 item_remove = menu.Append(
                     wx.ID_ANY,
@@ -1191,6 +1223,12 @@ class MainWindow(wx.Frame):
                 items = self.mainPan.GetSelectedItems()
 
                 if len(items) == 1:
+                    item_open = menu.Append(
+                        wx.ID_ANY,
+                        "Open",
+                        "Open file in with its default application."
+                    )
+                    self.Bind(wx.EVT_MENU, self.OpenItem, item_open)
                     item_rename = menu.Append(
                         wx.ID_ANY,
                         "Rename",
@@ -1223,6 +1261,12 @@ class MainWindow(wx.Frame):
 
         elif self.mode == "tagging":
 
+            item_open = menu.Append(
+                wx.ID_ANY,
+                "Open",
+                "Open file in with its default application."
+            )
+            self.Bind(wx.EVT_MENU, self.OpenItem, item_open)
             item_rename = menu.Append(
                 wx.ID_ANY,
                 "Rename",
@@ -1235,7 +1279,6 @@ class MainWindow(wx.Frame):
                 "Delete this file (this can not be undone)."
             )
             self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
-
             item_restore = menu.Append(
                 wx.ID_ANY,
                 "Restore",
@@ -1270,8 +1313,15 @@ class MainWindow(wx.Frame):
                     "Import all files that have at least one tag assigned."
                 )
                 self.Bind(wx.EVT_MENU, self.ImportTagged, item_import_tagged)
+            elif len(items) == 1:
+                item_open = menu.Append(
+                    wx.ID_ANY,
+                    "Open",
+                    "Open file in with its default application."
+                )
+                self.Bind(wx.EVT_MENU, self.OpenItem, item_open)
 
-            elif len(items) >= 1:
+            if len(items) >= 1:
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Remove from import",
@@ -1291,18 +1341,22 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def ImportAll(self, event):
+        # TODO: Tell user to wait...
+        self.cpane.EnableAll(False)
         import_files.import_files(self.temp_file_tags)
+        self.start_overview(warn_import=False)
+        self.cpane.EnableAll(True)
 
     def ImportTagged(self, event):
-
+        self.cpane.EnableAll(False)
         tagged_files = {}
         for item, tags in self.temp_file_tags.iteritems():
             if len(tags) > 0:
                 tagged_files[item] = tags
 
         import_files.import_files(tagged_files)
-
         self.start_overview(warn_import=False)
+        self.cpane.EnableAll(True)
 
     def EditFolder(self, event=None):
         if not self.mode == "folder":
@@ -1329,22 +1383,66 @@ class MainWindow(wx.Frame):
 
         self.on_start_folder_mode()
 
+    def OpenItem(self, event=None):
+        items = self.GetSelectedItems()
+        if len(items) != 1:
+            if self.mode == "import":
+                paths = self.mainPan.GetSelectedItems()
+                if len(paths) == 1 and os.path.isdir(paths[0]):
+                    item = paths[0]
+                else:
+                    return
+            else:
+                return
+        else:
+            item = items[0]
+
+        if self.mode in ["overview", "tagging"]:
+
+            cursor = database.get_current_gallery("connection").cursor()
+            cursor.execute(
+                ("SELECT uuid FROM file WHERE pk_id = ?"),
+                (item,)
+            )
+            uuid = cursor.fetchone()[0]
+
+            path = os.path.join(
+                database.get_current_gallery("directory"),
+                "files",
+                uuid
+            )
+
+        elif self.mode in ["folder", "import"]:
+            path = item
+        else:
+            return
+
+        # TODO: Test on Windows and OSX
+        if sys.platform.startswith('darwin'):
+            subprocess.call(('open', path))
+        elif os.name == 'nt':
+            os.startfile(path)
+        elif os.name == 'posix':
+            subprocess.call(('xdg-open', path))
+
     def RenameItem(self, event=None):
-        self.renaming = True
         if self.mode == "tagging":
             old_name = self.mainPan.GetName()
-        else:
+        elif self.mode == "overview":
             items = self.GetSelectedItems()
-            if items:
+            if len(items) == 1:
                 item = items[0]
             else:
                 return
             for child in self.mainPan.GetChildren():
                 if child is not self.topbar and child.GetPath() == item:
                     old_name = child.GetText()
+        else:
+            return
 
         if not old_name:
             return
+
         dlg = wx.TextEntryDialog(
             self,
             "Enter a new name:",
@@ -1352,12 +1450,11 @@ class MainWindow(wx.Frame):
         )
         dlg.ShowModal()
         new_name = dlg.GetValue()
+        dlg.Destroy()
         output.rename_file(self.GetSelectedItems()[0], new_name)
 
-        if self.mode == "overview":
+        if self.mode == "overview" and old_name != new_name:
             self.start_overview()
-
-        self.renaming = False
 
     def RestoreFiles(self, files, event=None):
 
@@ -1421,7 +1518,6 @@ class MainWindow(wx.Frame):
             items = self.mainPan.GetSelectedItems()
             advanced_ids = []
             gallery_ids = []
-
             for item in items:
                 obj = self.mainPan.GetItemFromPath(item)
                 if obj.IsGalleryFolder():

@@ -257,7 +257,6 @@ class ItemView(wx.ScrolledWindow):
                             'is_gf': is_gf,
                         })
                     elif os.path.isfile(item):
-                        print "file"
                         result.append({
                             'name': name,
                             'path': item,
@@ -299,11 +298,16 @@ class ItemView(wx.ScrolledWindow):
         return result
 
     def GetItemFromPath(self, path):
-        items = self.sizer.GetChildren()
+        try:
+            path = int(path)
+        except:
+            pass
 
+        items = self.GetChildren()
         for item in items:
-            if item.GetWindow().GetPath() == path:
-                return item.GetWindow()
+            if item != self.GetParent().topbar:
+                if item.GetPath() == path:
+                    return item
 
     def IsSelectedAll(self):
         items = self.sizer.GetChildren()
@@ -317,6 +321,21 @@ class ItemView(wx.ScrolledWindow):
         items = self.sizer.GetChildren()
         for item in items:
             item.GetWindow().SetSelected(selected)
+
+    def RemoveItem(self, paths):
+        # FIXME: Update item view correctly
+        for path in paths:
+            item = self.GetItemFromPath(path)
+            print path, item
+            self.sizer.Remove(item)
+            item.Destroy()
+
+        self.last_clicked = None
+        self.Layout()
+
+        for item in self.items:
+            if item["path"] in paths:
+                self.items.remove(item)
 
 
 class _ThumbnailThread(threading.Thread):
@@ -393,6 +412,11 @@ class Item(wx.Panel):
         )
 
         self.Layout()
+
+        # ToolTip
+        tooltip = wx.ToolTip(name)
+        tooltip.SetDelay(1000)
+        self.SetToolTip(tooltip)
 
         # events
 

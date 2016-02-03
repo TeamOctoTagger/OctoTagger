@@ -8,6 +8,7 @@ Interface for getting, creating, deleting and switching the gallery database, as
 import sqlite3
 import os
 import shutil
+import output
 
 sys_db_file = './system.db'
 DEFAULT_GALLERY_PATH = os.path.expanduser("~/OctoTagger")
@@ -161,18 +162,21 @@ def switch_gallery(id):
 
 
 def reset_gallery(id):
+    # TODO: connect with output functions
     gallery_conn = get_gallery(id, "connection")
     cursor = gallery_conn.cursor()
 
-    query_file_has_tag = "DELETE FROM file_has_tag"
-    query_tag = "DELETE FROM tag"
-    query_folder = "DELETE FROM folder"
+    cursor.execute("SELECT pk_id FROM folder")
+    folders = cursor.fetchall()
 
-    cursor.execute(query_file_has_tag)
-    cursor.execute(query_tag)
-    cursor.execute(query_folder)
+    cursor.execute("SELECT pk_id FROM tag")
+    tags = cursor.fetchall()
 
-    gallery_conn.commit()
+    for folder in folders:
+        output.delete_folder(folder[0])
+
+    for tag in tags:
+        output.delete_tag(tag[0])
 
 
 def delete_gallery(id):
