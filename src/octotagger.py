@@ -725,7 +725,6 @@ class MainWindow(wx.Frame):
         self.mainPan.SetFocus()
 
     def on_selection_change(self, event=None):
-
         selection = len(self.GetSelectedItems())
         if selection > 2:
             selection = 2
@@ -738,7 +737,6 @@ class MainWindow(wx.Frame):
 
         if self.mode == "folder":
             return
-
         else:
             items = self.GetSelectedItems()
 
@@ -757,7 +755,7 @@ class MainWindow(wx.Frame):
                         tag_names.append(tagging.tag_id_to_name(tag_id))
 
                     item_tags[item] = tag_names
-        elif self.mode == "overview":
+        elif self.mode in ["overview", "tagging"]:
             item_tags = {}
             for item in items:
                 tag_ids = tagging.get_tags(item)
@@ -766,7 +764,6 @@ class MainWindow(wx.Frame):
                     tag_names.append(tagging.tag_id_to_name(tag_id))
 
                 item_tags[item] = tag_names
-
         else:
             return
 
@@ -1126,10 +1123,12 @@ class MainWindow(wx.Frame):
     def OnRight(self, event):
         if self.mode == "tagging":
             self.mainPan.DisplayNext()
+            self.select_tags()
 
     def OnLeft(self, event):
         if self.mode == "tagging":
             self.mainPan.DisplayPrev()
+            self.select_tags()
 
     def OnCtrlA(self, event):
         if self.mode not in ["overview", "import", "folder"]:
@@ -1389,6 +1388,7 @@ class MainWindow(wx.Frame):
             if self.mode == "import":
                 paths = self.mainPan.GetSelectedItems()
                 if len(paths) == 1 and os.path.isdir(paths[0]):
+                    # FIXME: Not always correct?
                     item = paths[0]
                 else:
                     return
