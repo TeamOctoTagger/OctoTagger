@@ -6,7 +6,7 @@ import wx
 
 class ContextPane(wx.Panel):
 
-    def __init__(self, parent, size):
+    def __init__(self, parent, size, octotagger):
         wx.Panel.__init__(self, parent, size=size)
 
         # 0 = No selection
@@ -14,7 +14,9 @@ class ContextPane(wx.Panel):
         # 2 = Multiple selection
         self.selection = 0
         self.mode = "overview"
+        self.octotagger = octotagger
 
+        self.Bind(wx.EVT_SIZE, self.OnResize)
         self.InitUI()
 
     def InitUI(self):
@@ -43,7 +45,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().on_resume_overview_mode,
+            self.octotagger.on_resume_overview_mode,
             exit_tagging_view,
         )
         buttons["exit_tagging_view"] = exit_tagging_view
@@ -55,7 +57,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().OnCreateOutputFolder,
+            self.octotagger.OnCreateOutputFolder,
             create_folder
         )
         buttons["create_folder"] = create_folder
@@ -67,7 +69,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().CreateFolderFromExpression,
+            self.octotagger.CreateFolderFromExpression,
             create_folder_from_expr,
         )
         buttons["create_folder_from_expr"] = create_folder_from_expr
@@ -77,7 +79,7 @@ class ContextPane(wx.Panel):
             self,
             label="Edit folder"
         )
-        self.Bind(wx.EVT_BUTTON, self.GetParent().EditFolder, item_edit)
+        self.Bind(wx.EVT_BUTTON, self.octotagger.EditFolder, item_edit)
         buttons["item_edit"] = item_edit
         self.sizer.Add(item_edit, 0, flag=wx.EXPAND)
 
@@ -85,7 +87,7 @@ class ContextPane(wx.Panel):
             self,
             label="Abort import"
         )
-        self.Bind(wx.EVT_BUTTON, self.GetParent().start_overview, abort_import)
+        self.Bind(wx.EVT_BUTTON, self.octotagger.start_overview, abort_import)
         buttons["abort_import"] = abort_import
         self.sizer.Add(abort_import, 0, flag=wx.EXPAND)
 
@@ -93,7 +95,7 @@ class ContextPane(wx.Panel):
             self,
             label="Import all files"
         )
-        self.Bind(wx.EVT_BUTTON, self.GetParent().ImportAll, import_all)
+        self.Bind(wx.EVT_BUTTON, self.octotagger.ImportAll, import_all)
         buttons["import_all"] = import_all
         self.sizer.Add(import_all, 0, flag=wx.EXPAND)
 
@@ -101,7 +103,7 @@ class ContextPane(wx.Panel):
             self,
             label="Import tagged files"
         )
-        self.Bind(wx.EVT_BUTTON, self.GetParent().ImportTagged, import_tagged)
+        self.Bind(wx.EVT_BUTTON, self.octotagger.ImportTagged, import_tagged)
         buttons["import_tagged"] = import_tagged
         self.sizer.Add(import_tagged, 0, flag=wx.EXPAND)
 
@@ -111,7 +113,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().RemoveItem,
+            self.octotagger.RemoveItem,
             item_remove_import,
         )
         buttons["item_remove_import"] = item_remove_import
@@ -121,7 +123,7 @@ class ContextPane(wx.Panel):
             self,
             label="Remove"
         )
-        self.Bind(wx.EVT_BUTTON, self.GetParent().RemoveItem, item_remove)
+        self.Bind(wx.EVT_BUTTON, self.octotagger.RemoveItem, item_remove)
         buttons["item_remove"] = item_remove
         self.sizer.Add(item_remove, 0, flag=wx.EXPAND)
 
@@ -131,7 +133,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().RestoreSelected,
+            self.octotagger.RestoreSelected,
             item_restore,
         )
         buttons["item_restore"] = item_restore
@@ -143,7 +145,7 @@ class ContextPane(wx.Panel):
         )
         self.Bind(
             wx.EVT_BUTTON,
-            self.GetParent().RenameItem,
+            self.octotagger.RenameItem,
             item_rename,
         )
         buttons["item_rename"] = item_rename
@@ -215,13 +217,17 @@ class ContextPane(wx.Panel):
         self.Layout()
 
     def SelectAll(self, event):
-        self.GetParent().mainPan.SetSelectedAll(True)
-        self.GetParent().on_selection_change()
+        self.octotagger.mainPan.SetSelectedAll(True)
+        self.octotagger.on_selection_change()
 
     def DeselectAll(self, event):
-        self.GetParent().mainPan.SetSelectedAll(False)
-        self.GetParent().on_selection_change()
+        self.octotagger.mainPan.SetSelectedAll(False)
+        self.octotagger.on_selection_change()
 
     def EnableAll(self, enable):
         for child in self.GetChildren():
             child.Enable(enable)
+
+    def OnResize(self, event):
+        self.Refresh()
+        self.Layout()
