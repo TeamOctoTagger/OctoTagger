@@ -151,29 +151,25 @@ class CreateOutputFolder(wx.Dialog):
         sizer.AddGrowableRow(4)
         panel.SetSizer(sizer)
 
-        self.init_symlink()
+        self.InitData()
 
-    def init_symlink(self):
-        # Init variable
-        use_softlink = True
-
+    def InitData(self):
         # Get connection
         sys_conn = database.get_sys_db()
         cursor = sys_conn.cursor()
 
         # Get setting
-        query_symlink = "SELECT use_softlink FROM settings"
-        cursor.execute(query_symlink)
-        result = cursor.fetchall()
-        for setting in result:
-            if result[0] == 1:
-                use_softlink = True
-            else:
-                use_softlink = False
+        cursor.execute(
+            "SELECT use_softlink, default_folder_path FROM settings"
+        )
+        settings = cursor.fetchone()
+        use_softlink = (settings[0] == 1)
+        default_folder_path = settings[1]
 
         # Apply setting to UI
         self.rb_softlinks.SetValue(use_softlink)
         self.rb_hardlinks.SetValue(not use_softlink)
+        self.tc_directory.SetValue(default_folder_path)
 
     def on_browse(self, e):
         dlg_browse = wx.DirDialog(self,

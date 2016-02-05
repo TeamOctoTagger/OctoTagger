@@ -170,7 +170,6 @@ class EditGalleryFolder(wx.Dialog):
         for tag_id in tag_ids:
             tag_names.append(tagging.tag_id_to_name(tag_id).replace("_", " "))
 
-        print tag_names
         self.lb.SetCheckedStrings(tag_names)
         self.checked_tags = tag_names
 
@@ -197,10 +196,11 @@ class EditGalleryFolder(wx.Dialog):
     def OnOk(self, e):
         self.SaveSettings()
 
-    def OnClose(self, e):
+    def OnClose(self, event):
         self.Destroy()
 
     def SaveSettings(self):
+        # FIXME: Change name not working (under windows)?
 
         # Register folders
         # Get gallery connection
@@ -242,12 +242,13 @@ class EditGalleryFolder(wx.Dialog):
 
         if name != self.name or location != self.location:
             if os.path.isdir(os.path.join(location, name)):
+                print "koko made NI"
                 wx.MessageBox(
                     ("Location or target folder already exists, "
                      "remove it first."),
                     "Error",
                 )
-            return
+                return
 
         if name != self.name:
             output.rename(self.folder_id, False, name)

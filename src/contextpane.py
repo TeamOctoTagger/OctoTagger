@@ -63,6 +63,18 @@ class ContextPane(wx.Panel):
         buttons["create_folder"] = create_folder
         self.sizer.Add(create_folder, 0, flag=wx.EXPAND)
 
+        return_overview = wx.Button(
+            self,
+            label="Return to overview"
+        )
+        self.Bind(
+            wx.EVT_BUTTON,
+            self.octotagger.start_overview,
+            return_overview
+        )
+        buttons["return_overview"] = return_overview
+        self.sizer.Add(return_overview, 0, flag=wx.EXPAND)
+
         create_folder_from_expr = wx.Button(
             self,
             label="Create folder from current expression"
@@ -118,6 +130,18 @@ class ContextPane(wx.Panel):
         )
         buttons["item_remove_import"] = item_remove_import
         self.sizer.Add(item_remove_import, 0, flag=wx.EXPAND)
+
+        item_open = wx.Button(
+            self,
+            label="Open"
+        )
+        self.Bind(
+            wx.EVT_BUTTON,
+            self.octotagger.OpenItem,
+            item_open,
+        )
+        buttons["item_open"] = item_open
+        self.sizer.Add(item_open, 0, flag=wx.EXPAND)
 
         item_remove = wx.Button(
             self,
@@ -179,6 +203,7 @@ class ContextPane(wx.Panel):
 
             if selection == 1:
                 self.Insert("item_rename")
+                self.Insert("item_open")
 
             if selection >= 1:
                 self.Insert("item_remove")
@@ -189,6 +214,7 @@ class ContextPane(wx.Panel):
 
         elif mode == "tagging":
             self.Insert("exit_tagging_view")
+            self.Insert("item_open")
             self.Insert("item_rename")
             self.Insert("item_remove")
             self.Insert("item_restore")
@@ -197,8 +223,10 @@ class ContextPane(wx.Panel):
             self.Insert("select_all")
             self.Insert("deselect_all")
             self.Insert("create_folder")
+            self.Insert("return_overview")
 
             if selection == 1:
+                self.Insert("item_open")
                 self.Insert("item_edit")
 
             if selection >= 1:

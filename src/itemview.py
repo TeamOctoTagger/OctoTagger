@@ -23,9 +23,12 @@ class ItemView(wx.ScrolledWindow):
             parent,
             style=wx.VSCROLL,
         )
-        # Bright vs Dark theme
-        # self.SetBackgroundColour("#c1c8c5")
-        self.SetBackgroundColour("#444444")
+
+        self.dark_theme = self.GetParent().dark_theme
+        if self.dark_theme:
+            self.SetBackgroundColour("#444444")
+        else:
+            self.SetBackgroundColour("#c1c8c5")
 
         self.mainsizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer = wx.WrapSizer(wx.HORIZONTAL)
@@ -362,6 +365,7 @@ class Item(wx.Panel):
         super(Item, self).__init__(parent)
 
         self.path = path
+        self.thumb = thumb
         self.is_gf = is_gf
         self.selected = False
 
@@ -384,8 +388,7 @@ class Item(wx.Panel):
         )
 
         self.Bind(EVT_THUMBNAIL_LOAD, self.OnThumbnailLoad)
-        self.thumb_thread = _ThumbnailThread(self, path, thumb)
-        self.thumb_thread.start()
+        self.LoadThumbnail()
 
         self.sizer.Add(
             self.bitmap,
@@ -404,8 +407,8 @@ class Item(wx.Panel):
         )
         self.text.SetMaxSize((THUMBNAIL_SIZE[0], -1))
 
-        # For dark theme
-        self.text.SetForegroundColour("#FFFFFF")
+        if self.GetParent().dark_theme:
+            self.text.SetForegroundColour("#FFFFFF")
 
         self.sizer.Add(
             self.text,
@@ -482,3 +485,7 @@ class Item(wx.Panel):
             modifiers=modifiers
         )
         wx.PostEvent(self, new_event)
+
+    def LoadThumbnail(self):
+        self.thumb_thread = _ThumbnailThread(self, self.path, self.thumb)
+        self.thumb_thread.start()

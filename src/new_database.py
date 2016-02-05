@@ -6,6 +6,7 @@ from os.path import expanduser
 import os
 import database
 
+
 class NewDatabase(wx.Dialog):
 
     """Extending Dialog"""
@@ -14,7 +15,7 @@ class NewDatabase(wx.Dialog):
         super(NewDatabase, self).__init__(*args, **kw)
 
         self.SetSize((450, 200))
-        self.SetTitle("New Database")
+        self.SetTitle("New Gallery")
         self.init_ui()
 
     def init_ui(self):
@@ -91,6 +92,15 @@ class NewDatabase(wx.Dialog):
         sizer.AddGrowableCol(1)
         sizer.AddGrowableRow(2)
         panel.SetSizer(sizer)
+        self.InitData()
+
+    def InitData(self):
+        cursor = database.get_sys_db().cursor()
+        cursor.execute(
+            "SELECT default_gallery_path FROM settings"
+        )
+        default_gallery_path = cursor.fetchone()[0]
+        self.tc_directory.SetValue(default_gallery_path)
 
     def on_browse(self, e):
         dlg_browse = wx.DirDialog(self,

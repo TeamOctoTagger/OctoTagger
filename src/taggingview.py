@@ -9,9 +9,8 @@ import itemview
 import thumbnail
 import threading
 
+# TODO: Fully implementd RemoveItem
 # TODO: Behaviour when all files get deleted
-# OPTIONAL: Animated gif support,
-# OPTIONAL: open file with application, preload next files
 
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
@@ -34,45 +33,52 @@ class TaggingView(wx.Panel):
         self.current_buffer = 0
         self.first = True
 
-        self.init_ui()
+        self.InitUI()
 
-    def init_ui(self):
+    def InitUI(self):
+
         self.imgPan = wx.Panel(self)
 
+        tag_topbar = wx.Panel(self)
+        tag_topbar_sz = wx.BoxSizer(wx.HORIZONTAL)
+        tag_topbar.SetSizer(tag_topbar_sz)
+
         self.text = wx.StaticText(
-            self,
+            tag_topbar,
             label="file",
             style=(
                 wx.ALIGN_CENTRE_HORIZONTAL |
-                wx.ST_ELLIPSIZE_END |
+                wx.ALIGN_CENTRE_VERTICAL |
+                wx.ST_ELLIPSIZE_MIDDLE |
                 wx.ST_NO_AUTORESIZE |
                 wx.SIMPLE_BORDER
             )
         )
-        self.text.SetForegroundColour("#FFFFFF")
 
         self.Image = wx.StaticBitmap(self.imgPan)
 
-        # self.SetBackgroundColour("#c1c8c5")
-        # self.imgPan.SetBackgroundColour("#c1c8c5")
-        self.SetBackgroundColour("#444444")
-        self.imgPan.SetBackgroundColour("#444444")
+        if self.GetParent().dark_theme:
+            tag_topbar.SetBackgroundColour("#333333")
+            self.text.SetForegroundColour("#FFFFFF")
+            self.SetBackgroundColour("#444444")
+            self.imgPan.SetBackgroundColour("#444444")
+        else:
+            self.SetBackgroundColour("#c1c8c5")
+            self.imgPan.SetBackgroundColour("#c1c8c5")
 
-        topBox = wx.BoxSizer(wx.HORIZONTAL)
-
-        btn_prev = wx.Button(self, -1, "<")
+        btn_prev = wx.Button(tag_topbar, -1, "<")
         btn_prev.Bind(wx.EVT_BUTTON, self.DisplayPrev)
 
-        btn_next = wx.Button(self, -1, ">")
+        btn_next = wx.Button(tag_topbar, -1, ">")
         btn_next.Bind(wx.EVT_BUTTON, self.DisplayNext)
 
-        btn_exit = wx.Button(self, -1, "X")
-        btn_exit.Bind(wx.EVT_BUTTON, self.OnExit)
+        # btn_exit = wx.Button(tag_topbar, -1, "X")
+        # btn_exit.Bind(wx.EVT_BUTTON, self.OnExit)
 
-        topBox.Add(btn_prev, 0, wx.EXPAND)
-        topBox.Add(self.text, 1, wx.EXPAND)
-        topBox.Add(btn_next, 0, wx.EXPAND)
-        topBox.Add(btn_exit, 0, wx.EXPAND)
+        tag_topbar_sz.Add(btn_prev, 0, wx.EXPAND)
+        tag_topbar_sz.Add(self.text, 1, wx.CENTER | wx.ALIGN_CENTRE_VERTICAL)
+        tag_topbar_sz.Add(btn_next, 0, wx.EXPAND)
+        # tag_topbar_sz.Add(btn_exit, 0, wx.EXPAND)
 
         imgPan_sz = wx.BoxSizer(wx.VERTICAL)
         imgPan_sz.Add(
@@ -83,7 +89,7 @@ class TaggingView(wx.Panel):
         self.imgPan.SetSizer(imgPan_sz)
 
         mainBox = wx.BoxSizer(wx.VERTICAL)
-        mainBox.Add(topBox, 0, wx.EXPAND)
+        mainBox.Add(tag_topbar, 0, wx.EXPAND)
         mainBox.Add(self.imgPan, 1, wx.ALL | wx.EXPAND)
 
         self.UpdateLabel()
@@ -254,8 +260,8 @@ class TaggingView(wx.Panel):
         return self.get_file(self.current_file)[0]
 
     def RemoveItem(self, item):
-        self.DisplayNext()
         self.files.remove(item)
+        self.DisplayNext()
 
     def OnMouseRight(self, event):
         wx.PostEvent(self, itemview.RightClickItemEvent(self.GetId()))

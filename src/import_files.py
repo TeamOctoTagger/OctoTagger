@@ -21,6 +21,12 @@ def import_files(files):
     cursor = gallery_conn.cursor()
     dest_dir = os.path.join(database.get_current_gallery("directory"), "files")
 
+    sys_cursor = database.get_sys_db().cursor()
+    sys_cursor.execute(
+        "SELECT import_copy FROM settings"
+    )
+    import_copy = (sys_cursor.fetchone()[0] == 1)
+
     if type(files) is list:
 
         for file in files:
@@ -35,7 +41,10 @@ def import_files(files):
                     new_name = str(uuid.uuid4())
 
                 dest = os.path.join(dest_dir, new_name)
-                shutil.copy(file, dest)
+                if import_copy:
+                    shutil.copy(file, dest)
+                else:
+                    shutil.move(file, dest)
 
                 query_insert_file = "INSERT INTO file (file_name, uuid) VALUES (\'%s\', \'%s\')" % (original_name, new_name)
                 cursor.execute(query_insert_file)
@@ -69,7 +78,10 @@ def import_files(files):
                     new_name = str(uuid.uuid4())
 
                 dest = os.path.join(dest_dir, new_name)
-                shutil.copy(file, dest)
+                if import_copy:
+                    shutil.copy(file, dest)
+                else:
+                    shutil.move(file, dest)
 
                 query_insert_file = (
                     "INSERT INTO file (file_name, uuid) VALUES (\'%s\', \'%s\')"

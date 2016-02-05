@@ -25,10 +25,8 @@ import re
 import subprocess
 import shutil
 
-# import create_folders
-
-# TODO: Many things don't work at all in Windows right now for some reason...
-# TODO: Smoother transition betwenn tagging mode and overview
+# TODO: Make everything more efficient, prevent unresponsive moments
+# TODO: Prevent default gallery from being deleted
 
 
 class MainWindow(wx.Frame):
@@ -47,8 +45,13 @@ class MainWindow(wx.Frame):
         # Map of temporary files and tags, for import mode
         self.temp_file_tags = {}
 
-        # Needed for preventing bug
-        self.renaming = False
+        # Application theme
+        cursor = database.get_sys_db().cursor()
+        cursor.execute("SELECT use_dark_theme FROM settings")
+        if cursor.fetchone()[0] == 1:
+            self.dark_theme = True
+        else:
+            self.dark_theme = False
 
         # A StatusBar in the bottom of the window
         self.CreateStatusBar()
@@ -78,12 +81,12 @@ class MainWindow(wx.Frame):
                                  )
 
         self.filemenu.AppendSeparator()
-        fileImportFiles = self.filemenu.Append(
+        self.fileImportFiles = self.filemenu.Append(
             wx.ID_ANY,
             "&Start file import process...",
             "Start the import process of files and folders"
         )
-        fileDirectImportFiles = self.filemenu.Append(
+        self.fileDirectImportFiles = self.filemenu.Append(
             wx.ID_ANY,
             "&Direct file import",
             "Import files directly, without going through the process"
@@ -187,8 +190,12 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
         self.Bind(wx.EVT_MENU, self.on_delete, tool_delete_database)
         self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, toolRefreshThumbnails)
-        self.Bind(wx.EVT_MENU, self.on_start_import, fileImportFiles)
-        self.Bind(wx.EVT_MENU, self.on_direct_import, fileDirectImportFiles)
+        self.Bind(wx.EVT_MENU, self.on_start_import, self.fileImportFiles)
+        self.Bind(
+            wx.EVT_MENU,
+            self.on_direct_import,
+            self.fileDirectImportFiles,
+        )
         self.Bind(wx.EVT_MENU, self.OnManual, helpManual)
         self.Bind(wx.EVT_MENU, self.OnExit, fileExit)
 
@@ -305,7 +312,8 @@ class MainWindow(wx.Frame):
         self.mainPan.mainsizer.Insert(0, self.topbar, 0, wx.EXPAND)
         self.topbar.Show(False)
 
-        self.cpane = contextpane.ContextPane(left_panel, size=(-1, 200), octotagger=self)
+        self.cpane = contextpane.ContextPane(
+            left_panel, size=(-1, 200), octotagger=self)
 
         left_panel_sz.Add(tag_panel, 1, wx.EXPAND)
         left_panel_sz.Add(
@@ -362,7 +370,9 @@ class MainWindow(wx.Frame):
             self,
             "Select the folder containing the "
             "files you want to import",
-            style=wx.DD_DIR_MUST_EXIST | wx.DD_DEFAULT_STYLE)
+            style=wx.DD_DIR_MUST_EXIST | wx.DD_DEFAULT_STYLE,
+            defaultPath=os.path.expanduser("~")
+        )
 
         if dlg_import.ShowModal() == wx.ID_CANCEL:
             print "Import process aborted."
@@ -452,9 +462,13 @@ class MainWindow(wx.Frame):
             if not self.CancelImportWarning():
                 return
 
-        dlg_import = wx.FileDialog(self, "Import files", "", "",
-                                   "All files (*.*)|*.*",
-                                   wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST)
+        dlg_import = wx.FileDialog(
+            self,
+            message="Import files",
+            wildcard="All files (*.*)|*.*",
+            style=wx.FD_MULTIPLE | wx.FD_FILE_MUST_EXIST,
+            defaultDir=os.path.expanduser("~")
+        )
 
         if dlg_import.ShowModal() == wx.ID_CANCEL:
             print "Import aborted."
@@ -466,6 +480,10 @@ class MainWindow(wx.Frame):
         if self.mode == "import":
             if not self.CancelImportWarning():
                 return
+
+        elif self.mode == "tagging":
+            # TODO: Find better solution than this
+            self.on_resume_overview_mode()
 
         self.toolStartTaggingMode.Enable(enable=False)
 
@@ -509,7 +527,10 @@ class MainWindow(wx.Frame):
         self.mainPan.SetFocus()
 
     def on_show_tagged(self, e):
-        self.mode = "overview"
+        if self.mode == "tagging":
+            self.on_resume_overview_mode()
+        else:
+            self.mode = "overview"
 
         # Set items to all untagged files
         # Get gallery connection
@@ -539,7 +560,10 @@ class MainWindow(wx.Frame):
         self.Layout()
 
     def on_show_untagged(self, e):
-        self.mode = "overview"
+        if self.mode == "tagging":
+            self.on_resume_overview_mode()
+        else:
+            self.mode = "overview"
 
         # Set items to all untagged files
         # Get gallery connection
@@ -569,7 +593,14 @@ class MainWindow(wx.Frame):
         self.Layout()
 
     def start_tagging_mode(self, e=None, start_file=None):
-        self.mode = "tagging"
+        if self.mode == "tagging":
+            return
+        else:
+            self.mode = "tagging"
+
+        # Disable unavailable menu items
+        self.fileImportFiles.Enable(enable=False)
+        self.fileDirectImportFiles.Enable(enable=False)
 
         self.items = self.mainPan.GetItems()
         self.selected_items = self.mainPan.GetSelectedItems()
@@ -614,6 +645,7 @@ class MainWindow(wx.Frame):
         self.Bind(itemview.EVT_ITEM_RIGHT_CLICK, self.on_right_click_item)
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
         self.update_tag_list()
+        self.mode = "overview"
 
         self.start_overview()
 
@@ -702,6 +734,8 @@ class MainWindow(wx.Frame):
                 if not self.CancelImportWarning():
                     return
             self.topbar.Show(False)
+        elif self.mode == "tagging":
+            self.on_resume_overview_mode()
 
         self.lb.EnableAll(True)
         self.toolStartTaggingMode.Enable(enable=True)
@@ -1104,13 +1138,35 @@ class MainWindow(wx.Frame):
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
 
-    def OnRefreshThumbnails(self, e):
-        gallery_dir = database.get_current_gallery("directory")
-        thumbnails = os.path.join(gallery_dir, "thumbnails")
-        temp = os.path.join(thumbnails, "temp")
+    def OnRefreshThumbnails(self, event=None):
+        items = self.GetSelectedItems()
+        if len(items) == 0 or self.mode != "overview":
+            gallery_dir = database.get_current_gallery("directory")
+            thumbnails = os.path.join(gallery_dir, "thumbnails")
+            temp = os.path.join(thumbnails, "temp")
 
-        shutil.rmtree(thumbnails)
-        os.makedirs(temp)
+            shutil.rmtree(thumbnails)
+            os.makedirs(temp)
+
+            if self.mode == "overview":
+                for child in self.mainPan.GetChildren():
+                    if child is self.topbar:
+                        continue
+                    child.LoadThumbnail()
+
+        elif len(items) > 0 and self.mode == "overview":
+            for item in items:
+                cursor = database.get_current_gallery("connection").cursor()
+                cursor.execute(
+                    "SELECT uuid FROM file WHERE pk_id = ?",
+                    (item,)
+                )
+                uuid = cursor.fetchone()[0]
+
+                directory = database.get_current_gallery("directory")
+                thumbnail = os.path.join(directory, "thumbnails", uuid)
+                os.remove(thumbnail)
+                self.mainPan.GetItemFromPath(item).LoadThumbnail()
 
     # Key events
 
@@ -1150,7 +1206,6 @@ class MainWindow(wx.Frame):
             if os.path.isdir(item):
                 self.ChangeFolder(item)
             else:
-                # TODO (Optional): Implement tagging view?
                 print "Not a folder"
 
         elif self.mode == "folder":
@@ -1207,7 +1262,8 @@ class MainWindow(wx.Frame):
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Remove",
-                    "Remove the selected folders from the database (files remain untouched)."
+                    ("Remove the selected folders from the "
+                     "database (files remain untouched).")
                 )
                 self.Bind(wx.EVT_MENU, self.RemoveItem, item_remove)
 
@@ -1232,7 +1288,12 @@ class MainWindow(wx.Frame):
                         "Rename this files."
                     )
                     self.Bind(wx.EVT_MENU, self.RenameItem, item_rename)
-
+                item_refresh = menu.Append(
+                    wx.ID_ANY,
+                    "Refresh thumbnail",
+                    "Regenerate the thumbnail of the selected files."
+                )
+                self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, item_refresh)
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Delete",
@@ -1242,7 +1303,8 @@ class MainWindow(wx.Frame):
                 item_restore = menu.Append(
                     wx.ID_ANY,
                     "Restore",
-                    "Remove the selected files from the database and move them to the desired location."
+                    ("Remove the selected files from the database and "
+                     "move them to the desired location.")
                 )
                 self.Bind(wx.EVT_MENU, self.RestoreSelected, item_restore)
             else:
@@ -1251,10 +1313,14 @@ class MainWindow(wx.Frame):
                     item_create_folder = menu.Append(
                         wx.ID_ANY,
                         "Create folder from current expression",
-                        "Create a special output folder from the current expression."
+                        ("Create a special output folder from the "
+                         "current expression.")
                     )
                     self.Bind(
-                        wx.EVT_MENU, self.CreateFolderFromExpression, item_create_folder)
+                        wx.EVT_MENU,
+                        self.CreateFolderFromExpression,
+                        item_create_folder,
+                    )
 
         elif self.mode == "tagging":
 
@@ -1544,11 +1610,40 @@ class MainWindow(wx.Frame):
             items = self.mainPan.GetSelectedItems()
             ids = []
 
+            amount = len(items)
+
+            # Confirm action with user.
+            if amount == 1:
+                file_text = "this file"
+                file_text_2 = (
+                    "If you only want to remove this file from OctoTagger, "
+                    "but keep it on your computer, use the 'Restore' "
+                    "option instead."
+                )
+            elif amount > 1:
+                file_text = "these " + str(amount) + " files"
+                file_text_2 = (
+                    "If you only want to remove these files from OctoTagger, "
+                    "but keep them on your computer, use the 'Restore' "
+                    "option instead."
+                )
+            elif amount == 0:
+                return
+
+            dlg = wx.MessageBox(
+                ("You are about to permanently delete " +
+                 file_text + " from your computer. "
+                 "Are you sure you want to continue?\n\n" +
+                 file_text_2),
+                style=wx.ICON_EXCLAMATION | wx.YES_NO | wx.NO_DEFAULT
+            )
+            if dlg == wx.NO:
+                # FIXME: Scrolls to the top after selecting NO
+                return
+
+            # Delete files
             for item in items:
                 ids.append(str(item))
-
-            # TODO: Confirmation?
-            # Delete files
 
             for item in items:
                 output.remove(item)
@@ -1575,7 +1670,20 @@ class MainWindow(wx.Frame):
 
             item = self.mainPan.GetCurrentItem()
 
-            # TODO: Confirmation?
+            # Confirm with user
+
+            dlg = wx.MessageBox(
+                ("You are about to permanently delete this file " +
+                 "from your computer. "
+                 "Are you sure you want to continue?\n\n" +
+                 "If you only want to remove this file from OctoTagger, "
+                 "but keep it on your computer, use the 'Restore' "
+                 "option instead."),
+                style=wx.ICON_EXCLAMATION | wx.YES_NO | wx.NO_DEFAULT
+            )
+            if dlg == wx.NO:
+                return
+
             # Delete files
 
             self.mainPan.RemoveItem(item)
