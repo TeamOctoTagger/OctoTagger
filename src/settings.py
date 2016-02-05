@@ -213,7 +213,6 @@ class Settings(wx.Dialog):
 
         # Validate input
         if default_gallery_path != "":
-            print "yo"
             path = os.path.normpath(default_gallery_path)
             if not os.path.isdir(path):
                 wx.MessageBox(

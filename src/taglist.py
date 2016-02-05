@@ -181,6 +181,19 @@ class TagList(wx.ScrolledWindow):
         text = event.GetEventObject()
         new_name = text.GetValue()
 
+        for tag_name in tagging.get_all_tags():
+            if tagging.tag_name_to_id(tag_name) == tag_id:
+                continue
+
+            if tag_name.lower() == new_name.lower():
+                wx.MessageBox(
+                    ("Tag name already in use! Two tags can't have the same "
+                     "name, regardless of case."),
+                    "Error",
+                    wx.OK,
+                )
+                return
+
         if not re.match('^' + expression.REG_TAG_NAME + '$', new_name):
             wx.MessageBox(
                 ("Invalid input! Tag names can only contain letters, "

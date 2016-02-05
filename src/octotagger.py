@@ -127,7 +127,7 @@ class MainWindow(wx.Frame):
             "&Reset current database",
             "Reset the current database"
         )
-        tool_delete_database = toolmenu.Append(
+        self.toolDeleteDatabase = toolmenu.Append(
             wx.ID_ANY,
             "&Delete current database",
             "Completely removes the current database."
@@ -188,7 +188,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_new_database, fileNewDatabase)
         self.Bind(wx.EVT_MENU, self.on_reset, toolResetCurrentDatabase)
         self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
-        self.Bind(wx.EVT_MENU, self.on_delete, tool_delete_database)
+        self.Bind(wx.EVT_MENU, self.OnDeleteDatabase, self.toolDeleteDatabase)
         self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, toolRefreshThumbnails)
         self.Bind(wx.EVT_MENU, self.on_start_import, self.fileImportFiles)
         self.Bind(
@@ -638,6 +638,9 @@ class MainWindow(wx.Frame):
 
     def on_resume_overview_mode(self, event=None):
 
+        self.fileImportFiles.Enable(enable=True)
+        self.fileDirectImportFiles.Enable(enable=True)
+
         self.main_box.Remove(self.mainPan)
         self.mainPan.Destroy()
         self.mainPan = itemview.ItemView(self)
@@ -1057,7 +1060,7 @@ class MainWindow(wx.Frame):
         elif dlg_export == 16:
             print "Canceled."
 
-    def on_delete(self, e):
+    def OnDeleteDatabase(self, e):
         dlg_clear = wx.MessageBox(
             (
                 'Are you sure you want to remove the database \"%s\"? '
@@ -1068,7 +1071,7 @@ class MainWindow(wx.Frame):
             wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION
         )
         # If the user continues, ask if he wants to export his files.
-        if dlg_clear == 2:
+        if dlg_clear == wx.YES:
             dlg_export = wx.MessageBox(
                 (
                     'Do you want to export your saved files? '
@@ -1080,19 +1083,18 @@ class MainWindow(wx.Frame):
                 'Export saved files?',
                 wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
             )
-            if dlg_export == 2:
-                print "Export files now"
+            if dlg_export == wx.YES:
+                print "rest"
+                return
                 self.OnRestoreAllFiles()
 
-            # Delete everything now!
+            print "del"
+            return
             database.delete_gallery(database.get_current_gallery("id"))
             if self.mode == "tagging":
                 self.on_resume_overview_mode()
 
             self.update_gallery_menu()
-
-        else:
-            print "Aborted clearing of files"
 
     def OnManual(self, e):
         path = os.path.join("doc", "documentation.pdf")
@@ -1518,6 +1520,24 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         new_name = dlg.GetValue()
         dlg.Destroy()
+
+        # Check if name already exists
+        cursor = database.get_current_gallery("connection").cursor()
+        cursor.execute(
+            "SELECT file_name FROM file WHERE file_name = ?",
+            (new_name,)
+        )
+        result = cursor.fetchone()
+        if result:
+            wx.MessageBox(
+                ("There already are files with the same name. "
+                 "It is recommended to give each file a unique name, "
+                 "in order to prevent inconsistencies and unexpected "
+                 "behaviour."),
+                "Warning"
+            )
+
+        # Rename the file
         output.rename_file(self.GetSelectedItems()[0], new_name)
 
         if self.mode == "overview" and old_name != new_name:
