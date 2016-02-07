@@ -58,7 +58,7 @@ def get_thumbnail(item, path_only=False):
             "files",
             row[1],
         )
-    elif type(item) is str:  # item is fs path
+    elif type(item) is unicode:  # item is fs path
         path = item
         is_db_item = False
     else:
@@ -100,7 +100,7 @@ def get_thumbnail(item, path_only=False):
         else:
             # Generate unique name
             md5 = hashlib.md5()
-            md5.update(item)
+            md5.update(item.encode('utf-8'))
             thumbnail_name = md5.hexdigest()
 
             thumbnail_path = os.path.join(
@@ -118,9 +118,12 @@ def _handler_pil(source, destination):
     # FIXME: "struct.error: unpack requires a string argument of length 4"
     # with some images.
 
-    image = Image.open(source).convert()
-    image.thumbnail(itemview.THUMBNAIL_SIZE)
-    image.save(destination, "PNG")
+    try:
+        image = Image.open(source).convert()
+        image.thumbnail(itemview.THUMBNAIL_SIZE)
+        image.save(destination, "PNG")
+    except:
+        print "Could not open file."
 
 
 

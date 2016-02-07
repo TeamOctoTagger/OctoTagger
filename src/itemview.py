@@ -91,13 +91,15 @@ class ItemView(wx.ScrolledWindow):
 
     def OnSize(self, event):
         # prevent horizontal overflow
+        self.Freeze()
         size = self.GetSize()
         vsize = self.GetVirtualSize()
         self.SetVirtualSize((size[0], vsize[1]))
-
         event.Skip()
+        self.Thaw()
 
     def OnMouseUp(self, event):
+        #self.Freeze()
         target = event.GetEventObject()
         if target is self:
             # clicked outside of any item
@@ -133,6 +135,7 @@ class ItemView(wx.ScrolledWindow):
             target.ToggleSelected()
 
         self.last_clicked = index
+        #self.Thaw()
 
         wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
 
@@ -191,14 +194,15 @@ class ItemView(wx.ScrolledWindow):
         self.update_items()
 
     def SetItems(self, items):
+        self.Freeze()
         '''
         Sets which items are to be displayed. Pass ids from database as int or
         paths from filesystem as str.
         '''
         connection = database.get_current_gallery('connection').cursor()
 
-        ids = map(str, filter(lambda x: type(x) == int, items))
-        paths = filter(lambda x: type(x) == str, items)
+        ids = map(unicode, filter(lambda x: type(x) == int, items))
+        paths = filter(lambda x: type(x) == unicode, items)
         files = filter(os.path.isfile, paths)
         folders = filter(os.path.isdir, paths)
         gf = filter(
@@ -243,7 +247,7 @@ class ItemView(wx.ScrolledWindow):
                         'name': row[0],
                         'path': item,
                     })
-                elif type(item) is str:  # item is fs path
+                elif type(item) is unicode:  # item is fs path
                     splitted_item = item.split("|")
                     if splitted_item.pop() == "GALLERYFOLDER":
                         is_gf = True
@@ -273,6 +277,7 @@ class ItemView(wx.ScrolledWindow):
 
         self.items = parse_items(items)
         self.update_items()
+        self.Thaw()
 
     def GetSelectedItems(self):
         result = []

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
 import wx
 import edit_output_folder
 import create_output_folder
@@ -24,6 +25,7 @@ import sys
 import re
 import subprocess
 import shutil
+import create_folders
 
 # TODO: Make everything more efficient, prevent unresponsive moments
 # TODO: Prevent default gallery from being deleted
@@ -72,8 +74,8 @@ class MainWindow(wx.Frame):
         # FILEMENU
         fileNewDatabase = self.filemenu.Append(
             wx.ID_ANY,
-            "&New database",
-            " Create a new database",
+            "&New gallery",
+            " Create a new gallery",
         )
         self.filemenu.AppendMenu(wx.ID_ANY,
                                  "&Open gallery",
@@ -270,11 +272,6 @@ class MainWindow(wx.Frame):
         )
 
         self.Bind(
-            wx.EVT_MAXIMIZE,
-            self.OnMaximize,
-        )
-
-        self.Bind(
             wx.EVT_TEXT_ENTER,
             self.on_query_text_enter,
             self.query_field,
@@ -375,7 +372,6 @@ class MainWindow(wx.Frame):
         )
 
         if dlg_import.ShowModal() == wx.ID_CANCEL:
-            print "Import process aborted."
             return
 
         if self.mode == "tagging":
@@ -389,7 +385,6 @@ class MainWindow(wx.Frame):
         self.InitImportFiles(self.import_path)
 
         items = self.GetFolderItems(self.import_path, True)
-        self.InitImportFiles(self.import_path)
         self.mainPan.SetItems(items)
 
         self.current_directory.SetLabelText(self.import_path)
@@ -418,11 +413,8 @@ class MainWindow(wx.Frame):
         files = []
 
         for item in os.listdir(path):
-            try:
-                item = os.path.join(path, item).encode('utf-8')
-            except:
-                print "Could not decode file name with utf-8"
-                item = os.path.join(path, item)
+
+            item = os.path.join(path, item)
 
             if item not in self.temp_file_tags:
                 print item, " is removed from import."
@@ -598,6 +590,8 @@ class MainWindow(wx.Frame):
         else:
             self.mode = "tagging"
 
+        self.Freeze()
+
         # Disable unavailable menu items
         self.fileImportFiles.Enable(enable=False)
         self.fileDirectImportFiles.Enable(enable=False)
@@ -636,7 +630,11 @@ class MainWindow(wx.Frame):
         self.mainPan.ReSize()
         self.mainPan.SetFocus()
 
+        self.Thaw()
+
     def on_resume_overview_mode(self, event=None):
+
+        self.Freeze()
 
         self.fileImportFiles.Enable(enable=True)
         self.fileDirectImportFiles.Enable(enable=True)
@@ -649,6 +647,8 @@ class MainWindow(wx.Frame):
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
         self.update_tag_list()
         self.mode = "overview"
+
+        self.Thaw()
 
         self.start_overview()
 
@@ -693,6 +693,8 @@ class MainWindow(wx.Frame):
 
     def on_query_text_enter(self, e):
 
+        self.Freeze()
+
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
 
@@ -728,6 +730,8 @@ class MainWindow(wx.Frame):
         self.select_tags()
         e.GetEventObject().Clear()
 
+        self.Thaw()
+
     def start_overview(self, e=None, warn_import=True):
         # Set items to all current database items
         # Get gallery connection
@@ -739,6 +743,8 @@ class MainWindow(wx.Frame):
             self.topbar.Show(False)
         elif self.mode == "tagging":
             self.on_resume_overview_mode()
+
+        self.Freeze()
 
         self.lb.EnableAll(True)
         self.toolStartTaggingMode.Enable(enable=True)
@@ -765,16 +771,22 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.mainPan.SetFocus()
 
+        self.Thaw()
+
     def on_selection_change(self, event=None):
         selection = len(self.GetSelectedItems())
         if selection > 2:
             selection = 2
+        self.Freeze()
         self.cpane.SetMode(selection=selection)
         self.Refresh()
         self.Layout()
         self.select_tags()
+        self.Thaw()
 
     def select_tags(self):
+
+        self.SetCursorWaiting(True)
 
         if self.mode == "folder":
             return
@@ -836,6 +848,7 @@ class MainWindow(wx.Frame):
 
         self.lb.SetCheckedStrings(checked)
         self.lb.SetUndeterminedStrings(undetermined)
+        self.SetCursorWaiting(False)
 
     def GetSelectedItems(self, path=None):
         if self.mode == "import":
@@ -865,6 +878,8 @@ class MainWindow(wx.Frame):
             return [self.mainPan.GetCurrentItem()]
 
     def ChangeFolder(self, path):
+        self.SetCursorWaiting(True)
+        self.Freeze()
         self.current_directory.SetLabelText(path)
         print path, self.import_path
         if path == self.import_path:
@@ -876,6 +891,8 @@ class MainWindow(wx.Frame):
         self.mainPan.SetItems(items)
         self.on_selection_change()
         self.Layout()
+        self.Thaw()
+        self.SetCursorWaiting(False)
 
     def ChangeFolderUp(self, event=None):
         directory_txt = self.current_directory.GetLabelText()
@@ -886,7 +903,16 @@ class MainWindow(wx.Frame):
             new_dir = os.path.dirname(directory)
             self.ChangeFolder(new_dir)
 
+    def SetCursorWaiting(self, waiting=True):
+        if waiting:
+            cursor = wx.StockCursor(wx.CURSOR_WAIT)
+        else:
+            cursor = wx.StockCursor(wx.CURSOR_ARROW)
+        self.SetCursor(cursor)
+
     def on_tag_selected(self, e):
+        self.SetCursorWaiting(True)
+        self.Freeze()
         if self.mode in ["overview", "import"]:
 
             items = self.GetSelectedItems()
@@ -936,6 +962,9 @@ class MainWindow(wx.Frame):
                 # No files are selected -> filter them
                 query_input = " ".join(checked_tags)
                 self.query_field.SetValue(query_input)
+
+            self.Thaw()
+            self.SetCursorWaiting(False)
 
         elif self.mode == "tagging":
             item = self.mainPan.GetCurrentItem()
@@ -1128,15 +1157,6 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
-    def OnMaximize(self, e):
-
-        if self.mode == "tagging":
-            self.Layout()
-            self.mainPan.imgPan.Layout()
-            self.mainPan.Layout()
-            self.mainPan.Refresh()
-            self.mainPan.ReSize()
-
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
 
@@ -1167,6 +1187,7 @@ class MainWindow(wx.Frame):
 
                 directory = database.get_current_gallery("directory")
                 thumbnail = os.path.join(directory, "thumbnails", uuid)
+                print thumbnail
                 os.remove(thumbnail)
                 self.mainPan.GetItemFromPath(item).LoadThumbnail()
 
@@ -1197,8 +1218,11 @@ class MainWindow(wx.Frame):
 
         self.select_tags()
         event.Skip()
+        self.Layout()
+        self.Refresh()
 
     def on_double_click_item(self, e):
+        self.mainPan.Freeze()
         if self.mode == "overview":
             item = e.item
             self.start_tagging_mode(item)
@@ -1212,6 +1236,7 @@ class MainWindow(wx.Frame):
 
         elif self.mode == "folder":
             self.EditFolder()
+        self.mainPan.Thaw()
 
     def on_right_click_item(self, e):
 
@@ -1250,7 +1275,6 @@ class MainWindow(wx.Frame):
                     "Open file in with its default application."
                 )
                 self.Bind(wx.EVT_MENU, self.OpenItem, item_open)
-                # OPTIONAL: Open in file manager option
                 item_remove = menu.Append(
                     wx.ID_ANY,
                     "Remove",
@@ -1470,16 +1494,19 @@ class MainWindow(wx.Frame):
 
                 cursor = database.get_current_gallery("connection").cursor()
                 cursor.execute(
-                    ("SELECT uuid FROM file WHERE pk_id = ?"),
+                    ("SELECT uuid, file_name FROM file WHERE pk_id = ?"),
                     (item,)
                 )
-                uuid = cursor.fetchone()[0]
+                result = cursor.fetchone()
+                uuid = result[0]
+                file_name = result[1]
 
-                path = os.path.join(
+                files_path = os.path.join(
                     database.get_current_gallery("directory"),
                     "files",
-                    uuid
                 )
+
+                path = os.path.join(files_path, uuid)
 
             elif self.mode in ["folder", "import"]:
                 path = item
@@ -1489,8 +1516,13 @@ class MainWindow(wx.Frame):
         if sys.platform.startswith('darwin'):
             subprocess.call(('open', path))
         elif os.name == 'nt':
-            # FIXME: Needs to have file extension
-            os.startfile(path)
+            if file or self.mode in ["import", "folder"]:
+                os.startfile(path)
+            else:
+                link_path = os.path.join(files_path, "temp_links", file_name)
+                print link_path
+                create_folders.symlink(path, link_path, True)
+                os.startfile(link_path)
         elif os.name == 'posix':
             subprocess.call(('xdg-open', path))
 

@@ -31,13 +31,30 @@ def import_files(files):
     # Keep track of files with the same name
     same_name_files = []
 
+    # Progress Window
+    current_file = 1
+    message = "Importing file " + str(current_file) + " of " + str(len(files))
+    dlg_progress = wx.ProgressDialog(
+        "Importing",
+        message,
+        maximum=len(files)
+    )
+
     if type(files) is list:
 
         for file in files:
             file = os.path.normpath(file)
+
+            # Update progress info
+            dlg_progress.Update(
+                current_file,
+                "Importing file " + str(current_file) + " of " + str(len(files)) + "."
+            )
+            current_file += 1
+
             # Defensive programming
             if os.path.isfile(file) and os.path.isdir(dest_dir):
-                # print "Importing " + file
+
                 original_name = os.path.basename(file)  # for the database
                 new_name = str(uuid.uuid4())
 
@@ -76,6 +93,13 @@ def import_files(files):
 
     elif type(files) is dict:
         for file, tags in files.iteritems():
+            print file
+            # Update progress info
+            dlg_progress.Update(
+                current_file,
+                "Importing file " + str(current_file) + " of " + str(len(files)) + "."
+            )
+            current_file += 1
 
             file = os.path.normpath(file)
 
@@ -140,6 +164,8 @@ def import_files(files):
                     'Error',
                     wx.OK | wx.ICON_EXCLAMATION
                 )
+
+    dlg_progress.Destroy()
 
     # Warn user about same name files
     if len(same_name_files) == 0:

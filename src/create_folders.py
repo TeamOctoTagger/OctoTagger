@@ -4,6 +4,7 @@
 import database
 import expression
 import os
+import winlink
 
 # TODO: Delete existing files first!
 
@@ -56,7 +57,13 @@ def create_folders():
 
 
 def symlink(src, dest, use_softlink):
-    src = os.path.abspath(src)
+    src = os.path.normpath(os.path.abspath(src))
+    dest = os.path.normpath(os.path.abspath(dest))
+
+    print "SRC", src
+    print "DST", dest
+    print "EXST?", os.path.exists(src)
+    print "DSTEXST?", os.path.exists(dest)
 
     if not os.path.exists(dest):
         try:
@@ -65,8 +72,8 @@ def symlink(src, dest, use_softlink):
             pass
 
         if os.name == "nt":
-            # TODO: Windows function!
-            return
+            use_hardlink = not use_softlink
+            winlink.symlink(src, dest, use_hardlink)
         else:
             if use_softlink:
                 os.symlink(src, dest)

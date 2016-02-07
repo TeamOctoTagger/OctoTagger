@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sqlite3
 import os
 import shutil
@@ -18,7 +20,7 @@ def update_system():
 
 
 def update_gallery():
-    os.makedirs(os.path.join("default", "files"))
+    os.makedirs(os.path.join("default", "files", "temp_links"))
     os.makedirs(os.path.join("default", "thumbnails", "temp"))
     if not os.path.isdir(os.path.join(DEFAULT_GALLERY_PATH, "default")):
         os.makedirs(os.path.join(DEFAULT_GALLERY_PATH, "default"))
