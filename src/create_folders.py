@@ -4,7 +4,9 @@
 import database
 import expression
 import os
-import winlink
+
+if os.name == "nt":
+    import winlink
 
 # TODO: Delete existing files first!
 
