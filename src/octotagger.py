@@ -2,30 +2,32 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
-import wx
-import edit_output_folder
-import create_output_folder
-import edit_gallery_folder
-import create_gallery_folder
-import output
-import settings
 import about
-import itemview
 import contextpane
+import create_folders
+import create_gallery_folder
+import create_output_folder
 import database
-import tagging
-import new_database
-import import_files
+import edit_gallery_folder
+import edit_output_folder
+import export
 import expression
+import import_files
+import itemview
+import new_database
+import output
+import os
+import re
+import settings
+import shutil
+import subprocess
+import suggestion
+import sys
+import tagging
 import taglist
 import taggingview
-import export
-import os
-import sys
-import re
-import subprocess
-import shutil
-import create_folders
+import wx
+
 
 # TODO: Make everything more efficient, prevent unresponsive moments
 # TODO: Prevent default gallery from being deleted
@@ -265,11 +267,26 @@ class MainWindow(wx.Frame):
             style=wx.TE_PROCESS_ENTER
         )
 
+        self.query_cbox = wx.ComboBox(
+            query_field_panel,
+            id=wx.ID_ANY,
+            value="",
+            choices=[""],
+            style=wx.TE_PROCESS_ENTER,  # | wx.CB_DROPDOWN,
+            validator=wx.DefaultValidator,
+            name=wx.ComboBoxNameStr)
+
+        self.query_cbox.Show(False)
+
         self.Bind(
             wx.EVT_TEXT,
             self.on_query_text,
             self.query_field,
         )
+
+        self.query_field.Bind(
+                wx.EVT_LEFT_DOWN,
+                self.on_query_text_click)
 
         self.Bind(
             wx.EVT_TEXT_ENTER,
@@ -277,8 +294,38 @@ class MainWindow(wx.Frame):
             self.query_field,
         )
 
+        self.Bind(
+            wx.EVT_TEXT,
+            self.on_query_text_change,
+            self.query_cbox,
+        )
+
+        self.Bind(
+            wx.EVT_COMBOBOX,
+            self.on_query_text_select,
+            self.query_cbox,
+        )
+
+        self.Bind(
+            wx.EVT_LEFT_DOWN,
+            self.on_query_text_click,
+            self.query_field,
+        )
+
+        self.Bind(
+            wx.EVT_TEXT_ENTER,
+            self.on_query_text_enter,
+            self.query_cbox,
+        )
+
         query_field_panel_sz.Add(
             self.query_field,
+            1,
+            wx.LEFT | wx.RIGHT | wx.UP,
+            20)
+
+        query_field_panel_sz.Add(
+            self.query_cbox,
             1,
             wx.LEFT | wx.RIGHT | wx.UP,
             20)
@@ -659,42 +706,84 @@ class MainWindow(wx.Frame):
             if self.mainPan.GetSelectedItems():
                 return
 
-            query_input = e.GetEventObject().GetValue()
+            else:
+                query_input = e.GetEventObject().GetValue()
 
-            if query_input == "":
-                self.start_overview()
-                self.cpane.Remove("create_folder_from_expr")
+                if query_input == "":
+                    self.start_overview()
+                    self.cpane.Remove("create_folder_from_expr")
+
+                else:
+                    self.cpane.Insert("create_folder_from_expr")
+                    try:
+                        query_files = ("SELECT pk_id FROM file WHERE %s" %
+                                       (expression.parse(query_input)))
+
+                        # Get file list
+                        cursor = (
+                            database.get_current_gallery("connection").cursor()
+                        )
+
+                        cursor.execute(query_files)
+                        result = cursor.fetchall()
+
+                        items = []
+
+                        for item in result:
+                            items.append(item[0])
+
+                        self.mainPan.SetItems(items)
+                        self.Layout()
+
+                    except:
+                        # TODO: Print in statusbar
+                        print "Invalid expression!"
+
+    def on_query_text_click(self, e):
+
+        if self.mode == "overview":
+            if self.mainPan.GetSelectedItems():
+                tagersss = suggestion.get_suggestions()
+                self.query_cbox.Clear()
+
+                for tag in tagersss:
+                    self.query_cbox.Append(tag)
+
+                self.query_field.Show(False)
+                self.query_cbox.Show(True)
+                self.Refresh()
+                self.Layout()
+                self.query_cbox.Popup()
 
             else:
-                self.cpane.Insert("create_folder_from_expr")
-                try:
-                    query_files = ("SELECT pk_id FROM file WHERE %s" %
-                                   (expression.parse(query_input)))
+                self.query_field.SetFocus()
 
-                    # Get file list
-                    cursor = (
-                        database.get_current_gallery("connection").cursor()
-                    )
+    def on_query_text_change(self, e):
 
-                    cursor.execute(query_files)
-                    result = cursor.fetchall()
+        if len(e.GetString()) is 2:
+            self.query_cbox.Dismiss()
+            self.query_cbox.SetInsertionPoint(self.query_cbox.GetLastPosition())
 
-                    items = []
+    def on_query_text_select(self, e):
 
-                    for item in result:
-                        items.append(item[0])
+        self.Freeze()
+        items = self.GetSelectedItems()
+        tag = e.GetEventObject().GetValue()
 
-                    self.mainPan.SetItems(items)
-                    self.Layout()
+        if not (items and tag):
+            return
 
-                except:
-                    # TODO: Print in statusbar
-                    print "Invalid expression!"
+        for item in items:
+            tagging.tag_file(item, tag)
+
+        self.update_tag_list()
+        self.select_tags()
+        e.GetEventObject().Clear()
+        self.Thaw()
 
     def on_query_text_enter(self, e):
 
         self.Freeze()
-
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
 
@@ -783,6 +872,12 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.select_tags()
         self.Thaw()
+        if self.mode == "overview":
+            if self.mainPan.GetSelectedItems() is not "":
+                self.query_cbox.Show(False)
+                self.query_field.Show(True)
+                self.Refresh()
+                self.Layout()
 
     def select_tags(self):
 
