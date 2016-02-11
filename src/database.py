@@ -185,7 +185,11 @@ def delete_gallery(id):
     directory = get_gallery(id, "directory")
 
     # Delete directory
-    shutil.rmtree(directory)
+    # FIXME: Windows complains about file being used in another process
+    try:
+        shutil.rmtree(directory)
+    except:
+        print "Directory could not be deleted!"
 
     # Get sys connection
     sys_conn = get_sys_db()
@@ -195,3 +199,7 @@ def delete_gallery(id):
     query_remove_gallery = "DELETE FROM gallery WHERE pk_id = %d" % id
     cursor.execute(query_remove_gallery)
     sys_conn.commit()
+
+    # Switch to existing gallery
+    cursor.execute("SELECT pk_id FROM gallery")
+    switch_gallery(cursor.fetchone()[0])

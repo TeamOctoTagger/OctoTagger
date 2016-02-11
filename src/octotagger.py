@@ -13,6 +13,7 @@ import edit_output_folder
 import export
 import expression
 import import_files
+import integrity
 import itemview
 import new_database
 import output
@@ -27,7 +28,6 @@ import tagging
 import taglist
 import taggingview
 import wx
-
 
 # TODO: Make everything more efficient, prevent unresponsive moments
 # TODO: Prevent default gallery from being deleted
@@ -125,6 +125,11 @@ class MainWindow(wx.Frame):
             "&Refresh thumbnails",
             "Regenerate all existing thumbnail. Could take a while."
         )
+        toolIntegrityCheck = toolmenu.Append(
+            wx.ID_ANY,
+            "&Perfrom integrity check",
+            "Checks links and folder for consistency."
+        )
         toolmenu.AppendSeparator()
         toolResetCurrentDatabase = toolmenu.Append(
             wx.ID_ANY,
@@ -194,6 +199,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
         self.Bind(wx.EVT_MENU, self.OnDeleteDatabase, self.toolDeleteDatabase)
         self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, toolRefreshThumbnails)
+        self.Bind(wx.EVT_MENU, integrity.check, toolIntegrityCheck)
         self.Bind(wx.EVT_MENU, self.on_start_import, self.fileImportFiles)
         self.Bind(
             wx.EVT_MENU,
@@ -887,12 +893,12 @@ class MainWindow(wx.Frame):
 
     def select_tags(self):
 
-        self.SetCursorWaiting(True)
-
         if self.mode == "folder":
             return
         else:
             items = self.GetSelectedItems()
+
+        self.SetCursorWaiting(True)
 
         if self.mode == "import":
             item_tags = {}
@@ -1127,6 +1133,7 @@ class MainWindow(wx.Frame):
         for gallery in result:
             gallery_list.append(gallery)
 
+        self.amount_galleries = len(gallery_list)
         # Open Database menu
         for gallery in gallery_list:
             item = wx.MenuItem(
@@ -1158,6 +1165,11 @@ class MainWindow(wx.Frame):
             self.Bind(wx.EVT_MENU, self.on_switch_gallery, gallery)
             if gallery.GetId() - 100 == current_gallery:
                 gallery.Check()
+
+        if (self.amount_galleries == 1):
+            self.toolDeleteDatabase.Enable(False)
+        else:
+            self.toolDeleteDatabase.Enable(True)
 
     def on_switch_gallery(self, e):
         gallery_id = e.GetId() - 100
@@ -1214,15 +1226,13 @@ class MainWindow(wx.Frame):
                 wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
             )
             if dlg_export == wx.YES:
-                print "rest"
-                return
                 self.OnRestoreAllFiles()
 
-            print "del"
-            return
             database.delete_gallery(database.get_current_gallery("id"))
             if self.mode == "tagging":
                 self.on_resume_overview_mode()
+            else:
+                self.start_overview()
 
             self.update_gallery_menu()
 

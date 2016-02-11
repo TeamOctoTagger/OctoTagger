@@ -1,10 +1,9 @@
 import database
-
 import os
 import sqlite3
 
 
-def check():
+def check(event = None):
     """checks the integrity of the current gallery"""
     gallery_folder = database.get_current_gallery("directory")
     gallery_conn = database.get_current_gallery("connection")

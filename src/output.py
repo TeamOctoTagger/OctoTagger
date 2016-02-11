@@ -420,14 +420,22 @@ def change_link_type(id, advanced, type):
             return
         for tag in tags:
             # remake folder
-            folder = os.path.join(
+            folder = os.path.normpath(os.path.join(
                 output[0],
                 output[1],
                 tag[1].replace("_", " "),
-            )
+            ))
             if os.path.isdir(folder):
                 shutil.rmtree(folder)
-            os.makedirs(folder)
+
+            # Necessary because Windows removes folders with delay
+            def createfolder(path):
+                try:
+                    os.makedirs(folder)
+                except:
+                    createfolder(path)
+
+            createfolder(folder)
 
             # relink files
             c.execute(
