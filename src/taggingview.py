@@ -206,6 +206,8 @@ class TaggingView(wx.Panel):
 
     def ReSize(self, event=None):
 
+        self.Freeze()
+
         self.load_images()
         self.Layout()
         self.Refresh()
@@ -214,13 +216,13 @@ class TaggingView(wx.Panel):
         image = self.get_image(0)
         image.thumbnail(size, Image.BILINEAR)
         new_image = self.ConvertPILToWX(image)
+        bitmap = wx.BitmapFromImage(new_image)
+        self.Image.SetBitmap(bitmap)
 
-        try:
-            self.Image.SetBitmap(wx.BitmapFromImage(new_image))
-        except:
-            print "No luck"
-
+        self.Refresh()
         self.Layout()
+
+        self.Thaw()
 
     def ConvertPILToWX(self, myPilImage, copyAlpha=True):
 

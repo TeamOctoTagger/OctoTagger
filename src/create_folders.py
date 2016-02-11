@@ -62,10 +62,10 @@ def symlink(src, dest, use_softlink):
     src = os.path.normpath(os.path.abspath(src))
     dest = os.path.normpath(os.path.abspath(dest))
 
-    print "SRC", src
-    print "DST", dest
-    print "EXST?", os.path.exists(src)
-    print "DSTEXST?", os.path.exists(dest)
+    # print "SRC", src
+    # print "DST", dest
+    # print "EXST?", os.path.exists(src)
+    # print "DSTEXST?", os.path.exists(dest)
 
     if not os.path.exists(dest):
         try:
