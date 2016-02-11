@@ -714,30 +714,37 @@ class MainWindow(wx.Frame):
                     self.cpane.Remove("create_folder_from_expr")
 
                 else:
-                    self.cpane.Insert("create_folder_from_expr")
+                    self.current_query = query_input
                     try:
-                        query_files = ("SELECT pk_id FROM file WHERE %s" %
-                                       (expression.parse(query_input)))
-
-                        # Get file list
-                        cursor = (
-                            database.get_current_gallery("connection").cursor()
-                        )
-
-                        cursor.execute(query_files)
-                        result = cursor.fetchall()
-
-                        items = []
-
-                        for item in result:
-                            items.append(item[0])
-
-                        self.mainPan.SetItems(items)
-                        self.Layout()
-
+                        parsed_query = expression.parse(query_input)
                     except:
-                        # TODO: Print in statusbar
-                        print "Invalid expression!"
+                        return
+
+                    self.cpane.Insert("create_folder_from_expr")
+
+                    # Get file list
+                    cursor = (
+                        database.get_current_gallery("connection").cursor()
+                    )
+                    cursor.execute(
+                        "SELECT pk_id FROM file WHERE %s" %
+                        parsed_query
+                    )
+                    result = cursor.fetchall()
+
+                    items = []
+                    for item in result:
+                        items.append(item[0])
+
+                    print self.current_query, items
+
+                    if len(items) == 0:
+                        # TODO: Show warning instead of nothing?
+                        pass
+
+                    # Display files
+                    self.mainPan.SetItems(items)
+                    self.Layout()
 
     def on_query_text_click(self, e):
 
@@ -757,6 +764,7 @@ class MainWindow(wx.Frame):
 
             else:
                 self.query_field.SetFocus()
+        e.Skip()
 
     def on_query_text_change(self, e):
 
@@ -766,7 +774,6 @@ class MainWindow(wx.Frame):
 
     def on_query_text_select(self, e):
 
-        self.Freeze()
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
 
@@ -779,7 +786,6 @@ class MainWindow(wx.Frame):
         self.update_tag_list()
         self.select_tags()
         e.GetEventObject().Clear()
-        self.Thaw()
 
     def on_query_text_enter(self, e):
 
@@ -1525,7 +1531,6 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def ImportAll(self, event):
-        # TODO: Tell user to wait...
         self.cpane.EnableAll(False)
         import_files.import_files(self.temp_file_tags)
         self.start_overview(warn_import=False)
