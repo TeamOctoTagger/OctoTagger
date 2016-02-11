@@ -127,10 +127,9 @@ class ItemView(wx.ScrolledWindow):
             items = self.sizer.GetChildren()
             direction = 1 if self.last_clicked < index else -1
 
+            selected = items[self.last_clicked].GetWindow().IsSelected()
             for i in range(self.last_clicked, index + direction, direction):
-                items[i].GetWindow().SetSelected(
-                    items[self.last_clicked].GetWindow().IsSelected()
-                )
+                items[i].GetWindow().SetSelected(selected)
         else:
             target.ToggleSelected()
 
@@ -331,19 +330,22 @@ class ItemView(wx.ScrolledWindow):
             item.GetWindow().SetSelected(selected)
 
     def RemoveItem(self, paths):
-        # FIXME: Update item view correctly
+        # remove items
         for path in paths:
             item = self.GetItemFromPath(path)
-            print path, item
             self.sizer.Remove(item)
-            item.Destroy()
-
-        self.last_clicked = None
-        self.Layout()
 
         for item in self.items:
             if item["path"] in paths:
                 self.items.remove(item)
+
+        # correct indices
+        items = self.sizer.GetChildren()
+        for index, item in enumerate(items):
+            item.SetUserData(index)
+
+        self.last_clicked = None
+        self.Layout()
 
 
 class _ThumbnailThread(threading.Thread):
