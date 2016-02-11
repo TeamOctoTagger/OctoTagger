@@ -866,12 +866,10 @@ class MainWindow(wx.Frame):
         selection = len(self.GetSelectedItems())
         if selection > 2:
             selection = 2
-        self.Freeze()
         self.cpane.SetMode(selection=selection)
         self.Refresh()
         self.Layout()
         self.select_tags()
-        self.Thaw()
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems() is not "":
                 self.query_cbox.Show(False)

@@ -9,9 +9,6 @@ import itemview
 import thumbnail
 import threading
 
-# TODO: Fully implementd RemoveItem
-# TODO: Behaviour when all files get deleted
-
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
 
@@ -260,8 +257,32 @@ class TaggingView(wx.Panel):
         return self.get_file(self.current_file)[0]
 
     def RemoveItem(self, item):
+        # FIXME after delete one directional input is needed for key presses to
+        # be recognized again
+        index = self.files.index(item)
         self.files.remove(item)
-        self.DisplayNext()
+        self.file_buffer.pop(index)
+
+        # invalidate current image
+        self.image_thread[self.current_buffer].join()  # prevent race
+        self.image_buffer[self.current_buffer] = None
+
+        if len(self.files) == 0:
+            # no more images
+            self.OnExit()
+        elif self.current_file == len(self.files):
+            # was last image
+            self.DisplayPrev()
+        else:
+            # invalidate next image
+            next = (self.current_buffer + 1) % 3
+            self.image_thread[next].join()  # prevent race
+            self.image_buffer[next] = None  # clear image
+
+            wx.PostEvent(self, ItemChangeEvent(self.GetId()))
+            self.load_images()
+            self.UpdateLabel()
+            self.ReSize()
 
     def OnMouseRight(self, event):
         wx.PostEvent(self, itemview.RightClickItemEvent(self.GetId()))
