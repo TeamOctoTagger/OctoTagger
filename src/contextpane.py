@@ -4,10 +4,10 @@
 import wx
 
 
-class ContextPane(wx.Panel):
+class ContextPane(wx.ScrolledWindow):
 
     def __init__(self, parent, size, octotagger):
-        wx.Panel.__init__(self, parent, size=size)
+        wx.ScrolledWindow.__init__(self, parent, size=size, style=wx.VSCROLL)
 
         # 0 = No selection
         # 1 = Single selection
@@ -16,6 +16,7 @@ class ContextPane(wx.Panel):
         self.mode = "overview"
         self.octotagger = octotagger
 
+        self.SetScrollRate(10, 10)
         self.Bind(wx.EVT_SIZE, self.OnResize)
         self.InitUI()
 

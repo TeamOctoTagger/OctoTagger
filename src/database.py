@@ -162,7 +162,6 @@ def switch_gallery(id):
 
 
 def reset_gallery(id):
-    # TODO: connect with output functions
     gallery_conn = get_gallery(id, "connection")
     cursor = gallery_conn.cursor()
 

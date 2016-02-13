@@ -30,7 +30,6 @@ import taggingview
 import wx
 
 # TODO: Make everything more efficient, prevent unresponsive moments
-# TODO: Prevent default gallery from being deleted
 
 
 class MainWindow(wx.Frame):
@@ -442,6 +441,11 @@ class MainWindow(wx.Frame):
         else:
             self.mode = "import"
 
+        # Set Title
+        self.SetTitle(
+            "OctoTagger - Import mode (Changes are not saved automatically)"
+        )
+
         # Set Items
         self.import_path = dlg_import.GetPath()
         self.InitImportFiles(self.import_path)
@@ -457,6 +461,8 @@ class MainWindow(wx.Frame):
 
         self.cpane.SetMode("import")
         self.update_tag_list()
+        self.lb.EnableAll(False)
+        self.query_field.Enable(False)
         self.Layout()
         self.SetFocus()
 
@@ -866,6 +872,11 @@ class MainWindow(wx.Frame):
         self.update_gallery_menu()
         self.cpane.SetMode("overview")
 
+        # Re-enable windows
+        self.lb.EnableAll(True)
+        self.query_field.Enable(True)
+        self.SetTitle("OctoTagger")
+
         # Set items
         self.mainPan.SetItems(items)
         self.Refresh()
@@ -876,17 +887,25 @@ class MainWindow(wx.Frame):
 
     def on_selection_change(self, event=None):
         selection = len(self.GetSelectedItems())
-        self.select_tags()
 
+        self.select_tags()
         if selection == 0:
-            print self.checked_tags
-            self.query_field.SetValue(self.current_query)
-            self.lb.SetCheckedStrings(self.checked_tags)
+            if self.mode == "import":
+                self.query_field.SetValue("")
+                self.query_field.Enable(False)
+                self.lb.SetCheckedAll(False)
+                self.lb.EnableAll(False)
+            else:
+                self.query_field.SetValue(self.current_query)
+                self.lb.SetCheckedStrings(self.checked_tags, only=True)
         elif selection > 0:
             self.query_field.SetValue("")
             if self.mode == "overview":
                 self.query_cbox.Show(False)
                 self.query_field.Show(True)
+            elif self.mode == "import":
+                self.query_field.Enable(True)
+                self.lb.EnableAll(True)
 
         if selection > 2:
             selection = 2
@@ -1175,9 +1194,21 @@ class MainWindow(wx.Frame):
 
     def on_switch_gallery(self, e):
         gallery_id = e.GetId() - 100
-        database.switch_gallery(gallery_id)
-        self.start_overview()
-        self.update_tag_list()
+        if not os.path.isfile(database.get_gallery(gallery_id, "file")):
+            dlg = wx.MessageBox(
+                ("Gallery not found. "
+                 "Do you wish to remove it?"),
+                "Error",
+                wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION
+                )
+            if dlg == wx.YES:
+                database.delete_gallery(gallery_id)
+
+            self.update_gallery_menu()
+        else:
+            database.switch_gallery(gallery_id)
+            self.start_overview()
+            self.update_tag_list()
 
     def on_new_database(self, e):
         dlg = new_database.NewDatabase(self)
