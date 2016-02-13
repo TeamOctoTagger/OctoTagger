@@ -334,6 +334,7 @@ class ItemView(wx.ScrolledWindow):
         for path in paths:
             item = self.GetItemFromPath(path)
             self.sizer.Remove(item)
+            item.Destroy()
 
         for item in self.items:
             if item["path"] in paths:

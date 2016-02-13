@@ -206,8 +206,6 @@ class TaggingView(wx.Panel):
 
     def ReSize(self, event=None):
 
-        self.Freeze()
-
         self.load_images()
         self.Layout()
         self.Refresh()
@@ -221,8 +219,6 @@ class TaggingView(wx.Panel):
 
         self.Refresh()
         self.Layout()
-
-        self.Thaw()
 
     def ConvertPILToWX(self, myPilImage, copyAlpha=True):
 
@@ -259,8 +255,6 @@ class TaggingView(wx.Panel):
         return self.get_file(self.current_file)[0]
 
     def RemoveItem(self, item):
-        # FIXME after delete one directional input is needed for key presses to
-        # be recognized again
         index = self.files.index(item)
         self.files.remove(item)
         self.file_buffer.pop(index)

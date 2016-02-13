@@ -73,7 +73,7 @@ class MainWindow(wx.Frame):
         helpmenu = wx.Menu()
         menu_open_database = self.get_gallery_menu()
 
-        # FILEMENU
+        # File
         fileNewDatabase = self.filemenu.Append(
             wx.ID_ANY,
             "&New gallery",
@@ -114,7 +114,7 @@ class MainWindow(wx.Frame):
         fileExit = self.filemenu.Append(
             wx.ID_EXIT, "&Exit", " Terminate the program")
 
-        # TOOLMENU
+        # Tools
         self.toolStartTaggingMode = toolmenu.Append(
             wx.ID_ANY,
             "&Start tagging mode",
@@ -148,7 +148,7 @@ class MainWindow(wx.Frame):
             " Restores all Files"
         )
 
-        # VIEWMENU
+        # View
         viewShowAllFiles = viewmenu.Append(
             wx.ID_ANY,
             "&Show all files",
@@ -171,7 +171,7 @@ class MainWindow(wx.Frame):
             " Shows the output folders"
         )
 
-        # HELPMENU
+        # Help
         helpManual = helpmenu.Append(
             6, "&User Manual", " How to use this program")
         item_about = helpmenu.Append(wx.ID_ANY, "&About", "About OctoTagger")
@@ -272,6 +272,8 @@ class MainWindow(wx.Frame):
             "",
             style=wx.TE_PROCESS_ENTER
         )
+        self.current_query = ""
+        self.checked_tags = []
 
         self.query_cbox = wx.ComboBox(
             query_field_panel,
@@ -322,6 +324,12 @@ class MainWindow(wx.Frame):
             wx.EVT_TEXT_ENTER,
             self.on_query_text_enter,
             self.query_cbox,
+        )
+
+        self.Bind(
+            wx.EVT_CHILD_FOCUS,
+            self.OnChildFocus,
+            self
         )
 
         query_field_panel_sz.Add(
@@ -397,6 +405,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnLeft, id=left_id)
         self.Bind(wx.EVT_MENU, self.OnRight, id=right_id)
 
+        # FIXME: Bindings don't fire sometimes (Focus problem?)
         self.accel_tbl = wx.AcceleratorTable([
             (wx.ACCEL_NORMAL, wx.WXK_F2, f2_id),
             (wx.ACCEL_NORMAL, wx.WXK_F1, helpManual.GetId()),
@@ -449,6 +458,9 @@ class MainWindow(wx.Frame):
         self.cpane.SetMode("import")
         self.update_tag_list()
         self.Layout()
+        self.SetFocus()
+
+        self.mainPan.SetAcceleratorTable(self.accel_tbl)
 
     def InitImportFiles(self, path):
         for root, dirs, files in os.walk(path):
@@ -643,8 +655,6 @@ class MainWindow(wx.Frame):
         else:
             self.mode = "tagging"
 
-        self.Freeze()
-
         # Disable unavailable menu items
         self.fileImportFiles.Enable(enable=False)
         self.fileDirectImportFiles.Enable(enable=False)
@@ -683,11 +693,7 @@ class MainWindow(wx.Frame):
         self.mainPan.ReSize()
         self.mainPan.SetFocus()
 
-        self.Thaw()
-
     def on_resume_overview_mode(self, event=None):
-
-        self.Freeze()
 
         self.fileImportFiles.Enable(enable=True)
         self.fileDirectImportFiles.Enable(enable=True)
@@ -701,19 +707,16 @@ class MainWindow(wx.Frame):
         self.update_tag_list()
         self.mode = "overview"
 
-        self.Thaw()
-
         self.start_overview()
 
     def on_query_text(self, e):
-        # FIXME: Some weird behaviour
-
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems():
                 return
 
             else:
                 query_input = e.GetEventObject().GetValue()
+                self.lb.SetCheckedStrings(query_input.split(" "), only=True)
 
                 if query_input == "":
                     self.start_overview()
@@ -795,7 +798,6 @@ class MainWindow(wx.Frame):
 
     def on_query_text_enter(self, e):
 
-        self.Freeze()
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
 
@@ -830,8 +832,6 @@ class MainWindow(wx.Frame):
         self.update_tag_list()
         self.select_tags()
         e.GetEventObject().Clear()
-
-        self.Thaw()
 
     def start_overview(self, e=None, warn_import=True):
         # Set items to all current database items
@@ -876,18 +876,24 @@ class MainWindow(wx.Frame):
 
     def on_selection_change(self, event=None):
         selection = len(self.GetSelectedItems())
+        self.select_tags()
+
+        if selection == 0:
+            print self.checked_tags
+            self.query_field.SetValue(self.current_query)
+            self.lb.SetCheckedStrings(self.checked_tags)
+        elif selection > 0:
+            self.query_field.SetValue("")
+            if self.mode == "overview":
+                self.query_cbox.Show(False)
+                self.query_field.Show(True)
+
         if selection > 2:
             selection = 2
         self.cpane.SetMode(selection=selection)
+
         self.Refresh()
         self.Layout()
-        self.select_tags()
-        if self.mode == "overview":
-            if self.mainPan.GetSelectedItems() is not "":
-                self.query_cbox.Show(False)
-                self.query_field.Show(True)
-                self.Refresh()
-                self.Layout()
 
     def select_tags(self):
 
@@ -1017,7 +1023,6 @@ class MainWindow(wx.Frame):
 
     def on_tag_selected(self, e):
         self.SetCursorWaiting(True)
-        self.Freeze()
         if self.mode in ["overview", "import"]:
 
             items = self.GetSelectedItems()
@@ -1065,10 +1070,9 @@ class MainWindow(wx.Frame):
 
             else:
                 # No files are selected -> filter them
-                query_input = " ".join(checked_tags)
-                self.query_field.SetValue(query_input)
+                self.checked_tags = checked_tags
+                self.query_field.SetValue(" ".join(checked_tags))
 
-            self.Thaw()
             self.SetCursorWaiting(False)
 
         elif self.mode == "tagging":
@@ -1330,8 +1334,11 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.Refresh()
 
+    def OnChildFocus(self, event):
+        print wx.Window.FindFocus()
+
     def on_double_click_item(self, e):
-        self.mainPan.Freeze()
+
         if self.mode == "overview":
             item = e.item
             self.start_tagging_mode(item)
@@ -1345,7 +1352,6 @@ class MainWindow(wx.Frame):
 
         elif self.mode == "folder":
             self.EditFolder()
-        self.mainPan.Thaw()
 
     def on_right_click_item(self, e):
 
@@ -1541,6 +1547,8 @@ class MainWindow(wx.Frame):
     def ImportAll(self, event):
         self.cpane.EnableAll(False)
         import_files.import_files(self.temp_file_tags)
+        self.query_field.SetValue("")
+        self.lb.SetCheckedAll(False)
         self.start_overview(warn_import=False)
         self.cpane.EnableAll(True)
 
@@ -1552,6 +1560,8 @@ class MainWindow(wx.Frame):
                 tagged_files[item] = tags
 
         import_files.import_files(tagged_files)
+        self.query_field.SetValue("")
+        self.lb.SetCheckedAll(False)
         self.start_overview(warn_import=False)
         self.cpane.EnableAll(True)
 
@@ -1802,6 +1812,8 @@ class MainWindow(wx.Frame):
                 return
 
             # Delete files
+            self.mainPan.RemoveItem(items)
+
             for item in items:
                 ids.append(str(item))
 
@@ -1824,7 +1836,6 @@ class MainWindow(wx.Frame):
             gallery.commit()
 
             self.select_tags()
-            self.start_overview()
 
         elif self.mode == "tagging":
 
@@ -1887,9 +1898,7 @@ class MainWindow(wx.Frame):
                     print "Error removing item"
 
             # Update the import view
-            current_dir = self.current_directory.GetLabelText()
-            items = self.GetFolderItems(current_dir)
-            self.mainPan.SetItems(items)
+            self.mainPan.RemoveItem(sel_items)
             self.select_tags()
             self.Layout()
 

@@ -85,12 +85,25 @@ class TagList(wx.ScrolledWindow):
 
         return item_strings
 
-    def SetCheckedStrings(self, strings):
+    def SetCheckedStrings(self, strings, only=False):
         items = self.GetItems()
 
         for item in items:
             if item.GetLabelText().replace(" ", "_") in strings:
                 item.Set3StateValue(wx.CHK_CHECKED)
+            elif only:
+                item.Set3StateValue(wx.CHK_UNCHECKED)
+
+    def SetCheckedAll(self, checked=True):
+        items = self.GetItems()
+
+        if checked:
+            state = wx.CHK_CHECKED
+        else:
+            state = wx.CHK_UNCHECKED
+
+        for item in items:
+            item.Set3StateValue(state)
 
     def GetUndeterminedStrings(self):
         undetermined_strings = []
