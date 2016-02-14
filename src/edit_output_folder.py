@@ -277,7 +277,7 @@ class EditOutputFolder(wx.Dialog):
         output.change_expression(self.folder_id, expr)
 
         # Exit
-        self.Destroy()
+        self.Close()
 
     def on_close(self, e):
-        self.Destroy()
+        self.Close()

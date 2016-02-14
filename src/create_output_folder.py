@@ -232,8 +232,6 @@ class CreateOutputFolder(wx.Dialog):
 
             return
 
-        self.Destroy()
-
         if(not os.path.exists(dir) or not os.path.isdir(dir)):
             wx.MessageBox(
                 'Invalid location!',
@@ -257,6 +255,7 @@ class CreateOutputFolder(wx.Dialog):
 
         # Create folders
         create_folders.create_folders()
+        self.Close()
 
     def on_close(self, e):
-        self.Destroy()
+        self.Close()

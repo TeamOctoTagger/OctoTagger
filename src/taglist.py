@@ -26,6 +26,7 @@ class TagList(wx.ScrolledWindow):
         )
 
         self.SetBackgroundColour("#FFFFFF")
+        self.checkboxes = []
         self.tags = tags
         self.checked = []
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -43,6 +44,7 @@ class TagList(wx.ScrolledWindow):
             style=wx.CHK_3STATE,
         )
         self.sizer.Add(checkbox, 0, flag=wx.ALL, border=2)
+        self.checkboxes.append(checkbox)
         self.Bind(wx.EVT_CHECKBOX, self.OnCheck)
         checkbox.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
@@ -74,7 +76,7 @@ class TagList(wx.ScrolledWindow):
         return checked_strings
 
     def GetItems(self):
-        return self.GetChildren()
+        return self.checkboxes
 
     def GetStrings(self):
         items = self.GetItems()
@@ -131,6 +133,7 @@ class TagList(wx.ScrolledWindow):
 
     def CheckAll(self, state):
         for cb in self.GetItems():
+            print type(cb)
             cb.Set3StateValue(state)
 
     def OnMouseRight(self, event):
@@ -161,7 +164,7 @@ class TagList(wx.ScrolledWindow):
         self.checked = self.GetCheckedStrings()
         self.EnableAll(False)
 
-        for child in self.GetChildren():
+        for child in self.GetItems:
             if child.GetLabelText().replace(" ", "_") == self.edit_tag:
                 cb = child
                 break

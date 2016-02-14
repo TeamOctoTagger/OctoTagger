@@ -197,7 +197,7 @@ class EditGalleryFolder(wx.Dialog):
         self.SaveSettings()
 
     def OnClose(self, event):
-        self.Destroy()
+        self.Close()
 
     def SaveSettings(self):
         # FIXME: Change name not working (under windows)?
@@ -265,4 +265,4 @@ class EditGalleryFolder(wx.Dialog):
         cursor.execute(query_save)
         gallery_conn.commit()
 
-        self.Destroy()
+        self.Close()
