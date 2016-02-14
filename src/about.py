@@ -6,25 +6,32 @@ OctoTagger's About dialog.
 '''
 
 import wx
-
+import os
 
 def getInfo():
-    description = ("OctoTagger is a simple yet powerful software for "
-                   "organizing your files.")
-    licence = open("LICENSE").read()
+    description = (u"OctoTagger is a simple yet powerful software for "
+                   u"organizing your files.")
 
     info = wx.AboutDialogInfo()
 
-    info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
-    info.SetName('OctoTagger')
-    info.SetVersion('0.1')
+    info.SetName(u'OctoTagger')
+    info.SetVersion(u'0.1')
     info.SetDescription(description)
-    info.SetCopyright('(C) 2015 Team OctoTagger')
-    info.SetWebSite('http://www.octotagger.co')
+    info.SetCopyright(u'(C) 2015 Team OctoTagger')
+    info.AddDeveloper(u'Erik Ritschl')
+    info.AddDeveloper(u'Clemens Stadlbauer')
+    info.AddDeveloper(u'Christoph Führer')
+    info.AddDocWriter(u'Julian Lorenz')
+    info.AddArtist(u'Julian Lorenz')
+
+    # Not supported natively by Windows and OS X
+    info.SetWebSite(u'http://www.octotagger.co')
+    info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
+
+    if os.name != "nt":
+        licence = open("LICENSE").read()
+    else:
+        licence = "GNU General Public License Version 3 (GPLv3)"
     info.SetLicence(licence)
-    info.AddDeveloper('Erik Ritschl')
-    info.AddDeveloper('Clemens Stadlbauer')
-    info.AddDeveloper('Christoph Führer')
-    info.AddDocWriter('Julian Lorenz')
-    info.AddArtist('Julian Lorenz')
+
     return info

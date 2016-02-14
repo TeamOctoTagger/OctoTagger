@@ -228,8 +228,6 @@ class MainWindow(wx.Frame):
             self.toolStartTaggingMode,
         )
 
-        # self.Bind(wx.EVT_CHAR_HOOK, self.OnKey)
-
         self.Bind(
             itemview.EVT_SELECTION_CHANGE,
             self.on_selection_change,
@@ -343,31 +341,7 @@ class MainWindow(wx.Frame):
             wx.LEFT | wx.RIGHT | wx.UP,
             20)
 
-        # Add Topbar
-        topbar_sz = wx.BoxSizer(wx.HORIZONTAL)
-        self.topbar = wx.Panel(self.mainPan)
-        self.topbar.SetSizer(topbar_sz)
-
-        self.current_directory = wx.StaticText(
-            self.topbar,
-            label="",
-            style=(
-                wx.ALIGN_CENTRE_HORIZONTAL |
-                wx.ST_ELLIPSIZE_END |
-                wx.ST_NO_AUTORESIZE |
-                wx.SIMPLE_BORDER
-            )
-        )
-
-        self.btn_up = wx.Button(self.topbar, -1, "^")
-        self.btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
-        self.btn_up.Disable()
-
-        topbar_sz.Add(self.btn_up, 0, wx.EXPAND)
-        topbar_sz.Add(self.current_directory, 1, wx.EXPAND | wx.ALIGN_CENTER)
-
-        self.mainPan.mainsizer.Insert(0, self.topbar, 0, wx.EXPAND)
-        self.topbar.Show(False)
+        self.AddTopbar()
 
         self.cpane = contextpane.ContextPane(
             left_panel, size=(-1, 200), octotagger=self)
@@ -423,6 +397,39 @@ class MainWindow(wx.Frame):
 
         self.start_overview()
 
+    def AddTopbar(self):
+        # Add Topbar
+        topbar_sz = wx.BoxSizer(wx.HORIZONTAL)
+        self.topbar = wx.Panel(self.mainPan)
+        self.topbar.SetSizer(topbar_sz)
+
+        self.current_directory = wx.StaticText(
+            self.topbar,
+            label="",
+            style=(
+                wx.ALIGN_CENTRE_HORIZONTAL |
+                wx.ALIGN_CENTRE_VERTICAL |
+                wx.ST_ELLIPSIZE_MIDDLE |
+                wx.ST_NO_AUTORESIZE
+            )
+        )
+        if self.dark_theme:
+            print "dark"
+            self.topbar.SetBackgroundColour("#333333")
+            self.current_directory.SetForegroundColour("#FFFFFF")
+        else:
+            print "bright"
+
+        self.btn_up = wx.Button(self.topbar, -1, "^")
+        self.btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
+        self.btn_up.Disable()
+
+        topbar_sz.Add(self.btn_up, 0, wx.EXPAND)
+        topbar_sz.Add(self.current_directory, 1, wx.ALIGN_CENTER | wx.ALIGN_CENTRE_VERTICAL)
+
+        self.mainPan.mainsizer.Insert(0, self.topbar, 0, wx.EXPAND)
+        self.topbar.Show(False)
+
     def on_start_import(self, e):
         dlg_import = wx.DirDialog(
             self,
@@ -452,21 +459,19 @@ class MainWindow(wx.Frame):
 
         items = self.GetFolderItems(self.import_path, True)
         self.mainPan.SetItems(items)
-
-        self.current_directory.SetLabelText(self.import_path)
         self.topbar.Show(True)
-
-        self.mainPan.Layout()
-        self.mainPan.Refresh()
+        
 
         self.cpane.SetMode("import")
         self.update_tag_list()
         self.lb.EnableAll(False)
         self.query_field.Enable(False)
-        self.Layout()
-        self.SetFocus()
-
         self.mainPan.SetAcceleratorTable(self.accel_tbl)
+
+        self.SetFocus()
+        self.mainPan.Layout()
+        self.mainPan.Refresh()
+        self.current_directory.SetLabelText(self.import_path)
 
     def InitImportFiles(self, path):
         for root, dirs, files in os.walk(path):
@@ -710,6 +715,7 @@ class MainWindow(wx.Frame):
         self.Bind(itemview.EVT_ITEM_DOUBLE_CLICK, self.on_double_click_item)
         self.Bind(itemview.EVT_ITEM_RIGHT_CLICK, self.on_right_click_item)
         self.main_box.Add(self.mainPan, 1, wx.EXPAND)
+        self.AddTopbar()
         self.update_tag_list()
         self.mode = "overview"
 
@@ -723,13 +729,13 @@ class MainWindow(wx.Frame):
             else:
                 query_input = e.GetEventObject().GetValue()
                 self.lb.SetCheckedStrings(query_input.split(" "), only=True)
+                self.current_query = query_input
 
                 if query_input == "":
                     self.start_overview()
                     self.cpane.Remove("create_folder_from_expr")
 
                 else:
-                    self.current_query = query_input
                     try:
                         parsed_query = expression.parse(query_input)
                     except:
@@ -896,8 +902,9 @@ class MainWindow(wx.Frame):
                 self.lb.SetCheckedAll(False)
                 self.lb.EnableAll(False)
             else:
-                self.query_field.SetValue(self.current_query)
-                self.lb.SetCheckedStrings(self.checked_tags, only=True)
+                if self.current_query:
+                    self.query_field.SetValue(self.current_query)
+                    self.lb.SetCheckedStrings(self.checked_tags, only=True)
         elif selection > 0:
             self.query_field.SetValue("")
             if self.mode == "overview":
@@ -1010,8 +1017,9 @@ class MainWindow(wx.Frame):
     def ChangeFolder(self, path):
         self.SetCursorWaiting(True)
         self.Freeze()
+
+        self.topbar.Show()
         self.current_directory.SetLabelText(path)
-        print path, self.import_path
         if path == self.import_path:
             self.btn_up.Disable()
         else:

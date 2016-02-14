@@ -34,6 +34,8 @@ class TaggingView(wx.Panel):
 
     def InitUI(self):
 
+        
+
         self.imgPan = wx.Panel(self)
 
         tag_topbar = wx.Panel(self)
@@ -47,8 +49,7 @@ class TaggingView(wx.Panel):
                 wx.ALIGN_CENTRE_HORIZONTAL |
                 wx.ALIGN_CENTRE_VERTICAL |
                 wx.ST_ELLIPSIZE_MIDDLE |
-                wx.ST_NO_AUTORESIZE |
-                wx.SIMPLE_BORDER
+                wx.ST_NO_AUTORESIZE
             )
         )
 
@@ -217,9 +218,9 @@ class TaggingView(wx.Panel):
         bitmap = wx.BitmapFromImage(new_image)
         self.Image.SetBitmap(bitmap)
 
-        self.Refresh()
         self.Layout()
-
+        self.Refresh()
+ 
     def ConvertPILToWX(self, myPilImage, copyAlpha=True):
 
         hasAlpha = myPilImage.mode[-1] == 'A'
