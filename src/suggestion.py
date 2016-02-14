@@ -28,8 +28,8 @@ def get_suggestions():
         tag_quantities.append([counter, tag_id])
         counter = 0
 
-    if len(tag_ids) > 5:
-        while i < 5:
+    if len(tag_ids) > 10:
+        while i < 10:
             recomm_ids.append(max(tag_quantities)[1])
             tag_quantities.remove(max(tag_quantities))
             i += 1

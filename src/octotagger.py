@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+from autocomplete import AutocompleteTextCtrl
 import about
 import contextpane
 import create_folders
@@ -263,25 +264,31 @@ class MainWindow(wx.Frame):
         tag_panel_sz.Add(query_field_panel, 0, wx.EXPAND | wx.ALIGN_CENTER)
         tag_panel_sz.Add(tag_list_panel, 1, wx.EXPAND)
 
-        self.query_field = wx.TextCtrl(
+        template = "%s<b><u>%s</b></u>%s"
+
+        def list_completer(a_list):
+            def completer(query):
+                formatted, unformatted = list(), list()
+                if query:
+                    unformatted = [item for item in a_list if query in item]
+                    for item in unformatted:
+                        s = item.find(query)
+                        formatted.append(
+                            template % (item[:s], query, item[s + len(query):])
+                        )
+
+                return formatted, unformatted
+            return completer
+
+        self.tags = suggestion.get_suggestions()
+
+        self.query_field = AutocompleteTextCtrl(
             query_field_panel,
-            -1,
-            "",
-            style=wx.TE_PROCESS_ENTER
+            completer=list_completer(self.tags)
         )
+
         self.current_query = ""
         self.checked_tags = []
-
-        self.query_cbox = wx.ComboBox(
-            query_field_panel,
-            id=wx.ID_ANY,
-            value="",
-            choices=[""],
-            style=wx.TE_PROCESS_ENTER,  # | wx.CB_DROPDOWN,
-            validator=wx.DefaultValidator,
-            name=wx.ComboBoxNameStr)
-
-        self.query_cbox.Show(False)
 
         self.Bind(
             wx.EVT_TEXT,
@@ -289,39 +296,17 @@ class MainWindow(wx.Frame):
             self.query_field,
         )
 
+        self.Bind(
+            wx.EVT_TEXT_ENTER,
+            self.on_query_text_enter,
+            self.query_field,
+        )
+        """
         self.query_field.Bind(
-                wx.EVT_LEFT_DOWN,
-                self.on_query_text_click)
-
-        self.Bind(
-            wx.EVT_TEXT_ENTER,
-            self.on_query_text_enter,
-            self.query_field,
-        )
-
-        self.Bind(
-            wx.EVT_TEXT,
-            self.on_query_text_change,
-            self.query_cbox,
-        )
-
-        self.Bind(
-            wx.EVT_COMBOBOX,
-            self.on_query_text_select,
-            self.query_cbox,
-        )
-
-        self.Bind(
             wx.EVT_LEFT_DOWN,
-            self.on_query_text_click,
-            self.query_field,
+            self.on_query_text_click
         )
-
-        self.Bind(
-            wx.EVT_TEXT_ENTER,
-            self.on_query_text_enter,
-            self.query_cbox,
-        )
+        """
 
         self.Bind(
             wx.EVT_CHILD_FOCUS,
@@ -331,12 +316,6 @@ class MainWindow(wx.Frame):
 
         query_field_panel_sz.Add(
             self.query_field,
-            1,
-            wx.LEFT | wx.RIGHT | wx.UP,
-            20)
-
-        query_field_panel_sz.Add(
-            self.query_cbox,
             1,
             wx.LEFT | wx.RIGHT | wx.UP,
             20)
@@ -722,6 +701,7 @@ class MainWindow(wx.Frame):
         self.start_overview()
 
     def on_query_text(self, e):
+
         if self.mode == "overview":
             if self.mainPan.GetSelectedItems():
                 return
@@ -767,32 +747,6 @@ class MainWindow(wx.Frame):
                     self.mainPan.SetItems(items)
                     self.Layout()
 
-    def on_query_text_click(self, e):
-
-        if self.mode == "overview":
-            if self.mainPan.GetSelectedItems():
-                tagersss = suggestion.get_suggestions()
-                self.query_cbox.Clear()
-
-                for tag in tagersss:
-                    self.query_cbox.Append(tag)
-
-                self.query_field.Show(False)
-                self.query_cbox.Show(True)
-                self.Refresh()
-                self.Layout()
-                self.query_cbox.Popup()
-
-            else:
-                self.query_field.SetFocus()
-        e.Skip()
-
-    def on_query_text_change(self, e):
-
-        if len(e.GetString()) is 2:
-            self.query_cbox.Dismiss()
-            self.query_cbox.SetInsertionPoint(self.query_cbox.GetLastPosition())
-
     def on_query_text_select(self, e):
 
         items = self.GetSelectedItems()
@@ -809,7 +763,9 @@ class MainWindow(wx.Frame):
         e.GetEventObject().Clear()
 
     def on_query_text_enter(self, e):
-
+        self.tags = suggestion.get_suggestions()
+        print self.tags
+        self.query_field.completer = self.list_completer(self.tags)
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
 
@@ -844,6 +800,26 @@ class MainWindow(wx.Frame):
         self.update_tag_list()
         self.select_tags()
         e.GetEventObject().Clear()
+
+    def list_completer(self, a_list):
+        template = "%s<b><u>%s</b></u>%s"
+        def completer(query):
+            formatted, unformatted = list(), list()
+            if query:
+                unformatted = [item for item in a_list if query in item]
+                for item in unformatted:
+                    s = item.find(query)
+                    formatted.append(
+                        template % (item[:s], query, item[s + len(query):])
+                    )
+
+            return formatted, unformatted
+        return completer
+    """
+    def on_query_text_click(self, e):
+        print("clickworks!")
+        self.query_field.SetFocus()
+    """
 
     def start_overview(self, e=None, warn_import=True):
         # Set items to all current database items
@@ -907,10 +883,7 @@ class MainWindow(wx.Frame):
                     self.lb.SetCheckedStrings(self.checked_tags, only=True)
         elif selection > 0:
             self.query_field.SetValue("")
-            if self.mode == "overview":
-                self.query_cbox.Show(False)
-                self.query_field.Show(True)
-            elif self.mode == "import":
+            if self.mode == "import":
                 self.query_field.Enable(True)
                 self.lb.EnableAll(True)
 
