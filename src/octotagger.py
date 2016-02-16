@@ -356,7 +356,6 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnLeft, id=left_id)
         self.Bind(wx.EVT_MENU, self.OnRight, id=right_id)
 
-        # FIXME: Bindings don't fire sometimes (Focus problem?)
         self.accel_tbl = wx.AcceleratorTable([
             (wx.ACCEL_NORMAL, wx.WXK_F2, f2_id),
             (wx.ACCEL_NORMAL, wx.WXK_F1, helpManual.GetId()),
@@ -956,6 +955,7 @@ class MainWindow(wx.Frame):
         if self.mode == "import":
             items = []
             if path:
+                items.append(path)
                 folder_items = []
                 children = os.listdir(path)
                 for child in children:
@@ -1014,8 +1014,8 @@ class MainWindow(wx.Frame):
         self.SetCursor(cursor)
 
     def on_tag_selected(self, e):
-        self.SetCursorWaiting(True)
         if self.mode in ["overview", "import"]:
+            self.SetCursorWaiting(True)
 
             items = self.GetSelectedItems()
             tags = self.lb.GetStrings()
@@ -1597,11 +1597,11 @@ class MainWindow(wx.Frame):
             path = file
         else:
             items = self.GetSelectedItems()
+            print items
             if len(items) != 1:
                 if self.mode == "import":
                     paths = self.mainPan.GetSelectedItems()
                     if len(paths) == 1 and os.path.isdir(paths[0]):
-                        # FIXME: Not always correct?
                         item = paths[0]
                     else:
                         return
@@ -1609,6 +1609,7 @@ class MainWindow(wx.Frame):
                     return
             else:
                 item = items[0]
+                print items
 
             if self.mode in ["overview", "tagging"]:
 
@@ -1670,6 +1671,14 @@ class MainWindow(wx.Frame):
         )
         dlg.ShowModal()
         new_name = dlg.GetValue()
+
+        # TODO: Find out the constant name
+        if dlg.GetReturnCode() == 5101:
+            return
+
+        if new_name == old_name:
+            return
+
         dlg.Destroy()
 
         # Check if name already exists

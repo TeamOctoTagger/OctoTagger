@@ -248,10 +248,12 @@ class ContextPane(wx.ScrolledWindow):
     def SelectAll(self, event):
         self.octotagger.mainPan.SetSelectedAll(True)
         self.octotagger.on_selection_change()
+        self.octotagger.mainPan.SetFocus()
 
     def DeselectAll(self, event):
         self.octotagger.mainPan.SetSelectedAll(False)
         self.octotagger.on_selection_change()
+        self.octotagger.mainPan.SetFocus()
 
     def EnableAll(self, enable):
         for child in self.GetChildren():

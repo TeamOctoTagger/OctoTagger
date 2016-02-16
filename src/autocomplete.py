@@ -127,10 +127,10 @@ class AutocompleteTextCtrl(wx.TextCtrl):
 
     def OnLeftDown(self, event):
         self.popup.Show()
-        unformated = tagging.get_all_tags()
-        formated = unformated
-        if len(formated) > 0:
-            self.popup.SetSuggestions(formated, unformated)
+        unformatted = tagging.get_all_tags()
+        formatted = unformatted
+        if len(formatted) > 0:
+            self.popup.SetSuggestions(formatted, unformatted)
             self.AdjustPopupPosition()
             self.Unbind(wx.EVT_KILL_FOCUS)
             self.popup.ShowWithoutActivating()
@@ -138,6 +138,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
             self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
         else:
             self.popup.Hide()
+        event.Skip()
 
     def OnTextUpdate(self, event):
         if self.skip_event:
@@ -150,11 +151,11 @@ class AutocompleteTextCtrl(wx.TextCtrl):
     def AutoComplete(self):
         self.queued_popup = False
         if self.Value != "":
-            formated, unformated = self.completer(self.Value)
-            print formated
-            print unformated
-            if len(formated) > 0:
-                self.popup.SetSuggestions(formated, unformated)
+            formatted, unformatted = self.completer(self.Value)
+            print formatted
+            print unformatted
+            if len(formatted) > 0:
+                self.popup.SetSuggestions(formatted, unformatted)
                 self.AdjustPopupPosition()
                 self.Unbind(wx.EVT_KILL_FOCUS)
                 self.popup.ShowWithoutActivating()
