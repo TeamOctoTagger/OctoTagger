@@ -25,7 +25,6 @@ POSSIBILITY OF SUCH DAMAGE."""
 __author__ = u"Toni Ruža <gmr.gaf@gmail.com>"
 __url__  = "http://bitbucket.org/raz/wxautocompletectrl"
 
-
 import wx
 import tagging
 
@@ -159,7 +158,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
                 self.AdjustPopupPosition()
                 self.Unbind(wx.EVT_KILL_FOCUS)
                 self.popup.ShowWithoutActivating()
-                self.SetFocus()
+                # self.SetFocus()
                 self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
             else:
                 self.popup.Hide()

@@ -834,8 +834,6 @@ class MainWindow(wx.Frame):
         elif self.mode == "tagging":
             self.on_resume_overview_mode()
 
-        self.Freeze()
-
         self.lb.EnableAll(True)
         self.toolStartTaggingMode.Enable(enable=True)
         self.mode = "overview"
@@ -865,8 +863,6 @@ class MainWindow(wx.Frame):
         self.Refresh()
         self.Layout()
         self.mainPan.SetFocus()
-
-        self.Thaw()
 
     def on_selection_change(self, event=None):
         selection = len(self.GetSelectedItems())
