@@ -99,7 +99,6 @@ class ItemView(wx.ScrolledWindow):
         self.Thaw()
 
     def OnMouseUp(self, event):
-        #self.Freeze()
         target = event.GetEventObject()
         if target is self:
             # clicked outside of any item
@@ -134,8 +133,6 @@ class ItemView(wx.ScrolledWindow):
             target.ToggleSelected()
 
         self.last_clicked = index
-        #self.Thaw()
-
         wx.PostEvent(self, SelectionChangeEvent(self.GetId()))
 
     def OnRightMouseUp(self, target, modifiers):

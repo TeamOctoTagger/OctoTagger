@@ -220,6 +220,8 @@ class MainWindow(wx.Frame):
             item_create_output_folder,
         )
 
+        self.Bind(wx.EVT_ACTIVATE, self.OnActivate)
+
         self.Bind(wx.EVT_MENU, self.OnSettings, item_settings)
         self.Bind(wx.EVT_MENU, self.OnAbout, item_about)
 
@@ -239,6 +241,9 @@ class MainWindow(wx.Frame):
         self.mainPan = itemview.ItemView(self)
         self.Bind(itemview.EVT_ITEM_DOUBLE_CLICK, self.on_double_click_item)
         self.Bind(itemview.EVT_ITEM_RIGHT_CLICK, self.on_right_click_item)
+
+        # Save scroll position in order to prevent a reset
+        self.scrolled = self.mainPan.GetViewStart()
 
         self.main_box = wx.BoxSizer(wx.HORIZONTAL)
         left_panel = wx.Panel(self, size=(300, -1), name="left_panel")
@@ -307,12 +312,6 @@ class MainWindow(wx.Frame):
             self.on_query_text_click
         )
         """
-
-        self.Bind(
-            wx.EVT_CHILD_FOCUS,
-            self.OnChildFocus,
-            self
-        )
 
         query_field_panel_sz.Add(
             self.query_field,
@@ -393,11 +392,8 @@ class MainWindow(wx.Frame):
             )
         )
         if self.dark_theme:
-            print "dark"
             self.topbar.SetBackgroundColour("#333333")
             self.current_directory.SetForegroundColour("#FFFFFF")
-        else:
-            print "bright"
 
         self.btn_up = wx.Button(self.topbar, -1, "^")
         self.btn_up.Bind(wx.EVT_BUTTON, self.ChangeFolderUp)
@@ -563,7 +559,6 @@ class MainWindow(wx.Frame):
             path = os.path.join(folder[1], folder[2])
             folders.append(unicode(path.encode('utf-8'), "utf-8"))
 
-        print folders
         self.update_gallery_menu()
         self.lb.EnableAll(False)
         self.cpane.SetMode("folder")
@@ -652,6 +647,7 @@ class MainWindow(wx.Frame):
 
         self.items = self.mainPan.GetItems()
         self.selected_items = self.mainPan.GetSelectedItems()
+        self.scrolled = self.mainPan.GetViewStart()
 
         self.main_box.Remove(self.mainPan)
         self.mainPan.Destroy()
@@ -738,8 +734,6 @@ class MainWindow(wx.Frame):
                     for item in result:
                         items.append(item[0])
 
-                    print self.current_query, items
-
                     if len(items) == 0:
                         # TODO: Show warning instead of nothing?
                         pass
@@ -765,7 +759,6 @@ class MainWindow(wx.Frame):
 
     def on_query_text_enter(self, e):
         self.tags = suggestion.get_suggestions()
-        print self.tags
         self.query_field.completer = self.list_completer(self.tags)
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
@@ -863,6 +856,8 @@ class MainWindow(wx.Frame):
         self.Refresh()
         self.Layout()
         self.mainPan.SetFocus()
+        self.mainPan.Scroll(self.scrolled)
+        print self.scrolled
 
     def on_selection_change(self, event=None):
         selection = len(self.GetSelectedItems())
@@ -1282,6 +1277,13 @@ class MainWindow(wx.Frame):
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
 
+    def OnActivate(self, event):
+        if self.mode != "tagging":
+            if event.GetActive():
+                self.mainPan.Scroll(self.scrolled)
+            else:
+                self.scrolled = self.mainPan.GetViewStart()
+
     def OnRefreshThumbnails(self, event=None):
         items = self.GetSelectedItems()
         if len(items) == 0 or self.mode != "overview":
@@ -1308,7 +1310,6 @@ class MainWindow(wx.Frame):
 
                 directory = database.get_current_gallery("directory")
                 thumbnail = os.path.join(directory, "thumbnails", uuid)
-                print thumbnail
                 os.remove(thumbnail)
                 self.mainPan.GetItemFromPath(item).LoadThumbnail()
 
@@ -1341,9 +1342,6 @@ class MainWindow(wx.Frame):
         event.Skip()
         self.Layout()
         self.Refresh()
-
-    def OnChildFocus(self, event):
-        print wx.Window.FindFocus()
 
     def on_double_click_item(self, e):
 
@@ -1582,9 +1580,7 @@ class MainWindow(wx.Frame):
             print "Can not edit more than one folder at once."
             return
 
-        
         is_gf = self.mainPan.GetItemFromPath(items[0]).IsGalleryFolder()
-        print self.mainPan.GetItemFromPath(items[0]), is_gf
         if is_gf:
             folder = tagging.gallery_path_to_id(items[0])
             dlg = edit_gallery_folder.EditGalleryFolder(self, folder)
@@ -1644,7 +1640,6 @@ class MainWindow(wx.Frame):
                 os.startfile(path)
             else:
                 link_path = os.path.join(files_path, "temp_links", file_name)
-                print link_path
                 create_folders.symlink(path, link_path, True)
                 os.startfile(link_path)
         elif os.name == 'posix':
@@ -1756,7 +1751,7 @@ class MainWindow(wx.Frame):
         if self.mode == "tagging":
             self.mainPan.RemoveItem(item[0])
 
-    def RemoveItem(self, event=None):
+    def RemoveItem(self):
         if self.mode == "folder":
             items = self.mainPan.GetSelectedItems()
             advanced_ids = []
@@ -1813,8 +1808,8 @@ class MainWindow(wx.Frame):
                  file_text_2),
                 style=wx.ICON_EXCLAMATION | wx.YES_NO | wx.NO_DEFAULT
             )
+
             if dlg == wx.NO:
-                # FIXME: Scrolls to the top after selecting NO
                 return
 
             # Delete files

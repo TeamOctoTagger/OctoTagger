@@ -133,7 +133,6 @@ class TagList(wx.ScrolledWindow):
 
     def CheckAll(self, state):
         for cb in self.GetItems():
-            print type(cb)
             cb.Set3StateValue(state)
 
     def OnMouseRight(self, event):
