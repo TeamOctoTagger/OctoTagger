@@ -312,9 +312,8 @@ class ItemView(wx.ScrolledWindow):
 
         items = self.GetChildren()
         for item in items:
-            if item != self.GetParent().topbar:
-                if item.GetPath() == path:
-                    return item
+            if isinstance(item, Item) and item.GetPath() == path:
+                return item
 
     def IsSelectedAll(self):
         items = self.sizer.GetChildren()

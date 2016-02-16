@@ -561,8 +561,9 @@ class MainWindow(wx.Frame):
 
         for folder in special_folder_result:
             path = os.path.join(folder[1], folder[2])
-            folders.append(path.encode('utf-8'))
+            folders.append(unicode(path.encode('utf-8'), "utf-8"))
 
+        print folders
         self.update_gallery_menu()
         self.lb.EnableAll(False)
         self.cpane.SetMode("folder")
@@ -1297,9 +1298,8 @@ class MainWindow(wx.Frame):
 
             if self.mode == "overview":
                 for child in self.mainPan.GetChildren():
-                    if child is self.topbar:
-                        continue
-                    child.LoadThumbnail()
+                    if isinstance(child, itemview.Item):
+                        child.LoadThumbnail()
 
         elif len(items) > 0 and self.mode == "overview":
             for item in items:
@@ -1586,10 +1586,9 @@ class MainWindow(wx.Frame):
             print "Can not edit more than one folder at once."
             return
 
-        for child in self.mainPan.GetChildren():
-            if child is not self.topbar and child.GetPath() == items[0]:
-                is_gf = child.IsGalleryFolder()
-
+        
+        is_gf = self.mainPan.GetItemFromPath(items[0]).IsGalleryFolder()
+        print self.mainPan.GetItemFromPath(items[0]), is_gf
         if is_gf:
             folder = tagging.gallery_path_to_id(items[0])
             dlg = edit_gallery_folder.EditGalleryFolder(self, folder)
@@ -1598,7 +1597,6 @@ class MainWindow(wx.Frame):
             dlg = edit_output_folder.EditOutputFolder(self, folder)
 
         dlg.ShowModal()
-        dlg.Destroy()
 
         self.on_start_folder_mode()
 
