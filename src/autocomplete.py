@@ -27,7 +27,6 @@ __url__  = "http://bitbucket.org/raz/wxautocompletectrl"
 
 import wx
 import tagging
-import msvcrt
 
 # TODO Suggestion Box sollte bei Enter offen bleiben
 
