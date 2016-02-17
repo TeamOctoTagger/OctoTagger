@@ -711,6 +711,7 @@ class MainWindow(wx.Frame):
 
                 if query_input == "":
                     self.start_overview()
+                    self.query_field.SetFocus()
                     self.cpane.Remove("create_folder_from_expr")
 
                 else:

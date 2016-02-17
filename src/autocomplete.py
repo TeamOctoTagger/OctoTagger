@@ -140,11 +140,12 @@ class AutocompleteTextCtrl(wx.TextCtrl):
         event.Skip()
 
     def OnTextUpdate(self, event):
-        if self.skip_event:
-            self.skip_event = False
-        elif not self.queued_popup:
-            wx.CallLater(self.frequency, self.AutoComplete)
-            self.queued_popup = True
+        if len(self.octotagger.GetSelectedItems()) > 0:
+            if self.skip_event:
+                self.skip_event = False
+            elif not self.queued_popup:
+                wx.CallLater(self.frequency, self.AutoComplete)
+                self.queued_popup = True
         event.Skip()
 
     def AutoComplete(self):
@@ -269,7 +270,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
     def OnSuggestionKeyDown(self, event):
         key = event.GetKeyCode()
         if key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
-            print "getfckedboy"
+            print "try"
             #self.skip_event = True
             #self.SetValue(self.popup.GetSelectedSuggestion())
             #self.SetInsertionPointEnd()
