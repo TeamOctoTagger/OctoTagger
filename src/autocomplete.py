@@ -27,7 +27,9 @@ __url__  = "http://bitbucket.org/raz/wxautocompletectrl"
 
 import wx
 import tagging
+import msvcrt
 
+# TODO Suggestion Box sollte bei Enter offen bleiben
 
 class SuggestionsPopup(wx.Frame):
     def __init__(self, parent):
@@ -79,17 +81,14 @@ class SuggestionsPopup(wx.Frame):
 
 
 class AutocompleteTextCtrl(wx.TextCtrl):
-    def __init__(
-        self, parent,
-        height=200, completer=None,
-        multiline=False, frequency=250
-    ):
+    def __init__(self, parent, octotagger, height=200, completer=None, multiline=False, frequency=250):
         style = wx.TE_PROCESS_ENTER
         if multiline:
             style = style | wx.TE_MULTILINE
         wx.TextCtrl.__init__(self, parent, style=style)
         self.height = height
         self.frequency = frequency
+        self.octotagger = octotagger
         if completer:
             self.SetCompleter(completer)
         self.queued_popup = False
@@ -126,18 +125,19 @@ class AutocompleteTextCtrl(wx.TextCtrl):
         event.Skip()
 
     def OnLeftDown(self, event):
-        self.popup.Show()
-        unformatted = tagging.get_all_tags()
-        formatted = unformatted
-        if len(formatted) > 0:
-            self.popup.SetSuggestions(formatted, unformatted)
-            self.AdjustPopupPosition()
-            self.Unbind(wx.EVT_KILL_FOCUS)
-            self.popup.ShowWithoutActivating()
-            self.SetFocus()
-            self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
-        else:
-            self.popup.Hide()
+        if len(self.octotagger.GetSelectedItems()) > 0:
+            self.popup.Show()
+            unformatted = tagging.get_all_tags()
+            formatted = unformatted
+            if len(formatted) > 0:
+                self.popup.SetSuggestions(formatted, unformatted)
+                self.AdjustPopupPosition()
+                self.Unbind(wx.EVT_KILL_FOCUS)
+                self.popup.ShowWithoutActivating()
+                self.SetFocus()
+                self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
+            else:
+                self.popup.Hide()
         event.Skip()
 
     def OnTextUpdate(self, event):
@@ -182,10 +182,39 @@ class AutocompleteTextCtrl(wx.TextCtrl):
             return
 
         elif key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and self.popup.Shown:
-            self.skip_event = True
-            self.SetValue(self.popup.GetSelectedSuggestion())
+            #self.skip_event = True
             self.SetInsertionPointEnd()
-            self.popup.Hide()
+
+            items = self.octotagger.GetSelectedItems()
+            print items
+            tag = self.popup.GetSelectedSuggestion()
+            print tag
+
+            if not (items and tag):
+                return
+
+            for item in items:
+                tagging.tag_file(item, tag)
+
+            self.octotagger.update_tag_list()
+            self.octotagger.select_tags()
+            self.Value = ""
+
+            unformatted = tagging.get_all_tags()
+            formatted = unformatted
+            if len(formatted) > 0:
+                self.popup.SetSuggestions(formatted, unformatted)
+                self.AdjustPopupPosition()
+                self.Unbind(wx.EVT_KILL_FOCUS)
+                self.popup.ShowWithoutActivating()
+                self.SetFocus()
+                self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
+            else:
+                self.popup.Hide()
+
+            self.popup.Show()
+            event.Skip()
+
             return
 
         elif key == wx.WXK_HOME:
@@ -206,18 +235,46 @@ class AutocompleteTextCtrl(wx.TextCtrl):
     def OnSuggestionClicked(self, event):
         self.skip_event = True
         n = self.popup._suggestions.HitTest(event.Position)
-        self.Value = self.popup.GetSuggestion(n)
+        #self.Value = self.popup.GetSuggestion(n)
         self.SetInsertionPointEnd()
         wx.CallAfter(self.SetFocus)
+
+        items = self.octotagger.GetSelectedItems()
+        print items
+        tag = self.popup.GetSuggestion(n)
+        print tag
+
+        if not (items and tag):
+            return
+
+        for item in items:
+            tagging.tag_file(item, tag)
+
+        self.octotagger.update_tag_list()
+        self.octotagger.select_tags()
+        self.Value = ""
+
+        unformatted = tagging.get_all_tags()
+        formatted = unformatted
+        if len(formatted) > 0:
+            self.popup.SetSuggestions(formatted, unformatted)
+            self.AdjustPopupPosition()
+            self.Unbind(wx.EVT_KILL_FOCUS)
+            self.popup.ShowWithoutActivating()
+            self.SetFocus()
+            self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
+        else:
+            self.popup.Hide()
         event.Skip()
 
     def OnSuggestionKeyDown(self, event):
         key = event.GetKeyCode()
         if key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
-            self.skip_event = True
-            self.SetValue(self.popup.GetSelectedSuggestion())
-            self.SetInsertionPointEnd()
-            self.popup.Hide()
+            print "getfckedboy"
+            #self.skip_event = True
+            #self.SetValue(self.popup.GetSelectedSuggestion())
+            #self.SetInsertionPointEnd()
+            #self.popup.Hide()
         event.Skip()
 
     def OnKillFocus(self, event):

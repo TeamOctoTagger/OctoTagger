@@ -4,6 +4,7 @@
 from __future__ import unicode_literals
 from autocomplete import AutocompleteTextCtrl
 import about
+import autocomplete
 import contextpane
 import create_folders
 import create_gallery_folder
@@ -287,9 +288,10 @@ class MainWindow(wx.Frame):
 
         self.tags = suggestion.get_suggestions()
 
-        self.query_field = AutocompleteTextCtrl(
+        self.query_field = autocomplete.AutocompleteTextCtrl(
             query_field_panel,
-            completer=list_completer(self.tags)
+            completer=list_completer(self.tags),
+            octotagger=self
         )
 
         self.current_query = ""
@@ -742,7 +744,6 @@ class MainWindow(wx.Frame):
                     self.Layout()
 
     def on_query_text_select(self, e):
-
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
 
