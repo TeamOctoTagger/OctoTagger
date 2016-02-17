@@ -253,7 +253,8 @@ class AutocompleteTextCtrl(wx.TextCtrl):
         self.octotagger.update_tag_list()
         self.octotagger.select_tags()
         self.Value = ""
-
+        self.popup.Hide()
+        """
         unformatted = tagging.get_all_tags()
         formatted = unformatted
         if len(formatted) > 0:
@@ -265,6 +266,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
             self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
         else:
             self.popup.Hide()
+        """
         event.Skip()
 
     def OnSuggestionKeyDown(self, event):
