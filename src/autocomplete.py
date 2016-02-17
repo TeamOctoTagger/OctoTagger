@@ -27,8 +27,8 @@ __url__  = "http://bitbucket.org/raz/wxautocompletectrl"
 
 import wx
 import tagging
+import msvcrt
 
-# TODO Suggestion Box sollte sich bei keiner Selection nicht öffnen
 # TODO Suggestion Box sollte bei Enter offen bleiben
 
 class SuggestionsPopup(wx.Frame):
@@ -125,18 +125,19 @@ class AutocompleteTextCtrl(wx.TextCtrl):
         event.Skip()
 
     def OnLeftDown(self, event):
-        self.popup.Show()
-        unformatted = tagging.get_all_tags()
-        formatted = unformatted
-        if len(formatted) > 0:
-            self.popup.SetSuggestions(formatted, unformatted)
-            self.AdjustPopupPosition()
-            self.Unbind(wx.EVT_KILL_FOCUS)
-            self.popup.ShowWithoutActivating()
-            self.SetFocus()
-            self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
-        else:
-            self.popup.Hide()
+        if len(self.octotagger.GetSelectedItems()) > 0:
+            self.popup.Show()
+            unformatted = tagging.get_all_tags()
+            formatted = unformatted
+            if len(formatted) > 0:
+                self.popup.SetSuggestions(formatted, unformatted)
+                self.AdjustPopupPosition()
+                self.Unbind(wx.EVT_KILL_FOCUS)
+                self.popup.ShowWithoutActivating()
+                self.SetFocus()
+                self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
+            else:
+                self.popup.Hide()
         event.Skip()
 
     def OnTextUpdate(self, event):
