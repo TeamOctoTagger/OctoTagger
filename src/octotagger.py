@@ -1760,7 +1760,7 @@ class MainWindow(wx.Frame):
         if self.mode == "tagging":
             self.mainPan.RemoveItem(item[0])
 
-    def RemoveItem(self):
+    def RemoveItem(self, event=None):
         if self.mode == "folder":
             items = self.mainPan.GetSelectedItems()
             advanced_ids = []

@@ -3,7 +3,7 @@ import os
 import sqlite3
 
 
-def check(event = None):
+def check(event=None):
     """checks the integrity of the current gallery"""
     gallery_folder = database.get_current_gallery("directory")
     gallery_conn = database.get_current_gallery("connection")
@@ -51,7 +51,7 @@ def check(event = None):
             os.path.isdir(os.path.join(folder_path, f))
         ])
 
-        if folder["use_softlink"] == True:
+        if folder["use_softlink"]:
             untracked_files = [
                 f for f in files if
                 os.path.isfile(os.path.join(folder_path, f)) and not

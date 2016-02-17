@@ -12,6 +12,8 @@ import threading
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
 
+# FIXME: Some images are not shown on Windows
+
 
 class TaggingView(wx.Panel):
 
@@ -33,8 +35,6 @@ class TaggingView(wx.Panel):
         self.InitUI()
 
     def InitUI(self):
-
-        
 
         self.imgPan = wx.Panel(self)
 
