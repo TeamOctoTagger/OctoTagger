@@ -125,7 +125,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
 
     def OnLeftDown(self, event):
         if len(self.octotagger.GetSelectedItems()) > 0:
-            self.popup.Show()
+            # self.popup.Show()
             unformatted = tagging.get_all_tags()
             formatted = unformatted
             if len(formatted) > 0:
@@ -133,7 +133,6 @@ class AutocompleteTextCtrl(wx.TextCtrl):
                 self.AdjustPopupPosition()
                 self.Unbind(wx.EVT_KILL_FOCUS)
                 self.popup.ShowWithoutActivating()
-                self.SetFocus()
                 self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
             else:
                 self.popup.Hide()
@@ -152,14 +151,11 @@ class AutocompleteTextCtrl(wx.TextCtrl):
         self.queued_popup = False
         if self.Value != "":
             formatted, unformatted = self.completer(self.Value)
-            print formatted
-            print unformatted
             if len(formatted) > 0:
                 self.popup.SetSuggestions(formatted, unformatted)
                 self.AdjustPopupPosition()
                 self.Unbind(wx.EVT_KILL_FOCUS)
                 self.popup.ShowWithoutActivating()
-                # self.SetFocus()
                 self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
             else:
                 self.popup.Hide()
