@@ -6,8 +6,19 @@ import os
 def check(event=None):
     connection = database.get_sys_db()
     c = connection.cursor()
+
+    result = {
+        "untracked": [],
+        "missing": [],
+        "occupied": [],
+    }
+
     for gallery in c.execute("SELECT pk_id FROM gallery"):
-        _check_gallery(gallery)
+        part = _check_gallery(gallery)
+        for key in result:
+            result[key].extend(part[key])
+
+    return result
 
 
 def _check_gallery(id):
@@ -20,6 +31,7 @@ def _check_gallery(id):
     result = {
         "untracked": [],
         "missing": [],
+        "occupied": [],
     }
 
     # check database
@@ -28,22 +40,40 @@ def _check_gallery(id):
     files_db = {x[0] for x in c.execute("SELECT uuid FROM file")}
 
     for untracked_file in (files_fs - files_db):
-        result["untracked"].append(untracked_file)
+        if untracked_file == "temp_links":
+            continue
+        result["untracked"].append(os.path.join(
+            gallery,
+            untracked_file,
+        ))
 
     for missing_file in (files_db - files_fs):
-        c.execute("SELECT pk_id FROM file WHERE uuid=:uuid", {
+        c.execute("SELECT file_name FROM file WHERE uuid=:uuid", {
             "uuid": missing_file,
         })
-        result["missing"].append(c.fetchone()[0])
+        result["missing"].append((
+            os.path.join(gallery, missing_file),
+            c.fetchone()[0],
+        ))
 
     # check advanced output folders
 
-    c.execute("SELECT location, name, use_softlink, expression FROM folder")
+    c.execute(
+        "SELECT location, name, use_softlink, expression, pk_id "
+        "FROM folder"
+    )
     for folder in c.fetchall():
         path = os.path.join(folder[0], folder[1])
-        files_fs = set(os.listdir(path))
+
+        # ensure folder exists
+        if not os.path.exists(path):
+            os.makedirs(path)
+        elif not os.path.isdir(path):
+            result['occupied'].append((True, folder[4]))
+            continue
 
         # create missing links
+        files_fs = set(os.listdir(path))
         c.execute(
             (
                 "SELECT uuid, file_name "
@@ -81,9 +111,16 @@ def _check_gallery(id):
         )
         for tag in c.fetchall():
             path = os.path.join(folder[0], folder[1], tag[0])
-            files_fs = set(os.listdir(path))
+
+            # ensure folder exists
+            if not os.path.exists(path):
+                os.makedirs(path)
+            elif not os.path.isdir(path):
+                result['occupied'].append((False, folder[3]))
+                continue
 
             # create missing links
+            files_fs = set(os.listdir(path))
             c.execute(
                 (
                     "SELECT uuid, file_name "

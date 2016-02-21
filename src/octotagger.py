@@ -200,7 +200,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
         self.Bind(wx.EVT_MENU, self.OnDeleteDatabase, self.toolDeleteDatabase)
         self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, toolRefreshThumbnails)
-        self.Bind(wx.EVT_MENU, integrity.check, toolIntegrityCheck)
+        self.Bind(wx.EVT_MENU, self.OnIntegrityCheck, toolIntegrityCheck)
         self.Bind(wx.EVT_MENU, self.on_start_import, self.fileImportFiles)
         self.Bind(
             wx.EVT_MENU,
@@ -1344,6 +1344,57 @@ class MainWindow(wx.Frame):
         event.Skip()
         self.Layout()
         self.Refresh()
+
+    def OnIntegrityCheck(self, event):
+        result = integrity.check()
+        text = ""
+
+        if result['untracked']:
+            text += (
+                "The following files have been found in our database "
+                "folder, but they have no entry in our database. "
+                "Please move them somewhere else.\n\n"
+            )
+            for untracked in result['untracked']:
+                text += untracked + "\n"
+            text += "\n"
+
+        if result['missing']:
+            text += (
+                "The following files are missing in our database folder. "
+                "Please move them back.\n\n"
+            )
+            for missing in result['missing']:
+                text += "{} ({})\n".format(*missing)
+            text += "\n"
+
+        if result['occupied']:
+            text += (
+                "The following output folders could not be created "
+                "as the name is already taken. Please rename the files "
+                "and run the check again.\n"
+            )
+            for occupied in result['occupied']:
+                text += occupied + "\n"
+            text + "\n"
+
+        if text:
+            dlg = wx.MessageDialog(
+                self,
+                text,
+                "Integrity Check",
+                wx.OK | wx.ICON_WARNING,
+            )
+        else:
+            dlg = wx.MessageDialog(
+                self,
+                "Integrity checked",
+                "Integrity Check",
+                wx.OK | wx.ICON_INFORMATION,
+            )
+
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def on_double_click_item(self, e):
 
