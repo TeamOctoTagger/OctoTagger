@@ -1,79 +1,107 @@
+import create_folders
 import database
 import os
-import sqlite3
 
 
 def check(event=None):
-    """checks the integrity of the current gallery"""
-    gallery_folder = database.get_current_gallery("directory")
-    gallery_conn = database.get_current_gallery("connection")
-    gallery_conn.row_factory = sqlite3.Row
-    c = gallery_conn.cursor()
+    connection = database.get_sys_db()
+    c = connection.cursor()
+    for gallery in c.execute("SELECT pk_id FROM gallery"):
+        _check_gallery(gallery)
+
+
+def _check_gallery(id):
+    """checks the integrity of a gallery"""
+    connection = database.get_gallery(id, "connection")
+    c = connection.cursor()
+
+    gallery = os.path.join(database.get_gallery(id, "directory"), "files")
+
     result = {
-        "files": {
-            "untracked": [],
-            "missing": [],
-        },
-        "folder": {
-            "directories": [],
-            "untracked": [],
-            "changed": [],
-        },
+        "untracked": [],
+        "missing": [],
     }
 
-    # check for loose files
+    # check database
 
-    files_fs = set(os.listdir(os.path.join(gallery_folder, "files")))
-
-    c.execute("SELECT uuid FROM file")
-    files_db = set(map(lambda x: x[0], c.fetchall()))
+    files_fs = set(os.listdir(gallery))
+    files_db = {x[0] for x in c.execute("SELECT uuid FROM file")}
 
     for untracked_file in (files_fs - files_db):
-        result["files"]["untracked"].append(untracked_file)
+        result["untracked"].append(untracked_file)
 
     for missing_file in (files_db - files_fs):
         c.execute("SELECT pk_id FROM file WHERE uuid=:uuid", {
             "uuid": missing_file,
         })
-        result["files"]["missing"].append(c.fetchone()[0])
+        result["missing"].append(c.fetchone()[0])
 
-    # check for old output folders
+    # check advanced output folders
 
-    c.execute("SELECT name, location, use_softlink FROM folder")
+    c.execute("SELECT location, name, use_softlink, expression FROM folder")
     for folder in c.fetchall():
-        folder_path = os.path.join(folder["location"], folder["name"])
-        files = set(os.listdir(folder_path))
+        path = os.path.join(folder[0], folder[1])
+        files_fs = set(os.listdir(path))
 
-        # TODO check expression
+        # create missing links
+        c.execute(
+            (
+                "SELECT uuid, file_name "
+                "FROM file "
+                "WHERE {}"
+            ).format(folder[3])
+        )
+        files = [f for f in c.fetchall() if f not in files_fs]
+        for file in files:
+            create_folders.symlink(
+                os.path.join(gallery, file[0]),
+                os.path.join(path, file[1]),
+                folder[2],
+            )
 
-        result["folder"]["directories"].extend([
-            f for f in files if
-            os.path.isdir(os.path.join(folder_path, f))
-        ])
+    # check gallery output folders
 
-        if folder["use_softlink"]:
-            untracked_files = [
-                f for f in files if
-                os.path.isfile(os.path.join(folder_path, f)) and not
-                os.path.islink(os.path.join(folder_path, f))
-            ]
-            for untracked_file in untracked_files:
-                c.execute("SELECT pk_id FROM file WHERE file_name=:name", {
-                    "name": untracked_file,
-                })
-                internal_file = c.fetchone()
-                if internal_file is None:
-                    result["folder"]["untracked"].append(untracked_file)
-                else:
-                    # TODO check if file matches expression
-                    result["folder"]["changed"].append(internal_file[0])
+    c.execute(
+        "SELECT location, name, use_softlink, pk_id "
+        "FROM gallery_folder"
+    )
+    for folder in c.fetchall():
+        c.execute(
+            (
+                "SELECT t.name, t.pk_id "
+                "FROM gallery_folder g "
+                "JOIN gallery_folder_has_tag gt "
+                "ON g.pk_id = gt.pk_fk_gallery_folder_id "
+                "JOIN tag t ON gt.pk_fk_tag_id = t.pk_id "
+                "WHERE g.pk_id = ?"
+            ),
+            (
+                folder[3],
+            ),
+        )
+        for tag in c.fetchall():
+            path = os.path.join(folder[0], folder[1], tag[0])
+            files_fs = set(os.listdir(path))
 
-    c.close()
+            # create missing links
+            c.execute(
+                (
+                    "SELECT uuid, file_name "
+                    "FROM file f "
+                    "JOIN file_has_tag ft ON t.pk_id = ft.pk_fk_file_id "
+                    "JOIN tag t ON ft.pk_fk_tag_id = t.pk_id "
+                    "WHERE t.pk_id = ?"
+                ),
+                (
+                    tag[1],
+                ),
+            )
+            files = [f for f in c.fetchall() if f not in files_fs]
+            for file in files:
+                create_folders.symlink(
+                    os.path.join(gallery, file[0]),
+                    os.path.join(path, file[1]),
+                    folder[2],
+                )
+
     return result
-
-
-def apply(diffs):
-    pass
-
-
-print(check())
