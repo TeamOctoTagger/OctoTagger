@@ -6,6 +6,7 @@ import database
 def get_suggestions():
 
     tag_ids = tagging.get_all_tag_ids()
+    print("suggestion start")
     recomm_ids = []
     recomms = []
     file_ids = []
@@ -22,11 +23,14 @@ def get_suggestions():
         file_ids.append(item[0])
 
     for tag_id in tag_ids:
-        for tempFile in file_ids:
-            if tagging.file_has_tag_id(tempFile, tag_id):
-                counter += 1
-        tag_quantities.append([counter, tag_id])
+        tag_quantities.append([0, tag_id])
+
+    for tempFile in file_ids:
         counter = 0
+        for tag_id in tag_ids:
+            if tagging.file_has_tag_id(tempFile, tag_id):
+                tag_quantities[counter][0] += 1
+            counter += 1
 
     if len(tag_ids) > 10:
         while i < 10:
@@ -44,4 +48,5 @@ def get_suggestions():
     for tag in recomm_ids:
         recomms.append(tagging.tag_id_to_name(tag))
 
+    print recomms
     return recomms

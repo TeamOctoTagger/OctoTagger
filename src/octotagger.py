@@ -273,16 +273,18 @@ class MainWindow(wx.Frame):
         template = "%s<b><u>%s</b></u>%s"
 
         def list_completer(a_list):
-            def completer(query):
+            def completer(query1):
                 formatted, unformatted = list(), list()
-                if query:
-                    unformatted = [item for item in a_list if query in item]
+                if query1:
+                    unformatted = [item for item in a_list if query1 in item]
                     for item in unformatted:
-                        s = item.find(query)
+                        s = item.find(query1)
                         formatted.append(
-                            template % (item[:s], query, item[s + len(query):])
+                            template % (item[:s], query1, item[s + len(query1):])
                         )
 
+                print ("formatted: ", formatted)
+                print ("unformatted: ", unformatted)
                 return formatted, unformatted
             return completer
 
@@ -308,12 +310,6 @@ class MainWindow(wx.Frame):
             self.on_query_text_enter,
             self.query_field,
         )
-        """
-        self.query_field.Bind(
-            wx.EVT_LEFT_DOWN,
-            self.on_query_text_click
-        )
-        """
 
         query_field_panel_sz.Add(
             self.query_field,
@@ -760,6 +756,7 @@ class MainWindow(wx.Frame):
 
     def on_query_text_enter(self, e):
         self.tags = suggestion.get_suggestions()
+        #print ("selftags: ", self.tags)
         self.query_field.completer = self.list_completer(self.tags)
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
@@ -798,23 +795,18 @@ class MainWindow(wx.Frame):
 
     def list_completer(self, a_list):
         template = "%s<b><u>%s</b></u>%s"
-        def completer(query):
+        def completer(query2):
             formatted, unformatted = list(), list()
-            if query:
-                unformatted = [item for item in a_list if query in item]
+            if query2:
+                unformatted = [item for item in a_list if query2 in item]
                 for item in unformatted:
-                    s = item.find(query)
+                    s = item.find(query2)
                     formatted.append(
-                        template % (item[:s], query, item[s + len(query):])
+                        template % (item[:s], query2, item[s + len(query2):])
                     )
 
             return formatted, unformatted
         return completer
-    """
-    def on_query_text_click(self, e):
-        print("clickworks!")
-        self.query_field.SetFocus()
-    """
 
     def start_overview(self, e=None, warn_import=True):
         # Set items to all current database items
