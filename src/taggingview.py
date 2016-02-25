@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+import time
 import wx
 import os
 import database
@@ -11,8 +11,6 @@ import threading
 
 TaggingViewExitEvent, EVT_EXIT_TAGGING_VIEW = wx.lib.newevent.NewCommandEvent()
 ItemChangeEvent, EVT_ITEM_CHANGE = wx.lib.newevent.NewCommandEvent()
-
-# FIXME: Some images are not shown on Windows
 
 
 class TaggingView(wx.Panel):
@@ -96,8 +94,6 @@ class TaggingView(wx.Panel):
 
         self.SetSizerAndFit(mainBox)
 
-        self.Layout()
-        self.Refresh()
         self.Bind(wx.EVT_SIZE, self.ReSize)
         self.imgPan.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
         self.Image.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
@@ -206,45 +202,29 @@ class TaggingView(wx.Panel):
         self.text.SetLabel(label)
 
     def ReSize(self, event=None):
-
         self.load_images()
-        self.Layout()
-        self.Refresh()
         size = self.imgPan.GetSize()
 
         image = self.get_image(0)
-        image.thumbnail(size, Image.BILINEAR)
-        new_image = self.ConvertPILToWX(image)
-        bitmap = wx.BitmapFromImage(new_image)
+        image.thumbnail(size, Image.BILINEAR)  # make image fit imgPan
+        # FIXME converting with alpha results in images only visible for one
+        # frame on Windows
+        image = self.convert_pil_to_wx(image, False)
+        bitmap = wx.BitmapFromImage(image)
         self.Image.SetBitmap(bitmap)
 
-        self.Layout()
-        self.Refresh()
+        self.Layout()  # center image
+        self.Refresh()  # clear off-image area
  
-    def ConvertPILToWX(self, myPilImage, copyAlpha=True):
+    def convert_pil_to_wx(self, image_pil, copy_alpha=True):
+        image_wx = wx.EmptyImage(*image_pil.size)
+        image_wx.SetData(image_pil.convert('RGB').tobytes())
 
-        hasAlpha = myPilImage.mode[-1] == 'A'
-        if copyAlpha and hasAlpha:  # Make sure there is an alpha layer copy.
+        has_alpha = image_pil.mode[-1] == 'A'
+        if has_alpha and copy_alpha:
+            image_wx.SetAlphaData(image_pil.split()[-1].tobytes())
 
-            myWxImage = wx.EmptyImage(*myPilImage.size)
-            myPilImageCopyRGBA = myPilImage.copy()
-            myPilImageCopyRGB = myPilImageCopyRGBA.convert(
-                'RGB')    # RGBA --> RGB
-            myPilImageRgbData = myPilImageCopyRGB.tobytes()
-            myWxImage.SetData(myPilImageRgbData)
-            # Create layer and insert alpha values.
-            myWxImage.SetAlphaData(myPilImageCopyRGBA.tobytes()[3::4])
-
-        else:    # The resulting image will not have alpha.
-
-            myWxImage = wx.EmptyImage(*myPilImage.size)
-            myPilImageCopy = myPilImage.copy()
-            # Discard any alpha from the PIL image.
-            myPilImageCopyRGB = myPilImageCopy.convert('RGB')
-            myPilImageRgbData = myPilImageCopyRGB.tobytes()
-            myWxImage.SetData(myPilImageRgbData)
-
-        return myWxImage
+        return image_wx
 
     def GetItems(self):
         return self.files
