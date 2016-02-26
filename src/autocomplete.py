@@ -127,7 +127,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
     def OnLeftDown(self, event):
         if len(self.octotagger.GetSelectedItems()) > 0:
             # self.popup.Show()
-            unformatted = suggestion.get_suggestions()
+            unformatted = suggestion.get_suggestions(self.octotagger.GetSelectedItems())
             formatted = unformatted
             if len(formatted) > 0:
                 self.popup.SetSuggestions(formatted, unformatted)

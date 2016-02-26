@@ -3,7 +3,7 @@ import tagging
 import database
 
 
-def get_suggestions():
+def get_suggestions(selected_files):
 
     tag_ids = tagging.get_all_tag_ids()
     print("suggestion start")
@@ -11,8 +11,10 @@ def get_suggestions():
     recomms = []
     file_ids = []
     tag_quantities = []
+    no_append = False
     i = 0
     counter = 0
+    contains_tag = False
     query_items = "SELECT pk_id FROM file"
 
     cursor = database.get_current_gallery("connection").cursor()
@@ -34,15 +36,43 @@ def get_suggestions():
 
     if len(tag_ids) > 10:
         while i < 10:
-            recomm_ids.append(max(tag_quantities)[1])
-            tag_quantities.remove(max(tag_quantities))
-            i += 1
+            if not tag_quantities:
+                break
+
+            no_append = False
+            for selected_file in selected_files:
+                if tagging.file_has_tag_id(selected_file, max(tag_quantities)[1]):
+                    contains_tag = True
+                    no_append = True
+
+            if contains_tag is True:
+                tag_quantities.remove(max(tag_quantities))
+                contains_tag = False
+
+            if no_append is not True:
+                recomm_ids.append(max(tag_quantities)[1])
+                tag_quantities.remove(max(tag_quantities))
+                i += 1
         i = 0
     else:
         while i < len(tag_ids):
-            recomm_ids.append(max(tag_quantities)[1])
-            tag_quantities.remove(max(tag_quantities))
-            i += 1
+            if not tag_quantities:
+                break
+
+            no_append = False
+            for selected_file in selected_files:
+                if tagging.file_has_tag_id(selected_file, max(tag_quantities)[1]):
+                    contains_tag = True
+                    no_append = True
+
+            if contains_tag is True:
+                tag_quantities.remove(max(tag_quantities))
+                contains_tag = False
+
+            if no_append is not True:
+                recomm_ids.append(max(tag_quantities)[1])
+                tag_quantities.remove(max(tag_quantities))
+                i += 1
         i = 0
 
     for tag in recomm_ids:

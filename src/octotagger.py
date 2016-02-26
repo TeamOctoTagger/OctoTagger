@@ -288,7 +288,7 @@ class MainWindow(wx.Frame):
                 return formatted, unformatted
             return completer
 
-        self.tags = suggestion.get_suggestions()
+        self.tags = suggestion.get_suggestions(self.GetSelectedItems())
 
         self.query_field = autocomplete.AutocompleteTextCtrl(
             query_field_panel,
@@ -755,7 +755,7 @@ class MainWindow(wx.Frame):
         e.GetEventObject().Clear()
 
     def on_query_text_enter(self, e):
-        self.tags = suggestion.get_suggestions()
+        self.tags = suggestion.get_suggestions(self.GetSelectedItems())
         #print ("selftags: ", self.tags)
         self.query_field.completer = self.list_completer(self.tags)
         items = self.GetSelectedItems()
