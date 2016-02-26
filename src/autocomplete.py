@@ -27,6 +27,7 @@ __url__  = "http://bitbucket.org/raz/wxautocompletectrl"
 
 import wx
 import tagging
+import suggestion
 
 # TODO Suggestion Box sollte bei Enter offen bleiben
 
@@ -126,7 +127,7 @@ class AutocompleteTextCtrl(wx.TextCtrl):
     def OnLeftDown(self, event):
         if len(self.octotagger.GetSelectedItems()) > 0:
             # self.popup.Show()
-            unformatted = tagging.get_all_tags()
+            unformatted = suggestion.get_suggestions()
             formatted = unformatted
             if len(formatted) > 0:
                 self.popup.SetSuggestions(formatted, unformatted)

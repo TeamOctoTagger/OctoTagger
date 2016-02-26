@@ -805,6 +805,8 @@ class MainWindow(wx.Frame):
                         template % (item[:s], query2, item[s + len(query2):])
                     )
 
+            print ("formatted_2: ", formatted)
+            print ("unformatted_2: ", unformatted)
             return formatted, unformatted
         return completer
 
