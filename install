@@ -1,0 +1,47 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import os
+import stat
+
+
+def exec_setup():
+    os.system("python db/setup.py")
+
+
+def write_desktop_file():
+    path = os.path.abspath(os.getcwd())
+
+    desktop_file_content = (
+        ("[Desktop Entry]\n"
+         "Encoding=UTF-8\n"
+         "Version=1.0\n"
+         "Type=Application\n"
+         "Name=OctoTagger\n"
+         "Icon=%s\n"
+         "Path=%s\n"
+         "Exec=python src/octotagger.py\n"
+         "StartupNotify=false\n"
+         "StartupWMClass=Octotagger.py\n"
+         "OnlyShowIn=Unity") %
+        (os.path.join(path, "icons/logo.png"),
+         path)
+    )
+
+    desktop_file_path = os.path.expanduser(
+        "~/.local/share/applications/octotagger.desktop"
+    )
+
+    desktop_file = open(
+        desktop_file_path,
+        "w"
+    )
+
+    desktop_file.write(desktop_file_content)
+    os.chmod(desktop_file_path, os.stat(
+        desktop_file_path).st_mode | stat.S_IEXEC)
+
+# TODO: OSX support
+if os.name == "posix":
+    exec_setup()
+    write_desktop_file()
