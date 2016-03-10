@@ -360,7 +360,8 @@ class _ThumbnailThread(threading.Thread):
             (THUMBNAIL_SIZE[0] - image.GetWidth()) / 2,
             (THUMBNAIL_SIZE[1] - image.GetHeight()) / 2,
         ))
-        wx.PostEvent(self._notify_window, ThumbnailLoadEvent(data=image))
+        if self._notify_window:
+            wx.PostEvent(self._notify_window, ThumbnailLoadEvent(data=image))
 
 
 class Item(wx.Panel):
