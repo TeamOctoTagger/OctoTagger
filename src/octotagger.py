@@ -673,7 +673,6 @@ class MainWindow(wx.Frame):
         self.cpane.SetMode("tagging")
 
         self.Layout()
-        self.Refresh()
         self.mainPan.ReSize()
         self.mainPan.SetFocus()
 
@@ -877,9 +876,6 @@ class MainWindow(wx.Frame):
         if selection > 2:
             selection = 2
         self.cpane.SetMode(selection=selection)
-
-        self.Refresh()
-        self.Layout()
 
     def select_tags(self):
 
