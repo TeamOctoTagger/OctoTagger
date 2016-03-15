@@ -13,10 +13,9 @@ If using Windows:
 
 ## Installation
 
+### On Ubuntu
+```bash
 git clone https://github.com/TeamOctoTagger/OctoTagger
-
 cd OctoTagger
-
-python db/setup.py
-
-python src/octotagger.py
+./install
+```
