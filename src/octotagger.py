@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
-from autocomplete import AutocompleteTextCtrl
 import about
 import autocomplete
 import contextpane
@@ -852,7 +851,6 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.mainPan.SetFocus()
         self.mainPan.Scroll(self.scrolled)
-        print self.scrolled
 
     def on_selection_change(self, event=None):
         selection = len(self.GetSelectedItems())
