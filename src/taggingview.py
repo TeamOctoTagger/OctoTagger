@@ -51,8 +51,6 @@ class TaggingView(wx.Panel):
             )
         )
 
-        self.Image = wx.StaticBitmap(self.imgPan)
-
         if self.GetParent().dark_theme:
             tag_topbar.SetBackgroundColour("#333333")
             self.text.SetForegroundColour("#FFFFFF")
@@ -76,14 +74,6 @@ class TaggingView(wx.Panel):
         tag_topbar_sz.Add(btn_next, 0, wx.EXPAND)
         # tag_topbar_sz.Add(btn_exit, 0, wx.EXPAND)
 
-        imgPan_sz = wx.BoxSizer(wx.VERTICAL)
-        imgPan_sz.Add(
-            self.Image,
-            1,
-            wx.ALIGN_CENTER | wx.ALL | wx.ADJUST_MINSIZE
-        )
-        self.imgPan.SetSizer(imgPan_sz)
-
         mainBox = wx.BoxSizer(wx.VERTICAL)
         mainBox.Add(tag_topbar, 0, wx.EXPAND)
         mainBox.Add(self.imgPan, 1, wx.ALL | wx.EXPAND)
@@ -96,7 +86,6 @@ class TaggingView(wx.Panel):
 
         self.Bind(wx.EVT_SIZE, self.ReSize)
         self.imgPan.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
-        self.Image.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
     def load_images(self):
         for i in [-1, 0, 1]:
@@ -207,15 +196,21 @@ class TaggingView(wx.Panel):
 
         image = self.get_image(0)
         image.thumbnail(size, Image.BILINEAR)  # make image fit imgPan
-        # FIXME converting with alpha results in images only visible for one
-        # frame on Windows
-        image = self.convert_pil_to_wx(image, False)
+        image = self.convert_pil_to_wx(image, True).Size(
+            size,
+            (
+                (size[0] - image.size[0]) / 2,
+                (size[1] - image.size[1]) / 2,
+            ),
+        )
         bitmap = wx.BitmapFromImage(image)
-        self.Image.SetBitmap(bitmap)
 
-        self.Layout()  # center image
-        self.Refresh()  # clear off-image area
- 
+        dc = wx.ClientDC(self.imgPan)
+        dc.Clear()
+        dc.DrawBitmap(bitmap, 0, 0)
+
+        self.Layout()
+
     def convert_pil_to_wx(self, image_pil, copy_alpha=True):
         image_wx = wx.EmptyImage(*image_pil.size)
         image_wx.SetData(image_pil.convert('RGB').tobytes())

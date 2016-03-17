@@ -8,6 +8,7 @@ OctoTagger's About dialog.
 import wx
 import os
 
+
 def getInfo():
     description = (u"OctoTagger is a simple yet powerful software for "
                    u"organizing your files.")
@@ -17,7 +18,7 @@ def getInfo():
     info.SetName(u'OctoTagger')
     info.SetVersion(u'0.1')
     info.SetDescription(description)
-    info.SetCopyright(u'(C) 2015 Team OctoTagger')
+    info.SetCopyright(u'(C) 2016 Team OctoTagger')
     info.AddDeveloper(u'Erik Ritschl')
     info.AddDeveloper(u'Clemens Stadlbauer')
     info.AddDeveloper(u'Christoph Führer')
@@ -28,7 +29,7 @@ def getInfo():
     info.SetWebSite(u'http://www.octotagger.co')
     info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
 
-    if os.name != "nt":
+    if os.name == "posix":
         licence = open("LICENSE").read()
     else:
         licence = "GNU General Public License Version 3 (GPLv3)"
