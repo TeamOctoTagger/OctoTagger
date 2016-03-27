@@ -466,6 +466,7 @@ class Item(wx.Panel):
         else:
             color = self.GetParent().GetBackgroundColour()
         self.SetBackgroundColour(color)
+        self.Refresh()
 
     def IsSelected(self):
         return self.selected
