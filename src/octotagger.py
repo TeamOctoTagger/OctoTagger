@@ -688,8 +688,10 @@ class MainWindow(wx.Frame):
         self.AddTopbar()
         self.update_tag_list()
         self.mode = "overview"
-
         self.start_overview()
+        if self.current_query:
+            self.query_field.SetValue(self.current_query)
+            self.lb.SetCheckedStrings(self.checked_tags, only=True)
 
     def on_query_text(self, e):
 
