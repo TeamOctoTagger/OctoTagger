@@ -146,8 +146,7 @@ class NewDatabase(wx.Dialog):
         # Create Gallery
         gallery_id = database.create_gallery(name, dir)
         database.switch_gallery(gallery_id)
-
-        self.Destroy()
+        self.EndModal(0)
 
     def on_close(self, e):
-        self.Destroy()
+        self.EndModal(0)

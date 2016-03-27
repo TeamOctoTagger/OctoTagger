@@ -195,18 +195,16 @@ class TaggingView(wx.Panel):
 
         image = self.get_image(0)
         image.thumbnail(size, Image.BILINEAR)  # make image fit imgPan
-        image = self.convert_pil_to_wx(image, True).Size(
-            size,
-            (
-                (size[0] - image.size[0]) / 2,
-                (size[1] - image.size[1]) / 2,
-            ),
-        )
+        image = self.convert_pil_to_wx(image, True)
         bitmap = wx.BitmapFromImage(image)
 
         dc = wx.ClientDC(self.imgPan)
         dc.Clear()
-        dc.DrawBitmap(bitmap, 0, 0)
+        dc.DrawBitmap(
+            bitmap,
+            (size[0] - image.GetWidth()) / 2,
+            (size[1] - image.GetHeight()) / 2,
+        )
 
         self.Layout()
 
