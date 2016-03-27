@@ -431,7 +431,6 @@ class MainWindow(wx.Frame):
         items = self.GetFolderItems(self.import_path, True)
         self.mainPan.SetItems(items)
         self.topbar.Show(True)
-        
 
         self.cpane.SetMode("import")
         self.update_tag_list()
@@ -694,49 +693,47 @@ class MainWindow(wx.Frame):
 
     def on_query_text(self, e):
 
-        if self.mode == "overview":
-            if self.mainPan.GetSelectedItems():
+        if self.mode != "overview" or self.GetSelectedItems():
+            return
+
+        query_input = e.GetEventObject().GetValue()
+        self.lb.SetCheckedStrings(query_input.split(" "), only=True)
+        self.current_query = query_input
+
+        if query_input == "":
+            self.start_overview()
+            self.query_field.SetFocus()
+            self.cpane.Remove("create_folder_from_expr")
+
+        else:
+            try:
+                parsed_query = expression.parse(query_input)
+            except:
                 return
 
-            else:
-                query_input = e.GetEventObject().GetValue()
-                self.lb.SetCheckedStrings(query_input.split(" "), only=True)
-                self.current_query = query_input
+            self.cpane.Insert("create_folder_from_expr")
 
-                if query_input == "":
-                    self.start_overview()
-                    self.query_field.SetFocus()
-                    self.cpane.Remove("create_folder_from_expr")
+            # Get file list
+            cursor = (
+                database.get_current_gallery("connection").cursor()
+            )
+            cursor.execute(
+                "SELECT pk_id FROM file WHERE %s" %
+                parsed_query
+            )
+            result = cursor.fetchall()
 
-                else:
-                    try:
-                        parsed_query = expression.parse(query_input)
-                    except:
-                        return
+            items = []
+            for item in result:
+                items.append(item[0])
 
-                    self.cpane.Insert("create_folder_from_expr")
+            if len(items) == 0:
+                # TODO: Show warning instead of nothing?
+                pass
 
-                    # Get file list
-                    cursor = (
-                        database.get_current_gallery("connection").cursor()
-                    )
-                    cursor.execute(
-                        "SELECT pk_id FROM file WHERE %s" %
-                        parsed_query
-                    )
-                    result = cursor.fetchall()
-
-                    items = []
-                    for item in result:
-                        items.append(item[0])
-
-                    if len(items) == 0:
-                        # TODO: Show warning instead of nothing?
-                        pass
-
-                    # Display files
-                    self.mainPan.SetItems(items)
-                    self.Layout()
+            # Display files
+            self.mainPan.SetItems(items)
+            self.Layout()
 
     def on_query_text_select(self, e):
         items = self.GetSelectedItems()
@@ -754,7 +751,7 @@ class MainWindow(wx.Frame):
 
     def on_query_text_enter(self, e):
         self.tags = suggestion.get_suggestions(self.GetSelectedItems())
-        #print ("selftags: ", self.tags)
+        # print ("selftags: ", self.tags)
         self.query_field.completer = self.list_completer(self.tags)
         items = self.GetSelectedItems()
         tag = e.GetEventObject().GetValue()
