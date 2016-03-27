@@ -1246,7 +1246,6 @@ class MainWindow(wx.Frame):
     def OnCreateGalleryFolder(self, event=None):
         dlg = create_gallery_folder.CreateGalleryFolder(self)
         dlg.ShowModal()
-        dlg.Destroy()
 
         if self.mode == "folder":
             self.on_start_folder_mode()
@@ -1254,7 +1253,6 @@ class MainWindow(wx.Frame):
     def OnCreateOutputFolder(self, event=None):
         dlg = create_output_folder.CreateOutputFolder(self)
         dlg.ShowModal()
-        dlg.Destroy()
 
         if self.mode == "folder":
             self.on_start_folder_mode()
@@ -1262,7 +1260,6 @@ class MainWindow(wx.Frame):
     def OnSettings(self, e):
         dlg = settings.Settings(self)
         dlg.ShowModal()
-        dlg.Destroy()
 
     def OnAbout(self, e):
         wx.AboutBox(about.getInfo())
@@ -1382,7 +1379,7 @@ class MainWindow(wx.Frame):
             )
 
         dlg.ShowModal()
-        dlg.Destroy()
+        dlg.EndModal(0)
 
     def on_double_click_item(self, e):
 
@@ -1589,7 +1586,6 @@ class MainWindow(wx.Frame):
 
         dlg = create_output_folder.CreateOutputFolder(self, expr=query)
         dlg.ShowModal()
-        dlg.Destroy()
 
     def ImportAll(self, event):
         self.cpane.EnableAll(False)
@@ -1697,7 +1693,7 @@ class MainWindow(wx.Frame):
             else:
                 return
             for child in self.mainPan.GetChildren():
-                if child is not self.topbar and child.GetPath() == item:
+                if type(child) is itemview.Item and child.GetPath() == item:
                     old_name = child.GetText()
         else:
             return
@@ -1720,7 +1716,7 @@ class MainWindow(wx.Frame):
         if new_name == old_name:
             return
 
-        dlg.Destroy()
+        dlg.EndModal(0)
 
         # Check if name already exists
         cursor = database.get_current_gallery("connection").cursor()
@@ -1774,7 +1770,7 @@ class MainWindow(wx.Frame):
             wx.OK
         )
         dlg_complete.ShowModal()
-        dlg_complete.Destroy()
+        dlg_complete.EndModal()
 
     def OnRestoreAllFiles(self, event=None):
 

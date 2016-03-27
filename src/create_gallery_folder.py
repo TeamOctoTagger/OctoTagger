@@ -153,9 +153,10 @@ class CreateGalleryFolder(wx.Dialog):
 
     def OnOk(self, e):
         self.SaveSettings()
+        self.EndModal(0)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.EndModal(0)
 
     def SaveSettings(self):
 
@@ -228,5 +229,3 @@ class CreateGalleryFolder(wx.Dialog):
         output.create_gallery(folder_id)
         for tag in tags:
             output.change_gallery(folder_id, tag, True)
-
-        self.Destroy()

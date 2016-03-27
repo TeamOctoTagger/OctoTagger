@@ -255,7 +255,7 @@ class CreateOutputFolder(wx.Dialog):
 
         # Create folders
         create_folders.create_folders()
-        self.Close()
+        self.EndModal(0)
 
     def on_close(self, e):
-        self.Close()
+        self.EndModal(0)
