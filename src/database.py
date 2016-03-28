@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 '''
-Interface for getting, creating, deleting and switching the gallery database, as well as getting the system database.
+Interface for getting, creating, deleting and switching the gallery database,
+as well as getting the system database.
 '''
 
 import sqlite3
@@ -26,9 +27,10 @@ def get_gallery(gallery_id, property):
     # Get gallery's data.
     sys_db = get_sys_db()
     cursor = sys_db.cursor()
-    query_gallery_location = "SELECT location, name FROM gallery WHERE pk_id = %d" % (
-        gallery_id)
-
+    query_gallery_location = (
+        "SELECT location, name FROM gallery WHERE pk_id = %d" %
+        (gallery_id)
+    )
     cursor.execute(query_gallery_location)
     result = cursor.fetchall()
     for gallery in result:
@@ -48,9 +50,19 @@ def get_gallery(gallery_id, property):
     elif(property == "directory"):
         return os.path.join(gallery_location, gallery_name)
     elif(property == "file"):
-        return os.path.join(gallery_location, gallery_name, (gallery_name + '.db'))
+        return os.path.join(
+            gallery_location, gallery_name, (gallery_name + '.db')
+        )
     elif(property == "connection"):
-        return sqlite3.connect(os.path.normpath(os.path.join(gallery_location, gallery_name, (gallery_name + '.db'))))
+        return sqlite3.connect(
+            os.path.normpath(
+                os.path.join(
+                    gallery_location,
+                    gallery_name,
+                    (gallery_name + '.db')
+                )
+            )
+        )
     else:
         return False
 

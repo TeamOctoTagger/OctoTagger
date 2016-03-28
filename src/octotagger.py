@@ -1715,7 +1715,7 @@ class MainWindow(wx.Frame):
         if new_name == old_name:
             return
 
-        dlg.EndModal(0)
+        dlg.Destroy()
 
         # Check if name already exists
         cursor = database.get_current_gallery("connection").cursor()
@@ -1734,6 +1734,7 @@ class MainWindow(wx.Frame):
             )
 
         # Rename the file
+        import_files.rename_file(self.GetSelectedItems()[0], new_name)
         output.rename_file(self.GetSelectedItems()[0], new_name)
 
         if self.mode == "overview" and old_name != new_name:

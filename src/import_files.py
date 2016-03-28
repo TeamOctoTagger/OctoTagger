@@ -56,11 +56,14 @@ def import_files(files):
             if os.path.isfile(file) and os.path.isdir(dest_dir):
 
                 original_name = os.path.basename(file)  # for the database
-                new_name = str(uuid.uuid4())
+                new_name = (
+                    str(uuid.uuid4()) + "." + original_name.split(".")[-1]
+                )
 
                 while os.path.exists(os.path.join(dest_dir, new_name)):
-                    new_name = str(uuid.uuid4())
-
+                    new_name = (
+                        str(uuid.uuid4()) + "." + original_name.split(".")[-1]
+                    )
                 dest = os.path.join(dest_dir, new_name)
                 if import_copy:
                     shutil.copy(file, dest)
@@ -97,7 +100,8 @@ def import_files(files):
             # Update progress info
             dlg_progress.Update(
                 current_file,
-                "Importing file " + str(current_file) + " of " + str(len(files)) + "."
+                "Importing file " + str(current_file) + 
+                " of " + str(len(files)) + "."
             )
             current_file += 1
 
@@ -112,10 +116,14 @@ def import_files(files):
 
             if os.path.isfile(file) and os.path.isdir(dest_dir):
                 original_name = os.path.basename(file)
-                new_name = str(uuid.uuid4())
+                new_name = (
+                    str(uuid.uuid4()) + "." + original_name.split(".")[-1]
+                )
 
                 while os.path.exists(os.path.join(dest_dir, new_name)):
-                    new_name = str(uuid.uuid4())
+                    new_name = (
+                        str(uuid.uuid4()) + "." + original_name.split(".")[-1]
+                    )
 
                 dest = os.path.join(dest_dir, new_name)
                 if import_copy:
@@ -185,3 +193,27 @@ def import_files(files):
              "\n".join(same_name_files)),
             "Warning"
         )
+
+
+def rename_file(id, new_name):
+
+    # Update database
+    gallery_conn = database.get_current_gallery("connection")
+    cursor = gallery_conn.cursor()
+    cursor.execute("SELECT uuid FROM file WHERE pk_id = %d" % (id))
+    old_uuid = cursor.fetchone()[0]
+    new_uuid = ".".join([old_uuid.split(".")[0], new_name.split(".")[-1]])
+
+    cursor.execute((
+        "UPDATE file SET uuid = \'%s\'"
+        "WHERE pk_id = %d"
+        ) % (new_uuid, id)
+    )
+    gallery_conn.commit()
+
+    # Rename file
+    file_path = os.path.join(
+        database.get_current_gallery("directory"), "files")
+    old_file = os.path.join(file_path, old_uuid)
+    new_file = os.path.join(file_path, new_uuid)
+    shutil.move(old_file, new_file)
