@@ -83,7 +83,10 @@ class TaggingView(wx.Panel):
 
         self.SetSizerAndFit(mainBox)
 
+        self._imageBuffer = wx.EmptyBitmap(*self.imgPan.GetSize())
+
         self.Bind(wx.EVT_SIZE, self.ReSize)
+        self.imgPan.Bind(wx.EVT_PAINT, self.RePaint)
         self.imgPan.Bind(wx.EVT_RIGHT_UP, self.OnMouseRight)
 
     def load_images(self):
@@ -190,6 +193,7 @@ class TaggingView(wx.Panel):
         self.text.SetLabel(label)
 
     def ReSize(self, event=None):
+        self.Layout()
         self.load_images()
         size = self.imgPan.GetSize()
 
@@ -197,16 +201,24 @@ class TaggingView(wx.Panel):
         image.thumbnail(size, Image.BILINEAR)  # make image fit imgPan
         image = self.convert_pil_to_wx(image, True)
         bitmap = wx.BitmapFromImage(image)
+        self._imageBuffer = wx.EmptyBitmap(*size)
 
-        dc = wx.ClientDC(self.imgPan)
+        dc = wx.MemoryDC()
+        dc.SelectObject(self._imageBuffer)
+        dc.SetBackground(wx.Brush(self.GetBackgroundColour()))
         dc.Clear()
         dc.DrawBitmap(
             bitmap,
-            (size[0] - image.GetWidth()) / 2,
-            (size[1] - image.GetHeight()) / 2,
+            (size[0] - bitmap.GetWidth()) / 2,
+            (size[1] - bitmap.GetHeight()) / 2,
         )
 
-        self.Layout()
+        del dc
+        self.Refresh()
+
+    def RePaint(self, event):
+        dc = wx.PaintDC(self.imgPan)
+        dc.DrawBitmap(self._imageBuffer, 0, 0)
 
     def convert_pil_to_wx(self, image_pil, copy_alpha=True):
         image_wx = wx.EmptyImage(*image_pil.size)
