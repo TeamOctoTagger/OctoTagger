@@ -163,7 +163,7 @@ class TagList(wx.ScrolledWindow):
         self.checked = self.GetCheckedStrings()
         self.EnableAll(False)
 
-        for child in self.GetItems:
+        for child in self.GetItems():
             if child.GetLabelText().replace(" ", "_") == self.edit_tag:
                 cb = child
                 break
