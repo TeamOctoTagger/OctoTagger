@@ -164,6 +164,18 @@ class ContextPane(wx.ScrolledWindow):
         buttons["item_restore"] = item_restore
         self.sizer.Add(item_restore, 0, flag=wx.EXPAND)
 
+        item_export = wx.Button(
+            self,
+            label="Export"
+        )
+        self.Bind(
+            wx.EVT_BUTTON,
+            self.octotagger.ExportSelected,
+            item_export,
+        )
+        buttons["item_export"] = item_export
+        self.sizer.Add(item_export, 0, flag=wx.EXPAND)
+
         item_rename = wx.Button(
             self,
             label="Rename"
@@ -209,6 +221,7 @@ class ContextPane(wx.ScrolledWindow):
             if selection >= 1:
                 self.Insert("item_remove")
                 self.Insert("item_restore")
+                self.Insert("item_export")
 
             if selection > 1:
                 self.Remove("item_rename")
@@ -219,6 +232,7 @@ class ContextPane(wx.ScrolledWindow):
             self.Insert("item_rename")
             self.Insert("item_remove")
             self.Insert("item_restore")
+            self.Insert("item_export")
 
         elif mode == "folder":
             self.Insert("select_all")
