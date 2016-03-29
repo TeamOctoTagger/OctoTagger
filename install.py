@@ -69,4 +69,3 @@ if platform == "darwin":
 elif platform.startswith("linux"):
     exec_setup()
     write_desktop_file()
-

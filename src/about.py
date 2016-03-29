@@ -6,7 +6,7 @@ OctoTagger's About dialog.
 '''
 
 import wx
-import os
+from sys import platform
 
 
 def getInfo():
@@ -29,7 +29,7 @@ def getInfo():
     info.SetWebSite(u'http://www.octotagger.co')
     info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
 
-    if os.name == "posix":
+    if platform.startswith("linux"):
         licence = open("LICENSE").read()
     else:
         licence = "GNU General Public License Version 3 (GPLv3)"
