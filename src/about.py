@@ -6,7 +6,6 @@ OctoTagger's About dialog.
 '''
 
 import wx
-from sys import platform
 
 
 def getInfo():
@@ -16,7 +15,7 @@ def getInfo():
     info = wx.AboutDialogInfo()
 
     info.SetName(u'OctoTagger')
-    info.SetVersion(u'0.1')
+    info.SetVersion(u'1.0')
     info.SetDescription(description)
     info.SetCopyright(u'(C) 2016 Team OctoTagger')
     info.AddDeveloper(u'Erik Ritschl')
@@ -29,10 +28,7 @@ def getInfo():
     info.SetWebSite(u'http://www.octotagger.co')
     info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
 
-    if platform.startswith("linux"):
-        licence = open("LICENSE").read()
-    else:
-        licence = "GNU General Public License Version 3 (GPLv3)"
+    licence = open("LICENSE").read()
     info.SetLicence(licence)
 
     return info
