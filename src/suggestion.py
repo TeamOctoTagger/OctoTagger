@@ -11,11 +11,7 @@ def get_suggestions(selected_files):
     recomms = []
     file_ids = []
     tag_quantities = []
-    tag_quant_temp = []
-    no_append = False
     i = 0
-    counter = 0
-    contains_tag = False
     query_items = "SELECT pk_id FROM file"
     final_ids = []
 
@@ -36,30 +32,24 @@ def get_suggestions(selected_files):
                 tag_quantities[counter][0] += 1
             counter += 1
 
-    for tag_id in tag_ids:
-        tag_quant_temp.append([0, tag_id])
-
-    for tempFile in selected_files:
-        counter = 0
-        for tag_id in tag_ids:
-            if tagging.file_has_tag_id(tempFile, tag_id):
-                tag_quant_temp[counter][0] += 1
-            counter += 1
-
     if len(tag_ids) > 7:
         while i < 7:
             if not tag_quantities:
                 break
 
-            if max(tag_quant_temp)[0] < len(selected_files):
-                recomm_ids.append(max(tag_quantities)[1])
+            length = len(selected_files)
+            tagcount = 0
+            for selected_file in selected_files:
+                if tagging.file_has_tag_id(selected_file, max(tag_quantities)[1]):
+                    tagcount += 1
+
+            if tagcount is length:
                 tag_quantities.remove(max(tag_quantities))
-                tag_quant_temp.remove(max(tag_quant_temp))
                 i += 1
 
             else:
+                recomm_ids.append(max(tag_quantities)[1])
                 tag_quantities.remove(max(tag_quantities))
-                tag_quant_temp.remove(max(tag_quant_temp))
                 i += 1
         i = 0
     else:
@@ -67,15 +57,19 @@ def get_suggestions(selected_files):
             if not tag_quantities:
                 break
 
-            if max(tag_quant_temp)[0] < len(selected_files):
-                recomm_ids.append(max(tag_quantities)[1])
+            length = len(selected_files)
+            tagcount = 0
+            for selected_file in selected_files:
+                if tagging.file_has_tag_id(selected_file, max(tag_quantities)[1]):
+                    tagcount += 1
+
+            if tagcount is length:
                 tag_quantities.remove(max(tag_quantities))
-                tag_quant_temp.remove(max(tag_quant_temp))
                 i += 1
 
             else:
+                recomm_ids.append(max(tag_quantities)[1])
                 tag_quantities.remove(max(tag_quantities))
-                tag_quant_temp.remove(max(tag_quant_temp))
                 i += 1
         i = 0
 
@@ -127,20 +121,25 @@ def get_suggestions(selected_files):
         corr_recomm_ids.append(1)
         recomm_ids.append(1)
 
+    corr = True
+    recomm = True
+
     while True:
         if not recomm_ids and not corr_recomm_ids:
             break
 
-        if corr_recomm_ids[i] not in final_ids:
-            final_ids.append(corr_recomm_ids[i])
+        if len(selected_files) > 1:
+            if corr_recomm_ids[i] not in final_ids and corr is True:
+                final_ids.append(corr_recomm_ids[i])
+                if corr_recomm_ids[i] is corr_recomm_ids[len(corr_recomm_ids)-1]:
+                    corr = False
 
-        if recomm_ids[i] not in final_ids:
+        if recomm_ids[i] not in final_ids and recomm is True:
             final_ids.append(recomm_ids[i])
+            if corr_recomm_ids[i] is corr_recomm_ids[len(corr_recomm_ids)-1]:
+                recomm = False
 
-        if recomm_ids[i] is recomm_ids[len(recomm_ids)-1]:
-            break
-
-        if corr_recomm_ids[i] is corr_recomm_ids[len(corr_recomm_ids)-1]:
+        if recomm_ids[i] is recomm_ids[len(recomm_ids)-1] and corr_recomm_ids[i] is corr_recomm_ids[len(corr_recomm_ids)-1]:
             break
 
         i += 1
@@ -149,7 +148,5 @@ def get_suggestions(selected_files):
     for tag in final_ids:
         recomms.append(tagging.tag_id_to_name(tag))
 
-    print corr_recomm_ids
-    print recomm_ids
     return recomms
 
