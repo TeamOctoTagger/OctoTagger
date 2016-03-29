@@ -145,7 +145,12 @@ class MainWindow(wx.Frame):
         toolRestoreAllFiles = toolmenu.Append(
             wx.ID_ANY,
             "&Restore all files",
-            " Restores all Files"
+            "Restores all files"
+        )
+        toolExportAllFiles = toolmenu.Append(
+            wx.ID_ANY,
+            "&Export all files",
+            "Copies all files to a given location"
         )
 
         # View
@@ -197,6 +202,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_new_database, fileNewDatabase)
         self.Bind(wx.EVT_MENU, self.on_reset, toolResetCurrentDatabase)
         self.Bind(wx.EVT_MENU, self.OnRestoreAllFiles, toolRestoreAllFiles)
+        self.Bind(wx.EVT_MENU, self.OnExportAllFiles, toolExportAllFiles)
         self.Bind(wx.EVT_MENU, self.OnDeleteDatabase, self.toolDeleteDatabase)
         self.Bind(wx.EVT_MENU, self.OnRefreshThumbnails, toolRefreshThumbnails)
         self.Bind(wx.EVT_MENU, self.OnIntegrityCheck, toolIntegrityCheck)
@@ -1491,6 +1497,12 @@ class MainWindow(wx.Frame):
                      "move them to the desired location.")
                 )
                 self.Bind(wx.EVT_MENU, self.RestoreSelected, item_restore)
+                item_export = menu.Append(
+                    wx.ID_ANY,
+                    "Export",
+                    ("Copy the selected files to the desired location.")
+                )
+                self.Bind(wx.EVT_MENU, self.ExportSelected, item_export)
             else:
                 query = self.query_field.GetValue()
                 if query != "":
@@ -1533,6 +1545,12 @@ class MainWindow(wx.Frame):
                  "and move it to the desired location.")
             )
             self.Bind(wx.EVT_MENU, self.RestoreSelected, item_restore)
+            item_export = menu.Append(
+                wx.ID_ANY,
+                "Export",
+                ("Copy the selected files to the desired location.")
+            )
+            self.Bind(wx.EVT_MENU, self.ExportSelected, item_export)
 
         elif self.mode == "import":
 
@@ -1740,8 +1758,7 @@ class MainWindow(wx.Frame):
         if self.mode == "overview" and old_name != new_name:
             self.start_overview()
 
-    def RestoreFiles(self, files, event=None):
-
+    def RestoreFiles(self, files, event=None, move=True):
         # Ask for target directory
         dlg_import = wx.DirDialog(
             self,
@@ -1756,24 +1773,31 @@ class MainWindow(wx.Frame):
         target_dir = dlg_import.GetPath()
 
         # Restore the files
-        export.file(files, target_dir, move=True)
+        export.file(files, target_dir, move=move)
 
-        self.select_tags()
+        if move:
+            self.select_tags()
+            if self.mode == "overview":
+                self.start_overview()
 
-        if self.mode == "overview":
-            self.start_overview()
+            dlg_complete = wx.MessageDialog(
+                self,
+                "Restoration complete.",
+                "Message",
+                wx.OK
+            )
+        else:
+            dlg_complete = wx.MessageDialog(
+                self,
+                "Export complete.",
+                "Message",
+                wx.OK
+            )
 
-        dlg_complete = wx.MessageDialog(
-            self,
-            "Restoration complete.",
-            "Message",
-            wx.OK
-        )
         dlg_complete.ShowModal()
-        dlg_complete.EndModal()
+        dlg_complete.Destroy()
 
-    def OnRestoreAllFiles(self, event=None):
-
+    def OnRestoreAllFiles(self, event=None, move=True):
         # Get all file IDs
         gallery_conn = database.get_current_gallery("connection")
         c = gallery_conn.cursor()
@@ -1787,15 +1811,21 @@ class MainWindow(wx.Frame):
             ids.append(id[0])
 
         # Restore
-        self.RestoreFiles(ids)
+        self.RestoreFiles(ids, move=move)
 
-    def RestoreSelected(self, event=None):
+    def OnExportAllFiles(self, event=None):
+        self.OnRestoreAllFiles(move=False)
+
+    def RestoreSelected(self, event=None, move=True):
 
         item = self.GetSelectedItems()
-        self.RestoreFiles(item)
+        self.RestoreFiles(item, move=move)
 
-        if self.mode == "tagging":
+        if move and self.mode == "tagging":
             self.mainPan.RemoveItem(item[0])
+
+    def ExportSelected(self, event=None):
+        self.RestoreSelected(move=False)
 
     def RemoveItem(self, event=None):
         if self.mode == "folder":
