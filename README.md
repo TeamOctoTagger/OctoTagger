@@ -1,21 +1,25 @@
 # OctoTagger
-A simple cross-platform file organization software. [For more details, visit the project homepage.](http://www.octotagger.co/)
+A simple cross-platform file organization software. [For more details, visit the project homepage.](https://octotagger.co/)
 
-## Requirements
+## Dependencies
 
-- Python 2.7
-- wxPython (python-wxtools under Ubuntu)
-- Pillow (available under pip)
+- [Python 2.7](http://www.python.org/downloads)
+- [wxPython](http://www.wxpython.org/download.php)
+- Pillow (`pip install Pillow`)
 
-If using Windows:
-- pywin32
+For Windows:
+- [pywin32](http://sourceforge.net/projects/pywin32/files/pywin32/)
 - [pywinlink](https://github.com/TeamOctoTagger/pywinlink)
 
 ## Installation
 
-### On Ubuntu
+### On UNIX systems
 ```bash
 git clone https://github.com/TeamOctoTagger/OctoTagger
 cd OctoTagger
-./install
+python install.py
 ```
+
+### On Windows
+
+Execute ```OctoTagger\setup.exe``` as Administrator.
