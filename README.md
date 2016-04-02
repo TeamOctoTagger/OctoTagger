@@ -22,4 +22,4 @@ python install.py
 
 ### On Windows
 
-Download the Windows release from the [project homepage](https://octotagger.co/download.html) and execute `OctoTagger\setup.exe` as Administrator.
+Download the [latest Windows release](https://github.com/TeamOctoTagger/OctoTagger/releases/latest) and execute `OctoTagger\setup.exe` as Administrator.
