@@ -25,7 +25,7 @@ def getInfo():
     info.AddArtist(u'Julian Lorenz')
 
     # Not supported natively by Windows and OS X
-    info.SetWebSite(u'http://www.octotagger.co')
+    info.SetWebSite(u'https://octotagger.co')
     info.SetIcon(wx.Icon('icons/logo.png', wx.BITMAP_TYPE_PNG))
 
     licence = open("LICENSE").read()
