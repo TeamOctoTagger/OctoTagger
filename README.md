@@ -1,5 +1,5 @@
 # OctoTagger
-A simple cross-platform file organization software. For more details, visit [octotagger.co](https://octotagger.co/).
+A simple cross-platform file organization software. For more details, visit [https://teamoctotagger.github.io/Homepage/](https://teamoctotagger.github.io/Homepage/).
 
 ## Dependencies
 
